@@ -56,6 +56,14 @@ export default function EditTicketModal({
 
   return (
     <form onSubmit={handleSave}>
+      {ticket.image && (
+        <img
+          src={ticket.image}
+          alt="Adjunto"
+          className="w-full h-36 object-contain rounded mb-4"
+          style={{ background: "#f1f5f9" }}
+        />
+      )}
       <div className="mb-4">
         <label className="block text-sm font-medium">Título</label>
         <input

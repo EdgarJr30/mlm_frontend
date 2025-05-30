@@ -14,4 +14,5 @@ export interface Ticket {
     | "Cerrado";
   requester: string;
   responsible?: string;
+  image?: string; // base64
 }
