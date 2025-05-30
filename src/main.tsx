@@ -11,7 +11,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/create-ticket" element={<CreateTicketPage />} />
         <Route path="/kanban" element={<KanbanPage />} />
-        <Route path="*" element={<Navigate to="/create-ticket" />} />
+        <Route path="/" element={<Navigate to="/kanban" />} />
+        <Route path="*" element={<Navigate to="/kanban" />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,
