@@ -1,12 +1,15 @@
 import React, { useState } from "react";
+import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets";
+import { useNavigate } from "react-router-dom";
 
 export default function TicketForm() {
-  const [form, setForm] = useState({
+   const [form, setForm] = useState({
     title: "",
     description: "",
     priority: "media",
     requester: "",
   });
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -14,8 +17,17 @@ export default function TicketForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí luego se conectará a Supabase
-    alert("Ticket creado! (demo)");
+    const prevTickets = getTicketsFromStorage();
+    const newTicket = {
+      ...form,
+      id: Date.now(), // único por tiempo
+      status: "Pendiente",
+      responsible: "Sin asignar"
+    };
+    const updatedTickets = [newTicket, ...prevTickets];
+    saveTicketsToStorage(updatedTickets);
+    // Redirige al Kanban para que se refresque la vista
+    navigate("/kanban", { replace: true });
   };
 
   return (
