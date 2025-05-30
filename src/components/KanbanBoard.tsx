@@ -14,17 +14,25 @@ const STATUSES: Ticket["status"][] = [
   "Cerrado",
 ];
 
+const STATUS_ICONS: Record<Ticket["status"], string> = {
+  "Pendiente": "🔴",
+  "En Revisión": "🟡",
+  "Asignado": "🔵",
+  "En Proceso": "🟣",
+  "En Espera": "🟠",
+  "Completado": "🟢",
+  "Cerrado": "⚫️",
+};
+
 export default function KanbanBoard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Lee SIEMPRE desde localStorage al montar
   useEffect(() => {
     setTickets(getTicketsFromStorage());
   }, []);
 
-  // Cuando edites, guarda y recarga desde storage
   const handleSave = (editedTicket: Ticket) => {
     const newTickets = getTicketsFromStorage().map((t: Ticket) =>
       t.id === editedTicket.id ? editedTicket : t
@@ -33,7 +41,6 @@ export default function KanbanBoard() {
     setTickets(newTickets);
   };
 
-  // Recargar al cerrar el modal
   const closeModal = () => {
     setModalOpen(false);
     setSelectedTicket(null);
@@ -52,7 +59,10 @@ export default function KanbanBoard() {
           key={status}
           className="bg-white rounded-lg shadow-lg p-4 w-80 min-w-[20rem] flex flex-col h-full"
         >
-          <h3 className="font-semibold text-lg mb-4">{status}</h3>
+          <h3 className="font-semibold text-lg mb-4 flex items-center">
+            <span className="mr-2 text-xl">{STATUS_ICONS[status]}</span>
+            {status}
+          </h3>
           <div className="flex flex-col gap-3 overflow-y-auto">
             {tickets.filter((t) => t.status === status).map((ticket) => (
               <div
