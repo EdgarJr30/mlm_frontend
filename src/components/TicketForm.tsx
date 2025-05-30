@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets";
 import { useNavigate } from "react-router-dom";
+import { PhotoIcon, UserCircleIcon } from '@heroicons/react/24/solid'
+import { ChevronDownIcon } from '@heroicons/react/16/solid'
 
 export default function TicketForm() {
-   const [form, setForm] = useState({
+  const [form, setForm] = useState({
     title: "",
     description: "",
     priority: "media",
@@ -11,82 +13,148 @@ export default function TicketForm() {
   });
   const navigate = useNavigate();
 
+  // Manejar cambios
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Guardar el ticket
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const prevTickets = getTicketsFromStorage();
     const newTicket = {
       ...form,
-      id: Date.now(), // único por tiempo
+      id: Date.now(),
       status: "Pendiente",
-      responsible: "Sin asignar"
+      responsible: "Sin asignar",
     };
     const updatedTickets = [newTicket, ...prevTickets];
     saveTicketsToStorage(updatedTickets);
-    // Redirige al Kanban para que se refresque la vista
     navigate("/kanban", { replace: true });
   };
 
   return (
-    <form
-      className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
-      onSubmit={handleSubmit}
-    >
-      <h2 className="text-2xl font-bold mb-6">Crear Ticket de Mantenimiento</h2>
-      <div className="mb-4">
-        <label className="block text-sm font-medium">Título</label>
-        <input
-          type="text"
-          name="title"
-          value={form.title}
-          onChange={handleChange}
-          required
-          className="mt-1 p-2 w-full border rounded"
-        />
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-12">
+        <div className="border-b border-gray-900/10 pb-12">
+          <h2 className="text-base/7 font-semibold text-gray-900">Crear Ticket de Mantenimiento</h2>
+          <p className="mt-1 text-sm/6 text-gray-600">
+            Ingresa la información para crear un nuevo ticket al equipo de mantenimiento.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            {/* Título */}
+            <div className="sm:col-span-4">
+              <label htmlFor="title" className="block text-sm/6 font-medium text-gray-900">
+                Título del ticket
+              </label>
+              <div className="mt-2">
+                <input
+                  id="title"
+                  name="title"
+                  type="text"
+                  placeholder="Ej: Aire acondicionado no enfría"
+                  value={form.title}
+                  onChange={handleChange}
+                  required
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
+                />
+              </div>
+            </div>
+            {/* Descripción */}
+            <div className="col-span-full">
+              <label htmlFor="description" className="block text-sm/6 font-medium text-gray-900">
+                Descripción
+              </label>
+              <div className="mt-2">
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={3}
+                  value={form.description}
+                  onChange={handleChange}
+                  required
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
+                  placeholder="Describe el problema con detalle"
+                />
+              </div>
+              <p className="mt-3 text-sm/6 text-gray-600">Agrega detalles que ayuden a resolver el ticket.</p>
+            </div>
+            {/* Prioridad */}
+            <div className="sm:col-span-2">
+              <label htmlFor="priority" className="block text-sm/6 font-medium text-gray-900">
+                Prioridad
+              </label>
+              <div className="mt-2">
+                <select
+                  id="priority"
+                  name="priority"
+                  value={form.priority}
+                  onChange={handleChange}
+                  className="block w-full rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
+                >
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
+            </div>
+            {/* Solicitante */}
+            <div className="sm:col-span-4">
+              <label htmlFor="requester" className="block text-sm/6 font-medium text-gray-900">
+                Solicitante
+              </label>
+              <div className="mt-2 flex items-center gap-x-2">
+                <UserCircleIcon className="size-8 text-gray-300" />
+                <input
+                  id="requester"
+                  name="requester"
+                  type="text"
+                  placeholder="Nombre del solicitante"
+                  value={form.requester}
+                  onChange={handleChange}
+                  required
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
+                />
+              </div>
+            </div>
+            {/* Foto o archivo adjunto (opcional) */}
+            <div className="col-span-full">
+              <label htmlFor="cover-photo" className="block text-sm/6 font-medium text-gray-900">
+                Foto (opcional)
+              </label>
+              <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-6">
+                <div className="text-center">
+                  <PhotoIcon className="mx-auto size-12 text-gray-300" aria-hidden="true" />
+                  <div className="mt-4 flex text-sm/6 text-gray-600">
+                    <label
+                      htmlFor="file-upload"
+                      className="relative cursor-pointer rounded-md bg-white font-semibold text-blue-600 hover:text-blue-500"
+                    >
+                      <span>Subir archivo</span>
+                      <input id="file-upload" name="file-upload" type="file" className="sr-only" disabled />
+                    </label>
+                    <p className="pl-1">o arrastra y suelta</p>
+                  </div>
+                  <p className="text-xs/5 text-gray-600">PNG, JPG, GIF hasta 10MB (no funcional aún)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Botones */}
+        <div className="mt-6 flex items-center justify-end gap-x-6">
+          <button type="button" onClick={() => navigate("/kanban")} className="text-sm/6 font-semibold text-gray-900">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          >
+            Crear Ticket
+          </button>
+        </div>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium">Descripción</label>
-        <textarea
-          name="description"
-          value={form.description}
-          onChange={handleChange}
-          required
-          className="mt-1 p-2 w-full border rounded"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium">Prioridad</label>
-        <select
-          name="priority"
-          value={form.priority}
-          onChange={handleChange}
-          className="mt-1 p-2 w-full border rounded"
-        >
-          <option value="baja">Baja</option>
-          <option value="media">Media</option>
-          <option value="alta">Alta</option>
-        </select>
-      </div>
-      <div className="mb-6">
-        <label className="block text-sm font-medium">Solicitante</label>
-        <input
-          type="text"
-          name="requester"
-          value={form.requester}
-          onChange={handleChange}
-          required
-          className="mt-1 p-2 w-full border rounded"
-        />
-      </div>
-      <button
-        type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full"
-      >
-        Crear Ticket
-      </button>
     </form>
   );
 }
