@@ -144,35 +144,59 @@ export default function TicketForm() {
               <label htmlFor="cover-photo" className="block text-sm/6 font-medium text-gray-900">
                 Foto (opcional)
               </label>
-              <label
-                htmlFor="file-upload"
-                className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-6 text-center transition hover:bg-gray-50"
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add("ring-2", "ring-blue-500");
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove("ring-2", "ring-blue-500");
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove("ring-2", "ring-blue-500");
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && file.size <= 10 * 1024 * 1024) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const base64 = event.target?.result as string;
+                      setForm((prev) => ({ ...prev, image: base64 }));
+                      setImagePreview(base64);
+                    };
+                    reader.readAsDataURL(file);
+                  } else {
+                    alert("El archivo supera el tamaño máximo de 10MB.");
+                  }
+                }}
               >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="mb-2 h-24 w-auto object-contain rounded"
+                <label
+                  htmlFor="file-upload"
+                  className="mt-2 flex cursor-pointer justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-6 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="text-center">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="mx-auto mb-2 h-24 w-auto object-contain rounded" />
+                    ) : (
+                      <PhotoIcon className="mx-auto size-12 text-gray-300" aria-hidden="true" />
+                    )}
+                    <div className="mt-4 flex text-sm/6 text-gray-600 justify-center">
+                      <span className="font-semibold text-blue-600">Subir archivo</span>
+                      <span className="pl-1">o arrastra y suelta</span>
+                    </div>
+                    <p className="text-xs/5 text-gray-600">PNG, JPG, GIF hasta 10MB</p>
+                  </div>
+                  <input
+                    id="file-upload"
+                    name="file-upload"
+                    type="file"
+                    accept="image/png, image/jpeg, image/gif"
+                    className="sr-only"
+                    onChange={handleFileChange}
                   />
-                ) : (
-                  <PhotoIcon className="mx-auto size-12 text-gray-300" aria-hidden="true" />
-                )}
-                <div className="mt-4 flex text-sm/6 text-gray-600 justify-center">
-                  <span className="font-semibold text-blue-600 hover:text-blue-500">Subir archivo</span>
-                  <span className="pl-1">o arrastra y suelta</span>
-                </div>
-                <p className="text-xs/5 text-gray-600">PNG, JPG, GIF hasta 10MB</p>
-                <input
-                  id="file-upload"
-                  name="file-upload"
-                  type="file"
-                  accept="image/png, image/jpeg, image/gif"
-                  className="sr-only"
-                  onChange={handleFileChange}
-                />
-              </label>
+                </label>
+              </div>
             </div>
-
           </div>
         </div>
         {/* Botones */}
