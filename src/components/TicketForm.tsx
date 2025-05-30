@@ -144,34 +144,35 @@ export default function TicketForm() {
               <label htmlFor="cover-photo" className="block text-sm/6 font-medium text-gray-900">
                 Foto (opcional)
               </label>
-              <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-6">
-                <div className="text-center">
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="mx-auto mb-2 h-24 w-auto object-contain rounded" />
-                  ) : (
-                    <PhotoIcon className="mx-auto size-12 text-gray-300" aria-hidden="true" />
-                  )}
-                  <div className="mt-4 flex text-sm/6 text-gray-600">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer rounded-md bg-white font-semibold text-blue-600 hover:text-blue-500"
-                    >
-                      <span>Subir archivo</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        accept="image/png, image/jpeg, image/gif"
-                        className="sr-only"
-                        onChange={handleFileChange}
-                      />
-                    </label>
-                    <p className="pl-1">o arrastra y suelta</p>
-                  </div>
-                  <p className="text-xs/5 text-gray-600">PNG, JPG, GIF hasta 10MB</p>
+              <label
+                htmlFor="file-upload"
+                className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-6 text-center transition hover:bg-gray-50"
+              >
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="mb-2 h-24 w-auto object-contain rounded"
+                  />
+                ) : (
+                  <PhotoIcon className="mx-auto size-12 text-gray-300" aria-hidden="true" />
+                )}
+                <div className="mt-4 flex text-sm/6 text-gray-600 justify-center">
+                  <span className="font-semibold text-blue-600 hover:text-blue-500">Subir archivo</span>
+                  <span className="pl-1">o arrastra y suelta</span>
                 </div>
-              </div>
+                <p className="text-xs/5 text-gray-600">PNG, JPG, GIF hasta 10MB</p>
+                <input
+                  id="file-upload"
+                  name="file-upload"
+                  type="file"
+                  accept="image/png, image/jpeg, image/gif"
+                  className="sr-only"
+                  onChange={handleFileChange}
+                />
+              </label>
             </div>
+
           </div>
         </div>
         {/* Botones */}
