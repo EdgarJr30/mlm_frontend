@@ -141,6 +141,40 @@ export default function EditTicketModal({
           ))}
         </select>
       </div>
+      {/* Solicitante */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium">Solicitante</label>
+        <input
+          name="requester"
+          value={edited.requester || ""}
+          onChange={handleChange}
+          className="mt-1 p-2 w-full border rounded"
+          required
+        />
+      </div>
+      {/* Ubicación */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium">Ubicación</label>
+        <select
+          name="location"
+          value={edited.location || ""}
+          onChange={handleChange}
+          className="mt-1 p-2 w-full border rounded"
+          required
+        >
+          <option value="">Seleccione una ubicación</option>
+          <option value="Operadora de Servicios Alimenticios">Operadora de Servicios Alimenticios</option>
+          <option value="Adrian Tropical 27">Adrian Tropical 27</option>
+          <option value="Adrian Tropical Malecón">Adrian Tropical Malecón</option>
+          <option value="Adrian Tropical Lincoln">Adrian Tropical Lincoln</option>
+          <option value="Adrian Tropical San Vicente">Adrian Tropical San Vicente</option>
+          <option value="Atracciones el Lago">Atracciones el Lago</option>
+          <option value="M7">M7</option>
+          <option value="E. Arturo Trading">E. Arturo Trading</option>
+          <option value="Edificio Comunitario">Edificio Comunitario</option>
+        </select>
+      </div>
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Responsable</label>
         <select

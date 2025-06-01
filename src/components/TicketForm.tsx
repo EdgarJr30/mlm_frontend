@@ -11,6 +11,7 @@ export default function TicketForm() {
     requester: "",
     incidentDate: "",
     image: "", // base64
+    location: "",
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const navigate = useNavigate();
@@ -64,7 +65,20 @@ export default function TicketForm() {
     };
     const updatedTickets = [newTicket, ...prevTickets];
     saveTicketsToStorage(updatedTickets);
-    navigate("/kanban", { replace: true });
+    // TODO : mostrar mensaje de éxito en vez de redirigir inmediatamente
+    alert("Ticket creado exitosamente");
+    // navigate("/kanban", { replace: true }); 
+    // TODO : limpiar el formulario después de crear el ticket
+    setForm({
+      title: "",
+      description: "",
+      isUrgent: false,
+      requester: "",
+      incidentDate: "",
+      image: "",
+      location: "",
+    });
+    setImagePreview("");
   };
 
   return (
@@ -162,6 +176,34 @@ export default function TicketForm() {
                 />
               </div>
             </div>
+            {/* Ubicación */}
+            <div className="sm:col-span-4">
+              <label htmlFor="location" className="block text-sm/6 font-medium text-gray-900">
+                Ubicación
+              </label>
+              <div className="mt-2">
+                <select
+                  id="location"
+                  name="location"
+                  value={form.location}
+                  onChange={handleChange}
+                  required
+                  className="block w-full rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
+                >
+                  <option value="">Seleccione una ubicación</option>
+                  <option value="Operadora de Servicios Alimenticios">Operadora de Servicios Alimenticios</option>
+                  <option value="Adrian Tropical 27">Adrian Tropical 27</option>
+                  <option value="Adrian Tropical Malecón">Adrian Tropical Malecón</option>
+                  <option value="Adrian Tropical Lincoln">Adrian Tropical Lincoln</option>
+                  <option value="Adrian Tropical San Vicente">Adrian Tropical San Vicente</option>
+                  <option value="Atracciones el Lago">Atracciones el Lago</option>
+                  <option value="M7">M7</option>
+                  <option value="E. Arturo Trading">E. Arturo Trading</option>
+                  <option value="Edificio Comunitario">Edificio Comunitario</option>
+                </select>
+              </div>
+            </div>
+
             {/* Foto o archivo adjunto */}
             <div className="col-span-full">
               <label htmlFor="cover-photo" className="block text-sm/6 font-medium text-gray-900">

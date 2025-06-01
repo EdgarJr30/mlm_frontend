@@ -14,6 +14,7 @@ export interface Ticket {
     | "Completado"
     | "Cerrado";
   requester: string;
+  location: string;
   responsible?: string;
   incidentDate: string;
   image?: string; // base64

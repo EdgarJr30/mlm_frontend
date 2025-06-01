@@ -3,7 +3,7 @@ Requisitos
 CAMBIOS EASY MAINT
  
 Ajustes Requeridos en el Formulario de Solicitudes
-1. Campo de Prioridad
+1. Campo de Prioridad ✅
 Cambio:
 Eliminar el campo actual de “Prioridad”.
 Agregar un checkbox (casilla de verificación) con la opción “Urgente”.

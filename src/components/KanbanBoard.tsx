@@ -88,6 +88,7 @@ export default function KanbanBoard() {
                                 </div>
                                 <div className="text-xs text-gray-600">Prioridad: {ticket.priority}</div>
                                 <div className="text-xs text-gray-600">Solicitante: {ticket.requester}</div>
+                                <div className="text-xs text-gray-600">Ubicación: {ticket.location}</div>
                                 <div className="text-xs text-gray-600">
                                     Responsable: {ticket.responsible || "Sin asignar"}
                                 </div>
