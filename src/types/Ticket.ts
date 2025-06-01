@@ -7,12 +7,8 @@ export interface Ticket {
   priority: "baja" | "media" | "alta";
   status:
     | "Pendiente"
-    | "En Revisión"
-    | "Asignado"
-    | "En Proceso"
-    | "En Espera"
-    | "Completado"
-    | "Cerrado";
+    | "En Ejecución"
+    | "Finalizadas";
   requester: string;
   location: string;
   responsible?: string;

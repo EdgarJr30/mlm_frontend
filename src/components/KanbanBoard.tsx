@@ -6,22 +6,14 @@ import type { Ticket } from "../types/Ticket";
 
 const STATUSES: Ticket["status"][] = [
     "Pendiente",
-    "En Revisión",
-    "Asignado",
-    "En Proceso",
-    "En Espera",
-    "Completado",
-    "Cerrado",
+    "En Ejecución",
+    "Finalizadas",
 ];
 
 const STATUS_ICONS: Record<Ticket["status"], string> = {
     "Pendiente": "🔴",
-    "En Revisión": "🟡",
-    "Asignado": "🔵",
-    "En Proceso": "🟣",
-    "En Espera": "🟠",
-    "Completado": "🟢",
-    "Cerrado": "⚫️",
+    "En Ejecución": "🟡",
+    "Finalizadas": "⚫️",
 };
 
 export default function KanbanBoard() {

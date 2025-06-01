@@ -13,7 +13,8 @@ Agregar un campo que permita adjuntar imágenes o fotos al momento de crear la s
 3. Fecha del Incidente ✅
 Cambio:
 Agregar un campo de “Fecha del Incidente” (selector de fecha) para indicar cuándo ocurrió el evento reportado.
-4. Campo de Ubicación
+4. Campo de Ubicación ✅
+<!-- TODO: CREAR UN ENUM O JSON O UTILS PARA CREAR LAS UBICACIONES Y QUE SE ALIMENTE DONDE SEA QUE SE UTILICE DESDE UN SOLO LOGAR -->
 Cambio:
 Agregar un campo de selección (dropdown/lista desplegable) llamado “Ubicación” con las siguientes opciones:
 Operadora de Servicios Alimenticios
@@ -28,7 +29,7 @@ Edificio Comunitario
 5. Numeración de Solicitudes
 Agregar el # a las solicitudes para poder llevar un registro de control interno.
  
-6. Visualización de Estados
+6. Visualización de Estados ✅
 Cambio:
 Solo deben mostrarse y usarse las siguientes columnas/estados:
 Pendiente

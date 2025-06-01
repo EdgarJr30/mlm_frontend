@@ -3,12 +3,8 @@ import type { Ticket } from "../types/Ticket";
 
 const STATUSES: Ticket["status"][] = [
   "Pendiente",
-  "En Revisión",
-  "Asignado",
-  "En Proceso",
-  "En Espera",
-  "Completado",
-  "Cerrado",
+  "En Ejecución",
+  "Finalizadas",
 ];
 
 // Mock responsables (luego lo sacas de la BD)
