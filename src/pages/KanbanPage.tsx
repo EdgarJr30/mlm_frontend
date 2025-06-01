@@ -7,7 +7,7 @@ export default function KanbanPage() {
       <Sidebar />
       <main className="flex-1 md:ml-60 flex flex-col h-screen overflow-hidden">
         {/* Encabezado del Kanban */}
-        <header className="p-8 pb-0">
+        <header className="p-8 pb-0 pt-20 md:pt-8">
           <h2 className="text-3xl font-bold">Tablero Kanban - Mantenimiento</h2>
         </header>
         {/* El área del tablero se expande, el scroll es SOLO horizontal */}
