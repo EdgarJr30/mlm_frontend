@@ -22,11 +22,11 @@ const STATUS_STYLES: Record<Ticket["status"], string> = {
 //     "Finalizadas": "🟢",
 // };
 
-const PRIORITY_ICONS: Record<string, string> = {
-  baja: "🔻",
-  media: "🔸",
-  alta: "🔺",
-};
+// const PRIORITY_ICONS: Record<string, string> = {
+//     baja: "🔻",
+//     media: "🔸",
+//     alta: "🔺",
+// };
 
 export default function KanbanBoard() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -56,8 +56,31 @@ export default function KanbanBoard() {
         setModalOpen(true);
     };
 
+    function getPriorityStyles(priority: "baja" | "media" | "alta" | "urgente") {
+        const styles: Record<"baja" | "media" | "alta" | "urgente", string> = {
+            baja: "bg-green-100 text-green-800 border-green-200",
+            media: "bg-yellow-100 text-yellow-800 border-yellow-200",
+            alta: "bg-orange-100 text-orange-800 border-orange-200",
+            urgente: "bg-red-100 text-red-800 border-red-200",
+        };
+        return styles[priority] || "bg-gray-100 text-gray-800 border-gray-200";
+    }
+
+    function getStatusStyles(status: Ticket["status"]) {
+        const styles: Record<Ticket["status"], string> = {
+            "Pendiente": "bg-gray-100 text-gray-800 border-gray-200",
+            "En Ejecución": "bg-blue-100 text-blue-800 border-blue-200",
+            "Finalizadas": "bg-green-100 text-green-800 border-green-200",
+        };
+        return styles[status] || "bg-gray-100 text-gray-800 border-gray-200";
+    }
+
+    function capitalize(word?: string) {
+        return typeof word === "string" ? word.charAt(0).toUpperCase() + word.slice(1) : "";
+    }
+
     return (
-        <div className="flex gap-4 h-full min-h-[500px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full w-full p-4 overflow-x-hidden">
             {STATUSES.map((status) => (
                 <div
                     key={status}
@@ -68,40 +91,85 @@ export default function KanbanBoard() {
                         <span className={`px-2 py-1 rounded text-sm font-medium ${STATUS_STYLES[status]}`}>{status}</span>
                         {/* {status} */}
                     </h3>
-                    <div className="flex flex-col gap-3 overflow-y-auto">
-                        {tickets.filter((t) => t.status === status).map((ticket) => (
-                            <div
-                                key={ticket.id}
-                                className="bg-blue-50 border border-blue-200 rounded p-3 cursor-pointer hover:bg-blue-100 transition"
-                                onClick={() => openModal(ticket)}
-                            >
-                                {/* Mostramos la imagen si existe */}
-                                {ticket.image && (
-                                    <img
-                                        src={ticket.image}
-                                        alt="Adjunto"
-                                        className="w-full h-20 object-contain rounded mb-2"
-                                        style={{ background: "#f1f5f9" }}
-                                    />
-                                )}
-                                <div className="font-medium">{ticket.title}</div>
-                                {ticket.isUrgent && (
-                                    <div className="inline-block bg-red-100 text-red-700 text-xs font-semibold px-2 py-1 rounded mb-1">
-                                        🚨 Urgente
+                    <div className="flex flex-col gap-3 overflow-y-auto max-h-[80vh]">
+                        {tickets.filter((t) => t.status === status).map((ticket) => {
+                            return (
+                                <div
+                                    key={ticket.id}
+                                    onClick={() => openModal(ticket)}
+                                    className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
+                                >
+                                    {ticket.image && (
+                                        <img
+                                            src={ticket.image}
+                                            alt="Adjunto"
+                                            className="w-full h-24 object-contain rounded mb-3 bg-slate-100"
+                                        />
+                                    )}
+                                    <div className="flex items-start justify-between mb-1">
+                                        <h4 className="font-semibold text-sm text-gray-900">{ticket.title}</h4>
+                                        <button
+                                            type="button"
+                                            className="text-gray-900 hover:text-gray-600"
+                                            title="Ver más detalles"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h.01M12 12h.01M18 12h.01" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                )}
-                                <div className="text-xs text-gray-600">
-                                    Fecha Incidente: {ticket.incidentDate || "No especificada"}
+                                    <p className="text-xs text-gray-600 line-clamp-2 mb-2">{ticket.description || "Sin descripción"}</p>
+
+                                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                                        {ticket.isUrgent && (
+                                            <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Urgente
+                                            </span>
+                                        )}
+                                        <span className={`text-xs font-medium px-2 py-0.5 rounded border ${getPriorityStyles(ticket.priority)}`}>
+                                            {capitalize(ticket.priority)}
+                                        </span>
+                                        <span className={`text-xs font-medium px-2 py-0.5 rounded border ${getStatusStyles(ticket.status)}`}>
+                                            {ticket.status}
+                                        </span>
+                                    </div>
+
+                                    <div className="text-xs text-gray-500 space-y-1">
+                                        <div className="flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A3 3 0 008 19h8a3 3 0 002.879-1.196M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            Solicitante: {ticket.requester}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z" />
+                                            </svg>
+                                            Fecha: {ticket.incidentDate || "No especificada"}
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <strong className="text-xs">ID:</strong> {ticket.id}
+                                        </div>
+                                    </div>
+
+                                    {ticket.responsible && (
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <div className="h-6 w-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-semibold text-gray-700">
+                                                {ticket.responsible
+                                                    .split(" ")
+                                                    .map((n) => n[0])
+                                                    .join("")}
+                                            </div>
+                                            <span className="text-xs text-gray-600">{ticket.responsible}</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <strong>Prioridad:</strong> {PRIORITY_ICONS[ticket.priority]} {ticket.priority}
-                                <div className="text-xs text-gray-600">Prioridad: {ticket.priority}</div>
-                                <div className="text-xs text-gray-600">Solicitante: {ticket.requester}</div>
-                                <div className="text-xs text-gray-600">Ubicación: {ticket.location}</div>
-                                <div className="text-xs text-gray-600">
-                                    Responsable: {ticket.responsible || "Sin asignar"}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
+
                     </div>
                 </div>
             ))}

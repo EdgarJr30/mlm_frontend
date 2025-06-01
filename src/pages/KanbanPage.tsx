@@ -5,7 +5,7 @@ export default function KanbanPage() {
   return (
     <div className="min-h-screen flex bg-gray-100">
       <Sidebar />
-      <main className="flex-1 ml-60 flex flex-col h-screen overflow-hidden">
+      <main className="flex-1 md:ml-60 flex flex-col h-screen overflow-hidden">
         {/* Encabezado del Kanban */}
         <header className="p-8 pb-0">
           <h2 className="text-3xl font-bold">Tablero Kanban - Mantenimiento</h2>
