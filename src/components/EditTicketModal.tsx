@@ -61,7 +61,7 @@ export default function EditTicketModal({
   if (!ticket) return null;
 
   return (
-    <form onSubmit={handleSave}>
+    <form onSubmit={handleSave} className="space-y-6">
       {ticket.image && (
         <img
           src={ticket.image}
