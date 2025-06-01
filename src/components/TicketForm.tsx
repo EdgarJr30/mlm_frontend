@@ -95,6 +95,8 @@ export default function TicketForm() {
       return !!form.requester.trim() && !!form.location
     } else if (step === 3) {
       return !!form.incidentDate
+    } else if (step === 4) {
+      return true // No validación en revisión
     }
     return true
   }
@@ -110,6 +112,7 @@ export default function TicketForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (step !== 4) return
     if (!validateStep()) return alert("Completa los campos requeridos.")
 
     setIsSubmitting(true)
@@ -132,7 +135,7 @@ export default function TicketForm() {
   const progress = (step / 4) * 100
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen">
+    <div className="min-h-screen">
       {/* HEADER CON PROGRESS COMPONENT */}
       <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-4">
         <div className="max-w-5xl mx-auto">
@@ -207,8 +210,8 @@ export default function TicketForm() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
+              {/* <div className="space-y-2">
                   <Label htmlFor="location">Categoría <span className="text-red-500">*</span></Label>
                   <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
                     <SelectTrigger>
@@ -222,9 +225,9 @@ export default function TicketForm() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
 
-                <div className="space-y-2">
+              {/* <div className="space-y-2">
                   <Label htmlFor="priority">Prioridad</Label>
                   <Select value="media" onValueChange={() => { }}>
                     <SelectTrigger>
@@ -237,8 +240,8 @@ export default function TicketForm() {
                       <SelectItem value="urgente">🔴 Urgente</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
+                </div> */}
+              {/* </div> */}
 
               <div className="flex items-center gap-2 pt-1">
                 <Checkbox
@@ -357,7 +360,6 @@ export default function TicketForm() {
                     required
                   />
                 </div>
-                {/* //TODO: Crear campo para fecha limite  */}
                 <div className="space-y-2">
                   <Label htmlFor="deadlineDate">Fecha Límite Deseada <span className="">(Opcional)</span></Label>
                   <Input
@@ -392,32 +394,102 @@ export default function TicketForm() {
         </div>
       )}
 
-      {/* Botones de navegación - siempre visibles */}
-      <div className="w-full flex justify-center">
-        <div className="w-full max-w-5xl px-18 pb-8">
-          <div className="flex justify-between pt-6 border-t border-gray-100">
-            <Button
-              variant="outline"
-              type="button"
-              className="px-6 py-2"
-              onClick={handlePrevious}
-              disabled={step === 1}
-            >
-              ← Anterior
-            </Button>
 
-            {step < 4 ? (
-              <Button type="button" className="px-6 py-2" onClick={handleNext}>
+      {/* Paso 4: Revisión y Envío */}
+      {step === 4 && (
+        <form onSubmit={handleSubmit}>
+          <div className="w-full flex justify-center mt-10">
+            <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">🔍 Revisión y Envío</h2>
+                <p className="text-sm text-gray-500 border border-yellow-200 bg-yellow-50 px-4 py-2 rounded">
+                  Por favor revisa toda la información antes de enviar el ticket.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">📝 Información del Ticket</h3>
+                  <p><strong>Título:</strong> {form.title}</p>
+                  <p><strong>Descripción:</strong> {form.description}</p>
+                  <p><strong>Urgente:</strong> {form.isUrgent ? "Sí 🚨" : "No"}</p>
+                  <p><strong>Notas adicionales:</strong> {form.details || "N/A"}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">👤 Información del Solicitante</h3>
+                  <p><strong>Nombre:</strong> {form.requester}</p>
+                  <p><strong>Email:</strong> {form.email}</p>
+                  <p><strong>Teléfono:</strong> {form.phone || "N/A"}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">📍 Ubicación</h3>
+                  <p><strong>Ubicación:</strong> {form.location}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">📆 Fechas</h3>
+                  <p><strong>Fecha del incidente:</strong> {form.incidentDate}</p>
+                  <p><strong>Fecha límite deseada:</strong> {form.deadlineDate || "N/A"}</p>
+                </div>
+
+                {imagePreview && (
+                  <div>
+                    <h3 className="text-md font-semibold text-gray-700 mb-1">📎 Imagen Adjunta</h3>
+                    <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Botones de navegación en el paso 4 */}
+          <div className="w-full flex justify-center">
+            <div className="w-full max-w-5xl px-18 pb-8">
+              <div className="flex justify-between pt-6 border-t border-gray-100">
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="px-6 py-2"
+                  onClick={handlePrevious}
+                >
+                  ← Anterior
+                </Button>
+                <Button type="submit" className="px-6 py-2" disabled={isSubmitting}>
+                  {isSubmitting ? "Enviando..." : "Crear Ticket"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* Botones para pasos 1, 2 y 3 */}
+      {step < 4 && (
+        <div className="w-full flex justify-center">
+          <div className="w-full max-w-5xl px-18 pb-8">
+            <div className="flex justify-between pt-6 border-t border-gray-100">
+              <Button
+                variant="outline"
+                type="button"
+                className="px-6 py-2"
+                onClick={handlePrevious}
+                disabled={step === 1}
+              >
+                ← Anterior
+              </Button>
+              <Button
+                type="button"
+                className="px-6 py-2"
+                onClick={handleNext}
+              >
                 Siguiente →
               </Button>
-            ) : (
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Enviando..." : "Crear Ticket"}
-              </Button>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-    </form>
+      )}
+    </div>
   )
 }
