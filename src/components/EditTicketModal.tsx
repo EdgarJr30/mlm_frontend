@@ -7,7 +7,12 @@ const STATUSES: Ticket["status"][] = [
   "Finalizadas",
 ];
 
-// Mock responsables (luego lo sacas de la BD)
+const STATUS_STYLES: Record<Ticket["status"], string> = {
+  "Pendiente": "bg-yellow-100 text-yellow-800",
+  "En Ejecución": "bg-blue-100 text-blue-800",
+  "Finalizadas": "bg-green-100 text-green-800",
+};
+
 const RESPONSABLES = [
   "Sin asignar",
   "Juan Mantenimiento",
@@ -65,6 +70,14 @@ export default function EditTicketModal({
           style={{ background: "#f1f5f9" }}
         />
       )}
+
+      <div className="mb-4 flex flex-col gap-1">
+        <label className="text-sm font-medium">Estado actual</label>
+        <span className={`px-2 py-1 text-xs rounded self-start font-semibold ${STATUS_STYLES[edited.status]}`}>
+          {edited.status}
+        </span>
+      </div>
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Título</label>
         <input
@@ -75,6 +88,7 @@ export default function EditTicketModal({
           required
         />
       </div>
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Descripción</label>
         <textarea
@@ -85,7 +99,7 @@ export default function EditTicketModal({
           required
         />
       </div>
-      {/* Fecha del Incidente */}
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Fecha del Incidente</label>
         <input
@@ -97,16 +111,16 @@ export default function EditTicketModal({
           required
         />
       </div>
-      {/* Urgente */}
+
       <div className="mb-4 flex items-center gap-2">
         <input
           type="checkbox"
           name="isUrgent"
           checked={edited.isUrgent || false}
           onChange={handleChange}
-          className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+          className="h-4 w-4 text-red-600 border-gray-300 rounded"
         />
-        <label className="text-sm font-medium">Urgente</label>
+        <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
       </div>
 
       <div className="mb-4">
@@ -117,11 +131,12 @@ export default function EditTicketModal({
           onChange={handleChange}
           className="mt-1 p-2 w-full border rounded"
         >
-          <option value="baja">Baja</option>
-          <option value="media">Media</option>
-          <option value="alta">Alta</option>
+          <option value="baja">🔻 Baja</option>
+          <option value="media">🔸 Media</option>
+          <option value="alta">🔺 Alta</option>
         </select>
       </div>
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Estatus</label>
         <select
@@ -137,7 +152,7 @@ export default function EditTicketModal({
           ))}
         </select>
       </div>
-      {/* Solicitante */}
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Solicitante</label>
         <input
@@ -148,7 +163,7 @@ export default function EditTicketModal({
           required
         />
       </div>
-      {/* Ubicación */}
+
       <div className="mb-4">
         <label className="block text-sm font-medium">Ubicación</label>
         <select
@@ -186,6 +201,7 @@ export default function EditTicketModal({
           ))}
         </select>
       </div>
+
       <div className="flex justify-end gap-2 mt-6">
         <button
           type="button"
