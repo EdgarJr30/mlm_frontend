@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Input } from "../components/ui/input"
@@ -9,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import { Checkbox } from "../components/ui/checkbox"
-import { UserCircleIcon } from "@heroicons/react/24/solid"
 import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets"
 
 interface TicketFormData {
@@ -20,6 +17,9 @@ interface TicketFormData {
   incidentDate: string
   image: string // base64
   location: string
+  email?: string
+  phone?: string
+  createdAt?: string // ISO date string
 }
 
 const initialForm: TicketFormData = {
@@ -30,6 +30,21 @@ const initialForm: TicketFormData = {
   incidentDate: "",
   image: "",
   location: "",
+  email: "",
+  phone: "",
+  createdAt: new Date().toISOString(),
+  // createdAt is set to the current date by default
+  // but can be overridden if needed
+  // when the ticket is created
+  // in the handleSubmit function
+  // this will be set to the current date
+  // when the ticket is created
+  // so it can be used to sort tickets by creation date
+  // or for any other purpose
+  // if needed
+  // in the future
+  // if needed
+  // if needed
 }
 
 const locations = [
@@ -244,34 +259,75 @@ export default function TicketForm() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="requester">Solicitante *</Label>
+        <div className="w-full flex justify-center mt-10">
+          <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
+            {/* Título del paso */}
             <div className="flex items-center gap-2">
-              <UserCircleIcon className="h-6 w-6 text-gray-400" />
-              <Input
-                id="requester"
-                value={form.requester}
-                onChange={(e) => handleChange("requester", e.target.value)}
-                placeholder="Nombre del solicitante"
-                required
-              />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="size-6 text-blue-600">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
+              <h2 className="text-lg font-semibold text-gray-900">Información del Solicitante y Ubicación</h2>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="location">Ubicación *</Label>
-            <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona una ubicación" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((loc) => (
-                  <SelectItem key={loc} value={loc}>
-                    {loc}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+            {/* Contenido del paso */}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="requester">Nombre del Solicitante <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="requester"
+                    placeholder="Ej. Tu nombre completo"
+                    value={form.requester}
+                    onChange={(e) => handleChange("requester", e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email de Contacto <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tuemail@cilm.do"
+                    value={form.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Teléfono de Contacto  <span className="">(Opcional)</span></Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    pattern="^\+?[0-9\s\-\(\)]+$"
+                    title="Formato válido: +1 (809) 123-4567"
+                    placeholder="Ej. +1 (809) 123-4567"
+                    value={form.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    required={false}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Ubicación <span className="text-red-500">*</span></Label>
+                  <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una ubicación" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc} value={loc}>
+                          {loc}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

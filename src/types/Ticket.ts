@@ -14,4 +14,7 @@ export interface Ticket {
   responsible?: string;
   incidentDate: string;
   image?: string; // base64
+  email?: string;
+  phone?: string;
+  createdAt: string; // ISO date string
 }
