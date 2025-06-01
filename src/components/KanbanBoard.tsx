@@ -107,7 +107,7 @@ export default function KanbanBoard() {
                                         />
                                     )}
                                     <div className="flex items-start justify-between mb-1">
-                                        <h4 className="font-semibold text-sm text-gray-900">{ticket.title}</h4>
+                                        <h4 className="font-semibold text-sm text-gray-900">{ticket.title.length > 100 ? `${ticket.title.slice(0, 100)}...` : ticket.title}</h4>
                                         <button
                                             type="button"
                                             className="text-gray-900 hover:text-gray-600"
