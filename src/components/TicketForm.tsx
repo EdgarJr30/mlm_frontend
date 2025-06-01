@@ -143,7 +143,7 @@ export default function TicketForm() {
             <button
               type="button"
               onClick={() => navigate("/kanban")}
-              className="text-base font-medium text-black hover:underline flex items-center gap-2"
+              className="text-base font-medium text-black hover:underline flex items-center gap-2 cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -249,7 +249,7 @@ export default function TicketForm() {
                   checked={form.isUrgent}
                   onCheckedChange={(value) => handleChange("isUrgent", value === true)}
                 />
-                <Label htmlFor="isUrgent" className="flex items-center gap-2 text-sm">
+                <Label htmlFor="isUrgent" className="flex items-center gap-2 text-sm cursor-pointer">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                   </svg>
@@ -318,7 +318,7 @@ export default function TicketForm() {
                 <div className="space-y-2">
                   <Label htmlFor="location">Ubicación <span className="text-red-500">*</span></Label>
                   <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="cursor-pointer">
                       <SelectValue placeholder="Selecciona una ubicación" />
                     </SelectTrigger>
                     <SelectContent>
@@ -355,6 +355,7 @@ export default function TicketForm() {
                   <Input
                     id="incidentDate"
                     type="date"
+                    className="cursor-pointer"
                     value={form.incidentDate}
                     onChange={(e) => handleChange("incidentDate", e.target.value)}
                     required
@@ -365,6 +366,7 @@ export default function TicketForm() {
                   <Input
                     id="deadlineDate"
                     type="date"
+                    className="cursor-pointer"
                     value={form.deadlineDate}
                     onChange={(e) => handleChange("deadlineDate", e.target.value)}
                     required={false}
@@ -373,7 +375,7 @@ export default function TicketForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="image">Archivos djuntos <span className="">(Opcional)</span></Label>
-                <Input type="file" accept="image/*" onChange={handleFileChange} />
+                <Input type="file" accept="image/*" onChange={handleFileChange} className="cursor-pointer" />
                 {imagePreview && (
                   <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
                 )}
@@ -394,8 +396,6 @@ export default function TicketForm() {
         </div>
       )}
 
-
-      {/* Paso 4: Revisión y Envío */}
       {step === 4 && (
         <form onSubmit={handleSubmit}>
           <div className="w-full flex justify-center mt-10">
@@ -451,7 +451,7 @@ export default function TicketForm() {
                 <Button
                   variant="outline"
                   type="button"
-                  className="px-6 py-2"
+                  className="px-6 py-2 "
                   onClick={handlePrevious}
                 >
                   ← Anterior
