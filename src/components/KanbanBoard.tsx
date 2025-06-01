@@ -13,7 +13,7 @@ const STATUSES: Ticket["status"][] = [
 const STATUS_ICONS: Record<Ticket["status"], string> = {
     "Pendiente": "🔴",
     "En Ejecución": "🟡",
-    "Finalizadas": "⚫️",
+    "Finalizadas": "🟢",
 };
 
 export default function KanbanBoard() {
