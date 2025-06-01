@@ -15,11 +15,13 @@ interface TicketFormData {
   isUrgent: boolean
   requester: string
   incidentDate: string
+  deadlineDate?: string // ISO date string
   image: string // base64
   location: string
   email?: string
   phone?: string
   createdAt?: string // ISO date string
+  details?: string // additional details
 }
 
 const initialForm: TicketFormData = {
@@ -28,6 +30,7 @@ const initialForm: TicketFormData = {
   isUrgent: false,
   requester: "",
   incidentDate: "",
+  deadlineDate: "", // Optional, can be set later
   image: "",
   location: "",
   email: "",
@@ -41,10 +44,8 @@ const initialForm: TicketFormData = {
   // when the ticket is created
   // so it can be used to sort tickets by creation date
   // or for any other purpose
-  // if needed
-  // in the future
-  // if needed
-  // if needed
+  details: "",
+  // additional details can be added later
 }
 
 const locations = [
@@ -333,23 +334,60 @@ export default function TicketForm() {
       )}
 
       {step === 3 && (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="incidentDate">Fecha del incidente *</Label>
-            <Input
-              id="incidentDate"
-              type="date"
-              value={form.incidentDate}
-              onChange={(e) => handleChange("incidentDate", e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="image">Imagen (opcional)</Label>
-            <Input type="file" accept="image/*" onChange={handleFileChange} />
-            {imagePreview && (
-              <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
-            )}
+        <div className="w-full flex justify-center mt-10">
+          <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
+            {/* Título del paso */}
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="size-6 text-blue-600">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+              </svg>
+
+              <h2 className="text-lg font-semibold text-gray-900">Fechas y Asignación</h2>
+            </div>
+            {/* Contenido del paso */}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="incidentDate">Fecha del incidente <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="incidentDate"
+                    type="date"
+                    value={form.incidentDate}
+                    onChange={(e) => handleChange("incidentDate", e.target.value)}
+                    required
+                  />
+                </div>
+                {/* //TODO: Crear campo para fecha limite  */}
+                <div className="space-y-2">
+                  <Label htmlFor="deadlineDate">Fecha Límite Deseada <span className="">(Opcional)</span></Label>
+                  <Input
+                    id="deadlineDate"
+                    type="date"
+                    value={form.deadlineDate}
+                    onChange={(e) => handleChange("deadlineDate", e.target.value)}
+                    required={false}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image">Archivos djuntos <span className="">(Opcional)</span></Label>
+                <Input type="file" accept="image/*" onChange={handleFileChange} />
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="details">Notas Adicionales <span className="">(Opcional)</span></Label>
+                <Textarea
+                  id="details"
+                  placeholder="Cualquier informacion adicional que pueda ser util para resolver el problema…"
+                  rows={4}
+                  value={form.details}
+                  onChange={(e) => handleChange("details", e.target.value)}
+                  required={false}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
