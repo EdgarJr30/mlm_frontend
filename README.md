@@ -35,7 +35,7 @@ Solo deben mostrarse y usarse las siguientes columnas/estados:
 Pendiente
 En Ejecución
 Finalizadas
-7. Mejora Visual: Tags de Color e Iconos
+7. Mejora Visual: Tags de Color e Iconos ✅
 Cambios Opcionales/Recomendados:
 Agregar un tag de color para identificar rápidamente el Estado de la solicitud (ejemplo: Amarillo = Pendiente, Azul = En Ejecución, Verde = Finalizada).
 Agregar iconos representativos para marcar la prioridad o si la solicitud está marcada como “Urgente”.

@@ -1,282 +1,232 @@
-import React, { useState } from "react";
-import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets";
-import { useNavigate } from "react-router-dom";
-import { PhotoIcon, UserCircleIcon } from '@heroicons/react/24/solid';
+"use client"
+
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { Input } from "../components/ui/input"
+import { Textarea } from "../components/ui/textarea"
+import { Label } from "../components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import { Button } from "../components/ui/button"
+import { Progress } from "../components/ui/progress"
+import { Checkbox } from "../components/ui/checkbox"
+import { UserCircleIcon } from "@heroicons/react/24/solid"
+import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets"
+
+interface TicketFormData {
+  title: string
+  description: string
+  isUrgent: boolean
+  requester: string
+  incidentDate: string
+  image: string // base64
+  location: string
+}
+
+const initialForm: TicketFormData = {
+  title: "",
+  description: "",
+  isUrgent: false,
+  requester: "",
+  incidentDate: "",
+  image: "",
+  location: "",
+}
+
+const locations = [
+  "Operadora de Servicios Alimenticios",
+  "Adrian Tropical 27",
+  "Adrian Tropical Malecón",
+  "Adrian Tropical Lincoln",
+  "Adrian Tropical San Vicente",
+  "Atracciones el Lago",
+  "M7",
+  "E. Arturo Trading",
+  "Edificio Comunitario",
+]
 
 export default function TicketForm() {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    isUrgent: false,
-    requester: "",
-    incidentDate: "",
-    image: "", // base64
-    location: "",
-  });
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const navigate = useNavigate();
+  const [form, setForm] = useState(initialForm)
+  const [imagePreview, setImagePreview] = useState("")
+  const [step, setStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const navigate = useNavigate()
 
-  // Manejar cambios de texto
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    name: keyof TicketFormData,
+    value: string | boolean
   ) => {
-    const { name, type, value } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "checkbox"
-        ? (e.target as HTMLInputElement).checked
-        : value,
-    });
-  };
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
 
-  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-  //   setForm({ ...form, [e.target.name]: e.target.value });
-  // };
-
-  // Manejar carga de imagen
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) return alert("El archivo supera los 10MB")
 
-    // Límite de 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      alert("El archivo supera el tamaño máximo de 10MB.");
-      return;
-    }
-
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setForm((prev) => ({ ...prev, image: base64 }));
-      setImagePreview(base64);
-    };
-    reader.readAsDataURL(file);
-  };
+      const base64 = event.target?.result as string
+      setForm((prev) => ({ ...prev, image: base64 }))
+      setImagePreview(base64)
+    }
+    reader.readAsDataURL(file)
+  }
 
-  // Guardar el ticket
+  const validateStep = (): boolean => {
+    if (step === 1) {
+      return !!form.title.trim() && !!form.description.trim()
+    } else if (step === 2) {
+      return !!form.requester.trim() && !!form.location
+    } else if (step === 3) {
+      return !!form.incidentDate
+    }
+    return true
+  }
+
+  const handleNext = () => {
+    if (validateStep()) setStep(step + 1)
+    else alert("Completa los campos requeridos antes de continuar.")
+  }
+
+  const handlePrevious = () => {
+    setStep(step - 1)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const prevTickets = getTicketsFromStorage();
+    e.preventDefault()
+    if (!validateStep()) return alert("Completa los campos requeridos.")
+
+    setIsSubmitting(true)
     const newTicket = {
       ...form,
       id: Date.now(),
       status: "Pendiente",
       responsible: "Sin asignar",
-    };
-    const updatedTickets = [newTicket, ...prevTickets];
-    saveTicketsToStorage(updatedTickets);
-    // TODO : mostrar mensaje de éxito en vez de redirigir inmediatamente
-    alert("Ticket creado exitosamente");
-    // navigate("/kanban", { replace: true }); 
-    // TODO : limpiar el formulario después de crear el ticket
-    setForm({
-      title: "",
-      description: "",
-      isUrgent: false,
-      requester: "",
-      incidentDate: "",
-      image: "",
-      location: "",
-    });
-    setImagePreview("");
-  };
+    }
+    const tickets = [newTicket, ...getTicketsFromStorage()]
+    saveTicketsToStorage(tickets)
+
+    alert("Ticket creado exitosamente")
+    setForm(initialForm)
+    setImagePreview("")
+    setStep(1)
+    navigate("/kanban")
+  }
+
+  const progress = (step / 3) * 100
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="space-y-12">
-        {/* ...otros campos... */}
-        <div className="border-b border-gray-900/10 pb-12">
-          <h2 className="text-base/7 font-semibold text-gray-900">Crear Ticket de Mantenimiento</h2>
-          <p className="mt-1 text-sm/6 text-gray-600">
-            Ingresa la información para crear un nuevo ticket al equipo de mantenimiento.
-          </p>
-          <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-            {/* Título */}
-            <div className="sm:col-span-4">
-              <label htmlFor="title" className="block text-sm/6 font-medium text-gray-900">
-                Título del ticket
-              </label>
-              <div className="mt-2">
-                <input
-                  id="title"
-                  name="title"
-                  type="text"
-                  placeholder="Ej: Aire acondicionado no enfría"
-                  value={form.title}
-                  onChange={handleChange}
-                  required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
-                />
-              </div>
-            </div>
-            {/* Descripción */}
-            <div className="col-span-full">
-              <label htmlFor="description" className="block text-sm/6 font-medium text-gray-900">
-                Descripción
-              </label>
-              <div className="mt-2">
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  value={form.description}
-                  onChange={handleChange}
-                  required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
-                  placeholder="Describe el problema con detalle"
-                />
-              </div>
-              <p className="mt-3 text-sm/6 text-gray-600">Agrega detalles que ayuden a resolver el ticket.</p>
-            </div>
-            {/* Fecha del incidente */}
-            <div className="sm:col-span-2">
-              <label htmlFor="incidentDate" className="block text-sm font-medium text-gray-900">
-                Fecha del Incidente
-              </label>
-              <input
-                id="incidentDate"
-                name="incidentDate"
-                type="date"
-                value={form.incidentDate}
-                onChange={handleChange}
-                required
-                className="mt-2 block w-full rounded-md border-gray-300 text-base px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-            {/* Urgente */}
-            <div className="sm:col-span-2 flex items-center gap-2 mt-2">
-              <input
-                id="isUrgent"
-                name="isUrgent"
-                type="checkbox"
-                checked={form.isUrgent}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="isUrgent" className="text-sm text-gray-900">
-                Marcar como urgente
-              </label>
-            </div>
-            {/* Solicitante */}
-            <div className="sm:col-span-4">
-              <label htmlFor="requester" className="block text-sm/6 font-medium text-gray-900">
-                Solicitante
-              </label>
-              <div className="mt-2 flex items-center gap-x-2">
-                <UserCircleIcon className="size-8 text-gray-300" />
-                <input
-                  id="requester"
-                  name="requester"
-                  type="text"
-                  placeholder="Nombre del solicitante"
-                  value={form.requester}
-                  onChange={handleChange}
-                  required
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
-                />
-              </div>
-            </div>
-            {/* Ubicación */}
-            <div className="sm:col-span-4">
-              <label htmlFor="location" className="block text-sm/6 font-medium text-gray-900">
-                Ubicación
-              </label>
-              <div className="mt-2">
-                <select
-                  id="location"
-                  name="location"
-                  value={form.location}
-                  onChange={handleChange}
-                  required
-                  className="block w-full rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
-                >
-                  <option value="">Seleccione una ubicación</option>
-                  <option value="Operadora de Servicios Alimenticios">Operadora de Servicios Alimenticios</option>
-                  <option value="Adrian Tropical 27">Adrian Tropical 27</option>
-                  <option value="Adrian Tropical Malecón">Adrian Tropical Malecón</option>
-                  <option value="Adrian Tropical Lincoln">Adrian Tropical Lincoln</option>
-                  <option value="Adrian Tropical San Vicente">Adrian Tropical San Vicente</option>
-                  <option value="Atracciones el Lago">Atracciones el Lago</option>
-                  <option value="M7">M7</option>
-                  <option value="E. Arturo Trading">E. Arturo Trading</option>
-                  <option value="Edificio Comunitario">Edificio Comunitario</option>
-                </select>
-              </div>
-            </div>
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 py-6 space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold mb-2">Crear Ticket de Mantenimiento</h1>
+        <Progress value={progress} />
+        <p className="text-sm text-muted-foreground mt-1">Paso {step} de 3</p>
+      </div>
 
-            {/* Foto o archivo adjunto */}
-            <div className="col-span-full">
-              <label htmlFor="cover-photo" className="block text-sm/6 font-medium text-gray-900">
-                Foto (opcional)
-              </label>
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add("ring-2", "ring-blue-500");
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove("ring-2", "ring-blue-500");
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.remove("ring-2", "ring-blue-500");
-                  const file = e.dataTransfer.files?.[0];
-                  if (file && file.size <= 10 * 1024 * 1024) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const base64 = event.target?.result as string;
-                      setForm((prev) => ({ ...prev, image: base64 }));
-                      setImagePreview(base64);
-                    };
-                    reader.readAsDataURL(file);
-                  } else {
-                    alert("El archivo supera el tamaño máximo de 10MB.");
-                  }
-                }}
-              >
-                <label
-                  htmlFor="file-upload"
-                  className="mt-2 flex cursor-pointer justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-6 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="text-center">
-                    {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className="mx-auto mb-2 h-24 w-auto object-contain rounded" />
-                    ) : (
-                      <PhotoIcon className="mx-auto size-12 text-gray-300" aria-hidden="true" />
-                    )}
-                    <div className="mt-4 flex text-sm/6 text-gray-600 justify-center">
-                      <span className="font-semibold text-blue-600">Subir archivo</span>
-                      <span className="pl-1">o arrastra y suelta</span>
-                    </div>
-                    <p className="text-xs/5 text-gray-600">PNG, JPG, GIF hasta 10MB</p>
-                  </div>
-                  <input
-                    id="file-upload"
-                    name="file-upload"
-                    type="file"
-                    accept="image/png, image/jpeg, image/gif"
-                    className="sr-only"
-                    onChange={handleFileChange}
-                  />
-                </label>
-              </div>
-            </div>
+      {step === 1 && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="title">Título del ticket *</Label>
+            <Input
+              id="title"
+              value={form.title}
+              onChange={(e) => handleChange("title", e.target.value)}
+              placeholder="Ej: Aire acondicionado no enfría"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="description">Descripción *</Label>
+            <Textarea
+              id="description"
+              value={form.description}
+              onChange={(e) => handleChange("description", e.target.value)}
+              placeholder="Describe el problema con detalle"
+              rows={4}
+              required
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              checked={form.isUrgent}
+              onCheckedChange={(value) => handleChange("isUrgent", value === true)}
+              id="urgent"
+            />
+            <Label htmlFor="urgent">Marcar como urgente</Label>
           </div>
         </div>
-        {/* Botones */}
-        <div className="mt-6 flex items-center justify-end gap-x-6">
-          <button type="button" onClick={() => navigate("/kanban")} className="text-sm/6 font-semibold text-gray-900">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus:outline-blue-600"
-          >
-            Crear Ticket
-          </button>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="requester">Solicitante *</Label>
+            <div className="flex items-center gap-2">
+              <UserCircleIcon className="h-6 w-6 text-gray-400" />
+              <Input
+                id="requester"
+                value={form.requester}
+                onChange={(e) => handleChange("requester", e.target.value)}
+                placeholder="Nombre del solicitante"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="location">Ubicación *</Label>
+            <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una ubicación" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc} value={loc}>
+                    {loc}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+      )}
+
+      {step === 3 && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="incidentDate">Fecha del incidente *</Label>
+            <Input
+              id="incidentDate"
+              type="date"
+              value={form.incidentDate}
+              onChange={(e) => handleChange("incidentDate", e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="image">Imagen (opcional)</Label>
+            <Input type="file" accept="image/*" onChange={handleFileChange} />
+            {imagePreview && (
+              <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Botones de navegación */}
+      <div className="flex justify-between">
+        <Button type="button" variant="outline" onClick={handlePrevious} disabled={step === 1}>
+          Anterior
+        </Button>
+        {step < 3 ? (
+          <Button type="button" onClick={handleNext}>
+            Siguiente
+          </Button>
+        ) : (
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Enviando..." : "Crear Ticket"}
+          </Button>
+        )}
       </div>
     </form>
-  );
+  )
 }
