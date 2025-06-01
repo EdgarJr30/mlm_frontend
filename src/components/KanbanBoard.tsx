@@ -80,6 +80,12 @@ export default function KanbanBoard() {
                                     />
                                 )}
                                 <div className="font-medium">{ticket.title}</div>
+                                <div className="text-xs text-gray-600">
+                                    Urgente: {ticket.isUrgent ? "Sí" : "No"}
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                    Fecha Incidente: {ticket.incidentDate || "No especificada"}
+                                </div>
                                 <div className="text-xs text-gray-600">Prioridad: {ticket.priority}</div>
                                 <div className="text-xs text-gray-600">Solicitante: {ticket.requester}</div>
                                 <div className="text-xs text-gray-600">

@@ -1,8 +1,9 @@
 
 export interface Ticket {
-  id: number; // o string si prefieres
+  id: string;
   title: string;
   description: string;
+  isUrgent: boolean;
   priority: "baja" | "media" | "alta";
   status:
     | "Pendiente"
@@ -14,5 +15,6 @@ export interface Ticket {
     | "Cerrado";
   requester: string;
   responsible?: string;
+  incidentDate: string;
   image?: string; // base64
 }

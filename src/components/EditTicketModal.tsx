@@ -84,6 +84,29 @@ export default function EditTicketModal({
           required
         />
       </div>
+      {/* Fecha del Incidente */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium">Fecha del Incidente</label>
+        <input
+          type="date"
+          name="incidentDate"
+          value={edited.incidentDate}
+          onChange={handleChange}
+          className="mt-1 p-2 w-full border rounded"
+          required
+        />
+      </div>
+      {/* Urgente */}
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="isUrgent"
+          checked={edited.isUrgent}
+          onChange={handleChange}
+          className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+        />
+        <label className="text-sm font-medium">Urgente</label>
+      </div>
       <div className="mb-4">
         <label className="block text-sm font-medium">Prioridad</label>
         <select

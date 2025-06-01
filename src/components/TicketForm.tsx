@@ -7,17 +7,30 @@ export default function TicketForm() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-    priority: "media",
+    isUrgent: false,
     requester: "",
+    incidentDate: "",
     image: "", // base64
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const navigate = useNavigate();
 
   // Manejar cambios de texto
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, type, value } = e.target;
+    setForm({
+      ...form,
+      [name]: type === "checkbox"
+        ? (e.target as HTMLInputElement).checked
+        : value,
+    });
   };
+
+  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  //   setForm({ ...form, [e.target.name]: e.target.value });
+  // };
 
   // Manejar carga de imagen
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,24 +114,34 @@ export default function TicketForm() {
               </div>
               <p className="mt-3 text-sm/6 text-gray-600">Agrega detalles que ayuden a resolver el ticket.</p>
             </div>
-            {/* Prioridad */}
+            {/* Fecha del incidente */}
             <div className="sm:col-span-2">
-              <label htmlFor="priority" className="block text-sm/6 font-medium text-gray-900">
-                Prioridad
+              <label htmlFor="incidentDate" className="block text-sm font-medium text-gray-900">
+                Fecha del Incidente
               </label>
-              <div className="mt-2">
-                <select
-                  id="priority"
-                  name="priority"
-                  value={form.priority}
-                  onChange={handleChange}
-                  className="block w-full rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"
-                >
-                  <option value="baja">Baja</option>
-                  <option value="media">Media</option>
-                  <option value="alta">Alta</option>
-                </select>
-              </div>
+              <input
+                id="incidentDate"
+                name="incidentDate"
+                type="date"
+                value={form.incidentDate}
+                onChange={handleChange}
+                required
+                className="mt-2 block w-full rounded-md border-gray-300 text-base px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
+            {/* Urgente */}
+            <div className="sm:col-span-2 flex items-center gap-2 mt-2">
+              <input
+                id="isUrgent"
+                name="isUrgent"
+                type="checkbox"
+                checked={form.isUrgent}
+                onChange={handleChange}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+              />
+              <label htmlFor="isUrgent" className="text-sm text-gray-900">
+                Marcar como urgente
+              </label>
             </div>
             {/* Solicitante */}
             <div className="sm:col-span-4">
