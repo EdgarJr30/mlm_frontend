@@ -34,6 +34,17 @@ export default function EditTicketModal({
   onSave,
 }: EditTicketModalProps) {
   const [edited, setEdited] = useState<Ticket>(ticket);
+  const [showFullImage, setShowFullImage] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowFullImage(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     setEdited(ticket);
@@ -64,12 +75,50 @@ export default function EditTicketModal({
   return (
     <form onSubmit={handleSave} className="space-y-6">
       {ticket.image && (
-        <img
-          src={ticket.image}
-          alt="Adjunto"
-          className="w-full h-36 object-contain rounded mb-6"
-          style={{ background: "#f1f5f9" }}
-        />
+        <>
+          <img
+            src={ticket.image}
+            alt="Adjunto"
+            className="w-full h-36 object-contain rounded mb-6 cursor-pointer"
+            style={{ background: "#f1f5f9" }}
+            onClick={() => setShowFullImage(true)}
+          />
+
+          {showFullImage && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10"
+              onClick={() => setShowFullImage(false)} // Cierra al hacer clic afuera
+            >
+              <div
+                className="relative"
+                onClick={(e) => e.stopPropagation()} // Evita que el clic dentro del modal lo cierre
+              >
+                <button
+                  onClick={() => setShowFullImage(false)}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center hover:bg-white transition-all duration-200"
+                  aria-label="Cerrar"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                <img
+                  src={ticket.image}
+                  alt="Vista ampliada"
+                  className="max-w-full max-h-[80vh] rounded shadow-lg"
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
