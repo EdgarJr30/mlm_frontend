@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+// import { useNavigate } from "react-router-dom"
 import { LOCATIONS } from "../components/constants/locations";
 import { Input } from "../components/ui/input"
 import { Textarea } from "../components/ui/textarea"
@@ -70,7 +70,7 @@ export default function TicketForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
 
 
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
 
   const handleChange = (
     name: keyof TicketFormData,
@@ -173,7 +173,7 @@ export default function TicketForm() {
       <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-4">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
-            <button
+            {/* <button
               type="button"
               onClick={() => navigate("/kanban")}
               className="text-base font-medium text-black hover:underline flex items-center gap-2 cursor-pointer"
@@ -182,15 +182,14 @@ export default function TicketForm() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
               Volver
-            </button>
+            </button> */}
+            <div className="mt-4">
+              <h1 className="text-2xl font-extrabold text-gray-900">Crear Ticket de Mantenimiento</h1>
+              <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p>
+            </div>
             <span className="text-sm font-semibold text-black border border-gray-300 rounded-full px-4 py-1">
               Paso {step} de 4
             </span>
-          </div>
-
-          <div className="mt-4">
-            <h1 className="text-2xl font-extrabold text-gray-900">Crear Ticket de Mantenimiento</h1>
-            <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p>
           </div>
 
           {/* Barra de progreso con estilo personalizado */}
