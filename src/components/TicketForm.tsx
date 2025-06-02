@@ -64,7 +64,9 @@ export default function TicketForm() {
   const [imagePreview, setImagePreview] = useState("")
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData, string>>>({})
+  // const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
+
 
   const navigate = useNavigate()
 
@@ -78,8 +80,17 @@ export default function TicketForm() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) return alert("El archivo supera los 10MB")
 
+    // Validación de tamaño
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, image: "La imagen no puede superar los 10MB." }))
+      setForm((prev) => ({ ...prev, image: "" }))
+      setImagePreview("")
+      return
+    }
+
+    // Si todo está bien, limpia errores y carga imagen
+    setErrors((prev) => ({ ...prev, image: undefined }))
     const reader = new FileReader()
     reader.onload = (event) => {
       const base64 = event.target?.result as string
@@ -390,6 +401,7 @@ export default function TicketForm() {
               <div className="space-y-2">
                 <Label htmlFor="image">Archivos djuntos <span className="">(Opcional)</span></Label>
                 <Input type="file" accept="image/*" onChange={handleFileChange} className="cursor-pointer" />
+                {errors.image && <p className="text-sm text-red-500">{errors.image}</p>}
                 {imagePreview && (
                   <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
                 )}

@@ -14,7 +14,6 @@ Agregar un campo que permita adjuntar imágenes o fotos al momento de crear la s
 Cambio:
 Agregar un campo de “Fecha del Incidente” (selector de fecha) para indicar cuándo ocurrió el evento reportado.
 4. Campo de Ubicación ✅
-<!-- TODO: CREAR UN ENUM O JSON O UTILS PARA CREAR LAS UBICACIONES Y QUE SE ALIMENTE DONDE SEA QUE SE UTILICE DESDE UN SOLO LOGAR -->
 Cambio:
 Agregar un campo de selección (dropdown/lista desplegable) llamado “Ubicación” con las siguientes opciones:
 Operadora de Servicios Alimenticios
