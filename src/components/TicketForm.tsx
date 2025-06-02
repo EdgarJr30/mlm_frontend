@@ -19,6 +19,7 @@ import {
   validatePhone,
   validateDetails,
 } from "../utils/validators"
+import { showSuccessAlert } from "../utils/showAlert"
 
 interface TicketFormData {
   title: string
@@ -157,11 +158,11 @@ export default function TicketForm() {
     const tickets = [newTicket, ...getTicketsFromStorage()]
     saveTicketsToStorage(tickets)
 
-    alert("Ticket creado exitosamente")
-    setForm(initialForm)
-    setImagePreview("")
-    setStep(1)
-    navigate("/kanban")
+    showSuccessAlert("Ticket creado", "Tu ticket ha sido registrado exitosamente.").then(() => {
+      setForm(initialForm)
+      setImagePreview("")
+      setStep(1)
+    })
   }
 
   const progress = (step / 4) * 100
