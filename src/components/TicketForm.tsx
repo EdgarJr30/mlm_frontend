@@ -20,7 +20,7 @@ import {
   validateDetails,
 } from "../utils/validators"
 import { showSuccessAlert } from "../utils/showAlert"
-import { getNowInTimezone } from "../utils/formatDate";
+import { getNowInTimezoneForStorage } from "../utils/formatDate";
 
 interface TicketFormData {
   title: string
@@ -48,7 +48,7 @@ const initialForm: TicketFormData = {
   location: "",
   email: "",
   phone: "",
-  createdAt: getNowInTimezone("America/Santo_Domingo"),
+  createdAt: getNowInTimezoneForStorage("America/Santo_Domingo"),
   // createdAt is set to the current date by default
   // but can be overridden if needed
   // when the ticket is created

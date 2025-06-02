@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../types/Ticket";
 import { LOCATIONS } from "../components/constants/locations";
-import { formatDate, formatDateTimeLocal } from "../utils/formatDate";
+import { formatDate, formatDateInTimezone } from "../utils/formatDate";
 
 
 const STATUSES: Ticket["status"][] = [
@@ -235,7 +235,7 @@ export default function EditTicketModal({
             <input
               type="datetime-local"
               name="createdAt"
-              value={formatDateTimeLocal(edited.createdAt)}
+              value={formatDateInTimezone(edited.createdAt, "America/Santo_Domingo", "input")}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />

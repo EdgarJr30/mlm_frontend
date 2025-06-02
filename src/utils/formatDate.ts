@@ -1,4 +1,4 @@
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, format } from "date-fns-tz";
 
 export const formatDate = (dateStr?: string): string => {
   if (!dateStr) return "";
@@ -12,11 +12,28 @@ export const formatDateTimeLocal = (dateStr?: string): string => {
 };
 
 /**
- * Retorna la fecha actual en zona horaria específica como ISO string completo (con zona local aplicada)
- * @param tz Ej: "America/La_Paz", "America/Santo_Domingo"
+ * Devuelve la fecha y hora actual en una zona horaria específica
+ * en formato 'yyyy-MM-ddTHH:mm:ss' (sin Z), ideal para almacenar.
  */
-export const getNowInTimezone = (tz: string = "America/Santo_Domingo"): string => {
-  const now = new Date();
-  const zoned = toZonedTime(now, tz);
-  return zoned.toISOString();
+export const getNowInTimezoneForStorage = (tz: string = "America/Santo_Domingo"): string => {
+  const now = new Date()
+  const zoned = toZonedTime(now, tz)
+  return format(zoned, "yyyy-MM-dd'T'HH:mm:ss", { timeZone: tz }) // SIN "Z"
+}
+
+export const formatDateInTimezone = (
+  dateStr: string,
+  tz: string = "America/Santo_Domingo",
+  mode: "input" | "display" = "display"
+): string => {
+  if (!dateStr) return "";
+
+  const date = new Date(dateStr);
+  const zoned = toZonedTime(date, tz);
+
+  if (mode === "input") {
+    return format(zoned, "yyyy-MM-dd'T'HH:mm", { timeZone: tz });
+  }
+
+  return format(zoned, "dd/MM/yyyy, hh:mm a", { timeZone: tz });
 };
