@@ -31,12 +31,12 @@ export default function Modal({ isOpen, onClose, children, isLocked = false }: M
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-center items-start bg-black/30 backdrop-blur-[3px] overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] overflow-y-auto"
       onClick={handleClickOutside}
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-lg shadow-xl p-6 relative w-full max-w-4xl mt-12 mx-4"
+        className="bg-white rounded-lg shadow-xl p-6 relative w-full max-w-5xl mx-4 max-h-[90vh] overflow-y-auto"
       >
         {/* Botón de cierre profesional */}
         <button
