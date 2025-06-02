@@ -159,10 +159,9 @@ export default function TicketForm() {
     saveTicketsToStorage(tickets)
 
     showSuccessAlert("Ticket creado", "Tu ticket ha sido registrado exitosamente.").then(() => {
-      setForm(initialForm)
-      setImagePreview("")
-      setStep(1)
+      window.location.reload()
     })
+
   }
 
   const progress = (step / 4) * 100
