@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../types/Ticket";
 import { LOCATIONS } from "../components/constants/locations";
+import { formatDate } from "../utils/formatDate";
+
 
 const STATUSES: Ticket["status"][] = [
   "Pendiente",
@@ -222,7 +224,7 @@ export default function EditTicketModal({
             <input
               type="date"
               name="incidentDate"
-              value={edited.incidentDate}
+              value={formatDate(edited.incidentDate)}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
@@ -233,7 +235,7 @@ export default function EditTicketModal({
             <input
               type="date"
               name="createdAt"
-              value={edited.createdAt}
+              value={formatDate(edited.createdAt)}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
@@ -244,7 +246,7 @@ export default function EditTicketModal({
             <input
               type="deadlineDate"
               name="deadlineDate"
-              value={edited.deadlineDate || ""}
+              value={formatDate(edited.deadlineDate || "")}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
