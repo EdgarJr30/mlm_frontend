@@ -47,7 +47,7 @@ export default function EditTicketModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [setShowFullImage]);
 
   useEffect(() => {
     setEdited(ticket);
