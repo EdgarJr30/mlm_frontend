@@ -9,17 +9,25 @@ import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import { Checkbox } from "../components/ui/checkbox"
 import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets"
+import {
+  validateTitle,
+  validateDescription,
+  validateRequester,
+  validateLocation,
+  validateIncidentDate,
+  validateEmail
+} from "../utils/validators"
 
 interface TicketFormData {
   title: string
   description: string
-  isUrgent: boolean
+  isUrgent?: boolean
   requester: string
   incidentDate: string
   deadlineDate?: string // ISO date string
-  image: string // base64
+  image?: string // base64
   location: string
-  email?: string
+  email: string
   phone?: string
   createdAt?: string // ISO date string
   details?: string // additional details
@@ -54,6 +62,8 @@ export default function TicketForm() {
   const [imagePreview, setImagePreview] = useState("")
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData, string>>>({})
+
   const navigate = useNavigate()
 
   const handleChange = (
@@ -78,23 +88,38 @@ export default function TicketForm() {
   }
 
   const validateStep = (): boolean => {
+    const newErrors: Partial<Record<keyof TicketFormData, string>> = {}
+
     if (step === 1) {
-      return !!form.title.trim() && !!form.description.trim()
-    } else if (step === 2) {
-      return !!form.requester.trim() && !!form.location
-    } else if (step === 3) {
-      return !!form.incidentDate
-    } else if (step === 4) {
-      return true // No validación en revisión
+      newErrors.title = validateTitle(form.title) ?? undefined
+      newErrors.description = validateDescription(form.description) ?? undefined
     }
-    return true
+
+    if (step === 2) {
+      newErrors.requester = validateRequester(form.requester) ?? undefined
+      newErrors.email = validateEmail(form.email) ?? undefined
+      newErrors.location = validateLocation(form.location) ?? undefined
+    }
+
+    if (step === 3) {
+      newErrors.incidentDate = validateIncidentDate(form.incidentDate) ?? undefined
+    }
+
+    // Filtra nulls
+    const filtered = Object.fromEntries(
+      Object.entries(newErrors).filter(([, v]) => v != null)
+    ) as typeof newErrors
+
+    setErrors(filtered)
+    return Object.keys(filtered).length === 0
   }
+
 
   const handleNext = () => {
-    if (validateStep()) setStep(step + 1)
-    else alert("Completa los campos requeridos antes de continuar.")
+    if (validateStep()) {
+      setStep(step + 1)
+    }
   }
-
   const handlePrevious = () => {
     setStep(step - 1)
   }
@@ -102,7 +127,7 @@ export default function TicketForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (step !== 4) return
-    if (!validateStep()) return alert("Completa los campos requeridos.")
+    if (!validateStep()) return
 
     setIsSubmitting(true)
     const newTicket = {
@@ -177,60 +202,49 @@ export default function TicketForm() {
             {/* Contenido del paso */}
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title">Título del Ticket <span className="text-red-500">*</span></Label>
+                <Label htmlFor="title">
+                  Título del Ticket <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="title"
+                  maxLength={30}
                   placeholder="Ej. Aire acondicionado no enfría en oficina principal"
                   value={form.title}
                   onChange={(e) => handleChange("title", e.target.value)}
-                  required
                 />
+                <div className="flex justify-between items-center">
+                  {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                  <p
+                    className={`text-xs ml-auto ${form.title.length >= 15 ? "text-red-500" : "text-gray-400"
+                      }`}
+                  >
+                    {form.title.length}/30 caracteres
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Descripción Detallada <span className="text-red-500">*</span></Label>
+                <Label htmlFor="description">
+                  Descripción Detallada <span className="text-red-500">*</span>
+                </Label>
                 <Textarea
                   id="description"
-                  placeholder="Describe el problema con el mayor detalle posible. Incluye síntomas, cuándo comenzó el problema, y cualquier información relevante…"
+                  maxLength={60}
+                  placeholder="Describe el problema con el mayor detalle posible..."
                   rows={4}
                   value={form.description}
                   onChange={(e) => handleChange("description", e.target.value)}
-                  required
                 />
+                <div className="flex justify-between items-center">
+                  {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+                  <p
+                    className={`text-xs ml-auto ${form.description.length >= 30 ? "text-red-500" : "text-gray-400"
+                      }`}
+                  >
+                    {form.description.length}/60 caracteres
+                  </p>
+                </div>
               </div>
-
-              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
-              {/* <div className="space-y-2">
-                  <Label htmlFor="location">Categoría <span className="text-red-500">*</span></Label>
-                  <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc} value={loc}>
-                          {loc}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
-
-              {/* <div className="space-y-2">
-                  <Label htmlFor="priority">Prioridad</Label>
-                  <Select value="media" onValueChange={() => { }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Media" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baja">🟢 Baja</SelectItem>
-                      <SelectItem value="media">🟡 Media</SelectItem>
-                      <SelectItem value="alta">🟠 Alta</SelectItem>
-                      <SelectItem value="urgente">🔴 Urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div> */}
-              {/* </div> */}
 
               <div className="flex items-center gap-2 pt-1">
                 <Checkbox
@@ -242,7 +256,6 @@ export default function TicketForm() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                   </svg>
-
                   Marcar como urgente (requiere atención inmediata)
                 </Label>
               </div>
@@ -274,6 +287,7 @@ export default function TicketForm() {
                     onChange={(e) => handleChange("requester", e.target.value)}
                     required
                   />
+                  {errors.requester && <p className="text-sm text-red-500">{errors.requester}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -286,6 +300,7 @@ export default function TicketForm() {
                     onChange={(e) => handleChange("email", e.target.value)}
                     required
                   />
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
               </div>
 
@@ -318,6 +333,7 @@ export default function TicketForm() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.location && <p className="text-sm text-red-500">{errors.location}</p>}
                 </div>
               </div>
             </div>
@@ -349,6 +365,7 @@ export default function TicketForm() {
                     onChange={(e) => handleChange("incidentDate", e.target.value)}
                     required
                   />
+                  {errors.incidentDate && <p className="text-sm text-red-500">{errors.incidentDate}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="deadlineDate">Fecha Límite Deseada <span className="">(Opcional)</span></Label>
