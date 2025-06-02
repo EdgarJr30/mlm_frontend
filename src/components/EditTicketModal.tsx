@@ -136,6 +136,16 @@ export default function EditTicketModal({
           </div>
 
           <div>
+            <label className="block text-sm font-medium">ID</label>
+            <input
+              name="id"
+              value={edited.id}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium">Título</label>
             <input
               name="title"
@@ -146,15 +156,26 @@ export default function EditTicketModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Fecha del Incidente</label>
+            <label className="block text-sm font-medium">Email</label>
             <input
-              type="date"
-              name="incidentDate"
-              value={edited.incidentDate}
+              name="email"
+              value={edited.email || ""}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium">Tel</label>
+            <input
+              name="telephone"
+              value={edited.phone || ""}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+
 
           <div className="flex items-center gap-2">
             <input
@@ -167,46 +188,6 @@ export default function EditTicketModal({
             <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium">Estatus</label>
-            <select
-              name="status"
-              value={edited.status}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded cursor-pointer"
-            >
-              {STATUSES.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Columna derecha */}
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium">Descripción</label>
-            <textarea
-              name="description"
-              value={edited.description}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Prioridad</label>
-            <select
-              name="priority"
-              value={edited.priority}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded cursor-pointer"
-            >
-              <option value="baja">🔻 Baja</option>
-              <option value="media">🔸 Media</option>
-              <option value="alta">🔺 Alta</option>
-            </select>
-          </div>
 
           <div>
             <label className="block text-sm font-medium">Solicitante</label>
@@ -232,6 +213,67 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Columna derecha */}
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium">Fecha del Incidente</label>
+            <input
+              type="date"
+              name="incidentDate"
+              value={edited.incidentDate}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Fecha de Creacion</label>
+            <input
+              type="date"
+              name="createdAt"
+              value={edited.createdAt}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Fecha del Deadline</label>
+            <input
+              type="deadlineDate"
+              name="deadlineDate"
+              value={edited.deadlineDate || ""}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Descripción</label>
+            <textarea
+              name="description"
+              value={edited.description}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Prioridad</label>
+            <select
+              name="priority"
+              value={edited.priority}
+              onChange={handleChange}
+              className="mt-1 p-2 w-full border rounded cursor-pointer"
+            >
+              <option value="baja">🔻 Baja</option>
+              <option value="media">🔸 Media</option>
+              <option value="alta">🔺 Alta</option>
+            </select>
+          </div>
+
+
 
           <div>
             <label className="block text-sm font-medium">Responsable</label>
@@ -243,6 +285,19 @@ export default function EditTicketModal({
             >
               {RESPONSABLES.map((r) => (
                 <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Estatus</label>
+            <select
+              name="status"
+              value={edited.status}
+              onChange={handleChange}
+              className="mt-1 p-2 w-full border rounded cursor-pointer"
+            >
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>{status}</option>
               ))}
             </select>
           </div>
