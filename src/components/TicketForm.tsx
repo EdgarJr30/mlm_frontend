@@ -15,7 +15,9 @@ import {
   validateRequester,
   validateLocation,
   validateIncidentDate,
-  validateEmail
+  validateEmail,
+  validatePhone,
+  validateDetails,
 } from "../utils/validators"
 
 interface TicketFormData {
@@ -99,10 +101,12 @@ export default function TicketForm() {
       newErrors.requester = validateRequester(form.requester) ?? undefined
       newErrors.email = validateEmail(form.email) ?? undefined
       newErrors.location = validateLocation(form.location) ?? undefined
+      newErrors.phone = validatePhone(form.phone) ?? undefined
     }
 
     if (step === 3) {
       newErrors.incidentDate = validateIncidentDate(form.incidentDate) ?? undefined
+      newErrors.details = validateDetails(form.details) ?? undefined
     }
 
     // Filtra nulls
@@ -282,6 +286,7 @@ export default function TicketForm() {
                   <Label htmlFor="requester">Nombre del Solicitante <span className="text-red-500">*</span></Label>
                   <Input
                     id="requester"
+                    maxLength={30}
                     placeholder="Ej. Tu nombre completo"
                     value={form.requester}
                     onChange={(e) => handleChange("requester", e.target.value)}
@@ -295,6 +300,7 @@ export default function TicketForm() {
                   <Input
                     id="email"
                     type="email"
+                    maxLength={30}
                     placeholder="tuemail@cilm.do"
                     value={form.email}
                     onChange={(e) => handleChange("email", e.target.value)}
@@ -310,6 +316,7 @@ export default function TicketForm() {
                   <Input
                     id="phone"
                     type="tel"
+                    maxLength={20}
                     pattern="^\+?[0-9\s\-\(\)]+$"
                     title="Formato válido: +1 (809) 123-4567"
                     placeholder="Ej. +1 (809) 123-4567"
@@ -317,6 +324,7 @@ export default function TicketForm() {
                     onChange={(e) => handleChange("phone", e.target.value)}
                     required={false}
                   />
+                  {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -390,12 +398,14 @@ export default function TicketForm() {
                 <Label htmlFor="details">Notas Adicionales <span className="">(Opcional)</span></Label>
                 <Textarea
                   id="details"
+                  maxLength={120}
                   placeholder="Cualquier informacion adicional que pueda ser util para resolver el problema…"
                   rows={4}
                   value={form.details}
                   onChange={(e) => handleChange("details", e.target.value)}
                   required={false}
                 />
+                {errors.details && <p className="text-sm text-red-500">{errors.details}</p>}
               </div>
             </div>
           </div>
