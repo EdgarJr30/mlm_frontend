@@ -27,6 +27,7 @@ interface TicketFormData {
   description: string
   isUrgent?: boolean
   requester: string
+  priority?: "baja" | "media" | "alta"
   incidentDate: string
   deadlineDate?: string // ISO date string
   image?: string // base64
@@ -42,6 +43,7 @@ const initialForm: TicketFormData = {
   description: "",
   isUrgent: false,
   requester: "",
+  priority: "baja", // Default priority
   incidentDate: "",
   deadlineDate: "", // Optional, can be set later
   image: "",
