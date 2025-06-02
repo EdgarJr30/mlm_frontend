@@ -26,15 +26,18 @@ interface EditTicketModalProps {
   onClose: () => void;
   ticket: Ticket;
   onSave: (ticket: Ticket) => void;
+  showFullImage: boolean;
+  setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export default function EditTicketModal({
   onClose,
   ticket,
   onSave,
+  showFullImage,
+  setShowFullImage,
 }: EditTicketModalProps) {
   const [edited, setEdited] = useState<Ticket>(ticket);
-  const [showFullImage, setShowFullImage] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

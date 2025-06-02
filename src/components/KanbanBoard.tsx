@@ -32,6 +32,8 @@ export default function KanbanBoard() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
+    const [showFullImage, setShowFullImage] = useState(false);
+
 
     useEffect(() => {
         setTickets(getTicketsFromStorage());
@@ -173,13 +175,15 @@ export default function KanbanBoard() {
                     </div>
                 </div>
             ))}
-            <Modal isOpen={modalOpen} onClose={closeModal}>
+            <Modal isOpen={modalOpen} onClose={closeModal} isLocked={showFullImage}>
                 {selectedTicket && (
                     <EditTicketModal
                         isOpen={modalOpen}
                         onClose={closeModal}
                         ticket={selectedTicket}
                         onSave={handleSave}
+                        showFullImage={showFullImage}
+                        setShowFullImage={setShowFullImage}
                     />
                 )}
             </Modal>
