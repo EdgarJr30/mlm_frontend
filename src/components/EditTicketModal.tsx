@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../types/Ticket";
+import { LOCATIONS } from "../components/constants/locations";
 
 const STATUSES: Ticket["status"][] = [
   "Pendiente",
@@ -178,8 +179,10 @@ export default function EditTicketModal({
               className="mt-1 p-2 w-full border rounded"
               required
             >
-              {/* Opciones de ubicación */}
-              {/* ... */}
+              <option value="" disabled>Selecciona una ubicación</option>
+              {LOCATIONS.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
             </select>
           </div>
 

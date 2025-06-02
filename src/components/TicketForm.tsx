@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { LOCATIONS } from "../components/constants/locations";
 import { Input } from "../components/ui/input"
 import { Textarea } from "../components/ui/textarea"
 import { Label } from "../components/ui/label"
@@ -47,18 +48,6 @@ const initialForm: TicketFormData = {
   details: "",
   // additional details can be added later
 }
-
-const locations = [
-  "Operadora de Servicios Alimenticios",
-  "Adrian Tropical 27",
-  "Adrian Tropical Malecón",
-  "Adrian Tropical Lincoln",
-  "Adrian Tropical San Vicente",
-  "Atracciones el Lago",
-  "M7",
-  "E. Arturo Trading",
-  "Edificio Comunitario",
-]
 
 export default function TicketForm() {
   const [form, setForm] = useState(initialForm)
@@ -322,7 +311,7 @@ export default function TicketForm() {
                       <SelectValue placeholder="Selecciona una ubicación" />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations.map((loc) => (
+                      {LOCATIONS.map((loc) => (
                         <SelectItem key={loc} value={loc}>
                           {loc}
                         </SelectItem>
