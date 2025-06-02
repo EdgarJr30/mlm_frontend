@@ -118,6 +118,9 @@ export default function TicketForm() {
     if (step === 3) {
       newErrors.incidentDate = validateIncidentDate(form.incidentDate) ?? undefined
       newErrors.details = validateDetails(form.details) ?? undefined
+      if (!form.image) {
+        newErrors.image = "La imagen es obligatoria."
+      }
     }
 
     // Filtra nulls
@@ -399,7 +402,7 @@ export default function TicketForm() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="image">Archivos djuntos <span className="">(Opcional)</span></Label>
+                <Label htmlFor="image">Imagen del incidente <span className="text-red-500">*</span></Label>
                 <Input type="file" accept="image/*" onChange={handleFileChange} className="cursor-pointer" />
                 {errors.image && <p className="text-sm text-red-500">{errors.image}</p>}
                 {imagePreview && (
