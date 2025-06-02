@@ -95,7 +95,7 @@ export default function EditTicketModal({
               >
                 <button
                   onClick={() => setShowFullImage(false)}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center hover:bg-white transition-all duration-200"
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
                   aria-label="Cerrar"
                 >
                   <svg
