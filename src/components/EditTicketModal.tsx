@@ -140,9 +140,8 @@ export default function EditTicketModal({
             <input
               name="title"
               value={edited.title}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
-              required
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
 
@@ -152,9 +151,8 @@ export default function EditTicketModal({
               type="date"
               name="incidentDate"
               value={edited.incidentDate}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
-              required
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
 
@@ -164,7 +162,7 @@ export default function EditTicketModal({
               name="isUrgent"
               checked={edited.isUrgent || false}
               onChange={handleChange}
-              className="h-4 w-4 text-red-600 border-gray-300 rounded"
+              className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
             />
             <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
           </div>
@@ -175,7 +173,7 @@ export default function EditTicketModal({
               name="status"
               value={edited.status}
               onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
+              className="mt-1 p-2 w-full border rounded cursor-pointer"
             >
               {STATUSES.map((status) => (
                 <option key={status} value={status}>{status}</option>
@@ -191,9 +189,8 @@ export default function EditTicketModal({
             <textarea
               name="description"
               value={edited.description}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
-              required
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
 
@@ -203,7 +200,7 @@ export default function EditTicketModal({
               name="priority"
               value={edited.priority}
               onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
+              className="mt-1 p-2 w-full border rounded cursor-pointer"
             >
               <option value="baja">🔻 Baja</option>
               <option value="media">🔸 Media</option>
@@ -216,9 +213,8 @@ export default function EditTicketModal({
             <input
               name="requester"
               value={edited.requester || ""}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
-              required
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
 
@@ -227,9 +223,8 @@ export default function EditTicketModal({
             <select
               name="location"
               value={edited.location || ""}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
-              required
+              disabled
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             >
               <option value="" disabled>Selecciona una ubicación</option>
               {LOCATIONS.map((loc) => (
@@ -244,7 +239,7 @@ export default function EditTicketModal({
               name="responsible"
               value={edited.responsible || ""}
               onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded"
+              className="mt-1 p-2 w-full border rounded cursor-pointer"
             >
               {RESPONSABLES.map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -258,13 +253,13 @@ export default function EditTicketModal({
         <button
           type="button"
           onClick={onClose}
-          className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+          className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 cursor-pointer"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
         >
           Guardar Cambios
         </button>
