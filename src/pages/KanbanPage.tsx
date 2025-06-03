@@ -1,5 +1,5 @@
 import Sidebar from "../components/Sidebar";
-import KanbanBoard from "../components/KanbanBoard";
+import KanbanBoard from "../components/kanban/KanbanBoard";
 
 export default function KanbanPage() {
   return (

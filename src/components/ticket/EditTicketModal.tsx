@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import type { Ticket } from "../types/Ticket";
-import { LOCATIONS } from "../components/constants/locations";
-import { formatDate } from "../utils/formatDate";
+import type { Ticket } from "../../types/Ticket";
+import { LOCATIONS } from "../constants/locations";
+import { formatDate } from "../../utils/formatDate";
 
 
 const STATUSES: Ticket["status"][] = [

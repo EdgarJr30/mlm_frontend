@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import Modal from "./Modal";
-import EditTicketModal from "./EditTicketModal";
-import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets";
-import type { Ticket } from "../types/Ticket";
+import Modal from "../Modal";
+import EditTicketModal from "../ticket/EditTicketModal";
+import { getTicketsFromStorage, saveTicketsToStorage } from "../../utils/localStorageTickets";
+import type { Ticket } from "../../types/Ticket";
 
 const STATUSES: Ticket["status"][] = [
     "Pendiente",

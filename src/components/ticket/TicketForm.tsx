@@ -1,14 +1,14 @@
 import { useState } from "react"
 // import { useNavigate } from "react-router-dom"
-import { LOCATIONS } from "../components/constants/locations";
-import { Input } from "../components/ui/input"
-import { Textarea } from "../components/ui/textarea"
-import { Label } from "../components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { Button } from "../components/ui/button"
-import { Progress } from "../components/ui/progress"
-import { Checkbox } from "../components/ui/checkbox"
-import { getTicketsFromStorage, saveTicketsToStorage } from "../utils/localStorageTickets"
+import { LOCATIONS } from "../constants/locations";
+import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
+import { Label } from "../ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { Button } from "../ui/button"
+import { Progress } from "../ui/progress"
+import { Checkbox } from "../ui/checkbox"
+import { getTicketsFromStorage, saveTicketsToStorage } from "../../utils/localStorageTickets"
 import {
   validateTitle,
   validateDescription,
@@ -18,9 +18,9 @@ import {
   validateEmail,
   validatePhone,
   validateDetails,
-} from "../utils/validators"
-import { showSuccessAlert } from "../utils/showAlert"
-import { getNowInTimezoneForStorage } from "../utils/formatDate";
+} from "../../utils/validators"
+import { showSuccessAlert } from "../../utils/showAlert"
+import { getNowInTimezoneForStorage } from "../../utils/formatDate";
 
 interface TicketFormData {
   title: string
