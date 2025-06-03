@@ -391,17 +391,6 @@ export default function TicketForm() {
                   />
                   {errors.incidentDate && <p className="text-sm text-red-500">{errors.incidentDate}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="deadlineDate">Fecha Límite Deseada <span className="">(Opcional)</span></Label>
-                  <Input
-                    id="deadlineDate"
-                    type="date"
-                    className="cursor-pointer"
-                    value={form.deadlineDate}
-                    onChange={(e) => handleChange("deadlineDate", e.target.value)}
-                    required={false}
-                  />
-                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="image">Imagen del incidente <span className="text-red-500">*</span></Label>
@@ -410,19 +399,6 @@ export default function TicketForm() {
                 {imagePreview && (
                   <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="details">Notas Adicionales <span className="">(Opcional)</span></Label>
-                <Textarea
-                  id="details"
-                  maxLength={120}
-                  placeholder="Cualquier informacion adicional que pueda ser util para resolver el problema…"
-                  rows={4}
-                  value={form.details}
-                  onChange={(e) => handleChange("details", e.target.value)}
-                  required={false}
-                />
-                {errors.details && <p className="text-sm text-red-500">{errors.details}</p>}
               </div>
             </div>
           </div>
@@ -446,7 +422,6 @@ export default function TicketForm() {
                   <p><strong>Título:</strong> {form.title}</p>
                   <p><strong>Descripción:</strong> {form.description}</p>
                   <p><strong>Urgente:</strong> {form.isUrgent ? "Sí 🚨" : "No"}</p>
-                  <p><strong>Notas adicionales:</strong> {form.details || "N/A"}</p>
                 </div>
 
                 <div>
@@ -464,7 +439,6 @@ export default function TicketForm() {
                 <div>
                   <h3 className="text-md font-semibold text-gray-700 mb-1">📆 Fechas</h3>
                   <p><strong>Fecha del incidente:</strong> {form.incidentDate}</p>
-                  <p><strong>Fecha límite deseada:</strong> {form.deadlineDate || "N/A"}</p>
                 </div>
 
                 {imagePreview && (
