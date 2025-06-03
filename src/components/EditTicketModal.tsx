@@ -10,11 +10,11 @@ const STATUSES: Ticket["status"][] = [
   "Finalizadas",
 ];
 
-const STATUS_STYLES: Record<Ticket["status"], string> = {
-  "Pendiente": "bg-yellow-100 text-yellow-800",
-  "En Ejecución": "bg-blue-100 text-blue-800",
-  "Finalizadas": "bg-green-100 text-green-800",
-};
+// const STATUS_STYLES: Record<Ticket["status"], string> = {
+//   "Pendiente": "bg-yellow-100 text-yellow-800",
+//   "En Ejecución": "bg-blue-100 text-blue-800",
+//   "Finalizadas": "bg-green-100 text-green-800",
+// };
 
 const RESPONSABLES = [
   "Sin asignar",
@@ -262,7 +262,7 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
-          
+
           {ticket.image && (
             <>
               <img
