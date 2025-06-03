@@ -79,7 +79,7 @@ export default function EditTicketModal({
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
-      {ticket.image && (
+      {/* {ticket.image && (
         <>
           <img
             src={ticket.image}
@@ -123,35 +123,27 @@ export default function EditTicketModal({
             </div>
           )}
         </>
-      )}
+      )} */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Columna izquierda */}
-        <div className="flex flex-row items-center gap-6 flex-wrap">
-          {/* Estado */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Estado</label>
-            <span className={`px-2 py-1 text-xs rounded self-start font-semibold ${STATUS_STYLES[edited.status]}`}>
-              {edited.status}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="isUrgent"
-              checked={edited.isUrgent || false}
-              onChange={handleChange}
-              className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
-            />
-            <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
-          </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Columna 1: ID, Título, Descripción */}
+        <div className="flex flex-col gap-4">
           <div>
             <label className="block text-sm font-medium">ID</label>
             <input
               name="id"
               value={edited.id}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Fecha del Incidente</label>
+            <input
+              type="date"
+              name="incidentDate"
+              value={formatDate(edited.incidentDate)}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
@@ -177,6 +169,10 @@ export default function EditTicketModal({
             />
           </div>
 
+        </div>
+
+        {/* Columna 2: Solicitante, Email, Tel */}
+        <div className="flex flex-col gap-4">
           <div>
             <label className="block text-sm font-medium">Solicitante</label>
             <input
@@ -206,9 +202,24 @@ export default function EditTicketModal({
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium">Ubicación</label>
+            <select
+              name="location"
+              value={edited.location || ""}
+              disabled
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            >
+              <option value="" disabled>Selecciona una ubicación</option>
+              {LOCATIONS.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Columna derecha */}
+        {/* Columna 3: Responsable, Prioridad, Estatus */}
         <div className="flex flex-col gap-4">
           <div>
             <label className="block text-sm font-medium">Responsable</label>
@@ -222,17 +233,6 @@ export default function EditTicketModal({
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Fecha del Incidente</label>
-            <input
-              type="date"
-              name="incidentDate"
-              value={formatDate(edited.incidentDate)}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
           </div>
 
           <div>
@@ -262,45 +262,145 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
+          
+          {ticket.image && (
+            <>
+              <img
+                src={ticket.image}
+                alt="Adjunto"
+                className="w-full h-36 object-contain rounded cursor-pointer border bg-gray-100"
+                onClick={() => setShowFullImage(true)}
+              />
 
-          <div>
-            <label className="block text-sm font-medium">Ubicación</label>
-            <select
-              name="location"
-              value={edited.location || ""}
-              disabled
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            >
-              <option value="" disabled>Selecciona una ubicación</option>
-              {LOCATIONS.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
+              {showFullImage && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10"
+                  onClick={() => setShowFullImage(false)} // Cierra al hacer clic afuera
+                >
+                  <div
+                    className="relative"
+                    onClick={(e) => e.stopPropagation()} // Evita que el clic dentro del modal lo cierre
+                  >
+                    <button
+                      onClick={() => setShowFullImage(false)}
+                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
+                      aria-label="Cerrar"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <img
+                      src={ticket.image}
+                      alt="Vista ampliada"
+                      className="max-w-full max-h-[80vh] rounded shadow-lg"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Estado</label>
+              <span className={`px-2 py-1 text-xs rounded font-semibold ${STATUS_STYLES[edited.status]}`}>
+                {edited.status}
+              </span>
+            </div> */}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isUrgent"
+                checked={edited.isUrgent || false}
+                onChange={handleChange}
+                className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
+              />
+              <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
+            </div>
           </div>
-
-          {/* <div>
-            <label className="block text-sm font-medium">Fecha de Creacion</label>
-            <input
-              type="datetime-local"
-              name="createdAt"
-              value={formatDateInTimezone(edited.createdAt, "America/Santo_Domingo", "input")}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div> */}
-
-          {/* <div>
-            <label className="block text-sm font-medium">Fecha del Deadline</label>
-            <input
-              type="deadlineDate"
-              name="deadlineDate"
-              value={formatDate(edited.deadlineDate || "")}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div> */}
         </div>
+
+        {/* Columna 4: Fecha del incidente, ubicación, imagen, urgencia y estado */}
+        {/* <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
+
+            {ticket.image && (
+              <>
+                <img
+                  src={ticket.image}
+                  alt="Adjunto"
+                  className="w-full h-36 object-contain rounded cursor-pointer border bg-gray-100"
+                  onClick={() => setShowFullImage(true)}
+                />
+
+                {showFullImage && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10"
+                    onClick={() => setShowFullImage(false)} // Cierra al hacer clic afuera
+                  >
+                    <div
+                      className="relative"
+                      onClick={(e) => e.stopPropagation()} // Evita que el clic dentro del modal lo cierre
+                    >
+                      <button
+                        onClick={() => setShowFullImage(false)}
+                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
+                        aria-label="Cerrar"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <img
+                        src={ticket.image}
+                        alt="Vista ampliada"
+                        className="max-w-full max-h-[80vh] rounded shadow-lg"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Estado</label>
+                <span className={`px-2 py-1 text-xs rounded font-semibold ${STATUS_STYLES[edited.status]}`}>
+                  {edited.status}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="isUrgent"
+                  checked={edited.isUrgent || false}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
+                />
+                <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
+              </div>
+            </div>
+          </div>
+        </div> */}
       </div>
+
 
       <div className="flex justify-end gap-2 mt-6">
         <button
