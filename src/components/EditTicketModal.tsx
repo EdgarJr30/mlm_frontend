@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../types/Ticket";
 import { LOCATIONS } from "../components/constants/locations";
-import { formatDate, formatDateInTimezone } from "../utils/formatDate";
+import { formatDate } from "../utils/formatDate";
 
 
 const STATUSES: Ticket["status"][] = [
@@ -114,7 +114,6 @@ export default function EditTicketModal({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-
                 <img
                   src={ticket.image}
                   alt="Vista ampliada"
@@ -128,13 +127,24 @@ export default function EditTicketModal({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Columna izquierda */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-row items-center gap-6 flex-wrap">
           {/* Estado */}
-          <div>
-            <label className="text-sm font-medium">Estado actual</label>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">Estado</label>
             <span className={`px-2 py-1 text-xs rounded self-start font-semibold ${STATUS_STYLES[edited.status]}`}>
               {edited.status}
             </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="isUrgent"
+              checked={edited.isUrgent || false}
+              onChange={handleChange}
+              className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
+            />
+            <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
           </div>
 
           <div>
@@ -152,6 +162,26 @@ export default function EditTicketModal({
             <input
               name="title"
               value={edited.title}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Descripción</label>
+            <textarea
+              name="description"
+              value={edited.description}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Solicitante</label>
+            <input
+              name="requester"
+              value={edited.requester || ""}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
@@ -176,86 +206,30 @@ export default function EditTicketModal({
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
           </div>
-
-
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="isUrgent"
-              checked={edited.isUrgent || false}
-              onChange={handleChange}
-              className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
-            />
-            <label className="text-sm font-medium text-red-700">🚨 Urgente</label>
-          </div>
-
-
-          <div>
-            <label className="block text-sm font-medium">Solicitante</label>
-            <input
-              name="requester"
-              value={edited.requester || ""}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Ubicación</label>
-            <select
-              name="location"
-              value={edited.location || ""}
-              disabled
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            >
-              <option value="" disabled>Selecciona una ubicación</option>
-              {LOCATIONS.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* Columna derecha */}
         <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium">Responsable</label>
+            <select
+              name="responsible"
+              value={edited.responsible || ""}
+              onChange={handleChange}
+              className="mt-1 p-2 w-full border rounded cursor-pointer"
+            >
+              {RESPONSABLES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium">Fecha del Incidente</label>
             <input
               type="date"
               name="incidentDate"
               value={formatDate(edited.incidentDate)}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Fecha de Creacion</label>
-            <input
-              type="datetime-local"
-              name="createdAt"
-              value={formatDateInTimezone(edited.createdAt, "America/Santo_Domingo", "input")}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Fecha del Deadline</label>
-            <input
-              type="deadlineDate"
-              name="deadlineDate"
-              value={formatDate(edited.deadlineDate || "")}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Descripción</label>
-            <textarea
-              name="description"
-              value={edited.description}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
@@ -275,21 +249,6 @@ export default function EditTicketModal({
             </select>
           </div>
 
-
-
-          <div>
-            <label className="block text-sm font-medium">Responsable</label>
-            <select
-              name="responsible"
-              value={edited.responsible || ""}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded cursor-pointer"
-            >
-              {RESPONSABLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="block text-sm font-medium">Estatus</label>
             <select
@@ -303,6 +262,43 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium">Ubicación</label>
+            <select
+              name="location"
+              value={edited.location || ""}
+              disabled
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            >
+              <option value="" disabled>Selecciona una ubicación</option>
+              {LOCATIONS.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* <div>
+            <label className="block text-sm font-medium">Fecha de Creacion</label>
+            <input
+              type="datetime-local"
+              name="createdAt"
+              value={formatDateInTimezone(edited.createdAt, "America/Santo_Domingo", "input")}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div> */}
+
+          {/* <div>
+            <label className="block text-sm font-medium">Fecha del Deadline</label>
+            <input
+              type="deadlineDate"
+              name="deadlineDate"
+              value={formatDate(edited.deadlineDate || "")}
+              readOnly
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+            />
+          </div> */}
         </div>
       </div>
 
