@@ -392,6 +392,7 @@ export default function TicketForm() {
                     value={form.incidentDate}
                     onChange={(e) => handleChange("incidentDate", e.target.value)}
                     max={getTodayISODate()}
+                    onFocus={(e) => e.target.showPicker && e.target.showPicker()}
                     required
                   />
                   {errors.incidentDate && <p className="text-sm text-red-500">{errors.incidentDate}</p>}
