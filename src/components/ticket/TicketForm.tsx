@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, /*useEffect*/ } from "react"
 // import { useNavigate } from "react-router-dom"
 import { LOCATIONS } from "../constants/locations";
 import { Input } from "../ui/input"
@@ -66,15 +66,15 @@ export default function TicketForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
 
 
-useEffect(() => {
-  const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-    e.preventDefault()
-    e.returnValue = "Prueba" // Esto muestra el diálogo de confirmación
-  }
+// useEffect(() => {
+//   const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+//     e.preventDefault()
+//     e.returnValue = "Prueba" // Esto muestra el diálogo de confirmación
+//   }
 
-  window.addEventListener("beforeunload", handleBeforeUnload)
-  return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-}, [])
+//   window.addEventListener("beforeunload", handleBeforeUnload)
+//   return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+// }, [])
 
 
   // const navigate = useNavigate()
