@@ -455,14 +455,16 @@ export default function TicketForm() {
           <div className="w-full flex justify-center">
             <div className="w-full max-w-5xl px-18 pb-8">
               <div className="flex justify-between pt-6 border-t border-gray-100">
-                <Button
-                  variant="outline"
-                  type="button"
-                  className="px-6 py-2 "
-                  onClick={handlePrevious}
-                >
-                  ← Anterior
-                </Button>
+                {step > 1 && (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="px-6 py-2"
+                    onClick={handlePrevious}
+                  >
+                    ← Anterior
+                  </Button>
+                )}<div className="px-6 py-2" />
                 <Button type="submit" className="px-6 py-2" disabled={isSubmitting}>
                   {isSubmitting ? "Enviando..." : "Crear Ticket"}
                 </Button>
@@ -477,15 +479,18 @@ export default function TicketForm() {
         <div className="w-full flex justify-center">
           <div className="w-full max-w-5xl px-18 pb-8">
             <div className="flex justify-between pt-6 border-t border-gray-100">
-              <Button
-                variant="outline"
-                type="button"
-                className="px-6 py-2"
-                onClick={handlePrevious}
-                disabled={step === 1}
-              >
-                ← Anterior
-              </Button>
+              {step > 1 && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="px-6 py-2"
+                  onClick={handlePrevious}
+                  disabled={step === 1}
+                >
+                  ← Anterior
+                </Button>
+              )}<div className="px-6 py-2" />
+              {/* Solo muestra el botón "Anterior" si no es el primer paso */}
               <Button
                 type="button"
                 className="px-6 py-2"
