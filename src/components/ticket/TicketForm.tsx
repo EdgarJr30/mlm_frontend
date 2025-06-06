@@ -17,6 +17,11 @@ import {
   validateIncidentDate,
   validateEmail,
   validatePhone,
+  MAX_TITLE_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_REQUESTER_LENGTH,
+  MAX_EMAIL_LENGTH,
+  MAX_PHONE_LENGTH
 } from "../../utils/validators"
 import { showSuccessAlert } from "../../utils/showAlert"
 import { getNowInTimezoneForStorage } from "../../utils/formatDate";
@@ -226,7 +231,7 @@ useEffect(() => {
                 </Label>
                 <Input
                   id="title"
-                  maxLength={30}
+                  maxLength={MAX_TITLE_LENGTH}
                   placeholder="Ej. Aire acondicionado no enfría en oficina principal"
                   value={form.title}
                   onChange={(e) => handleChange("title", e.target.value)}
@@ -234,10 +239,10 @@ useEffect(() => {
                 <div className="flex justify-between items-center">
                   {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
                   <p
-                    className={`text-xs ml-auto ${form.title.length >= 15 ? "text-red-500" : "text-gray-400"
+                    className={`text-xs ml-auto ${form.title.length >= Math.floor(MAX_TITLE_LENGTH * 0.85) ? "text-red-500" : "text-gray-400"
                       }`}
                   >
-                    {form.title.length}/30 caracteres
+                    {form.title.length}/{MAX_TITLE_LENGTH} caracteres
                   </p>
                 </div>
               </div>
@@ -248,7 +253,7 @@ useEffect(() => {
                 </Label>
                 <Textarea
                   id="description"
-                  maxLength={60}
+                  maxLength={MAX_DESCRIPTION_LENGTH}
                   placeholder="Describe el problema con el mayor detalle posible..."
                   rows={4}
                   value={form.description}
@@ -257,10 +262,10 @@ useEffect(() => {
                 <div className="flex justify-between items-center">
                   {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
                   <p
-                    className={`text-xs ml-auto ${form.description.length >= 30 ? "text-red-500" : "text-gray-400"
+                    className={`text-xs ml-auto ${form.description.length >= Math.floor(MAX_DESCRIPTION_LENGTH * 0.85) ? "text-red-500" : "text-gray-400"
                       }`}
                   >
-                    {form.description.length}/60 caracteres
+                    {form.description.length}/{MAX_DESCRIPTION_LENGTH} caracteres
                   </p>
                 </div>
               </div>
@@ -301,7 +306,7 @@ useEffect(() => {
                   <Label htmlFor="requester">Nombre del Solicitante <span className="text-red-500">*</span></Label>
                   <Input
                     id="requester"
-                    maxLength={30}
+                    maxLength={MAX_REQUESTER_LENGTH}
                     placeholder="Ej. Tu nombre completo"
                     value={form.requester}
                     onChange={(e) => handleChange("requester", e.target.value)}
@@ -315,7 +320,7 @@ useEffect(() => {
                   <Input
                     id="email"
                     type="email"
-                    maxLength={30}
+                    maxLength={MAX_EMAIL_LENGTH}
                     placeholder="tuemail@cilm.do"
                     value={form.email}
                     onChange={(e) => handleChange("email", e.target.value)}
@@ -331,7 +336,7 @@ useEffect(() => {
                   <Input
                     id="phone"
                     type="tel"
-                    maxLength={20}
+                    maxLength={MAX_PHONE_LENGTH}
                     pattern="^\+?[0-9\s\-\(\)]+$"
                     title="Formato válido: +1 (809) 123-4567"
                     placeholder="Ej. +1 (809) 123-4567"
