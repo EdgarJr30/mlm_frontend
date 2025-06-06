@@ -11,7 +11,7 @@ export default function KanbanPage() {
           <h2 className="text-3xl font-bold">Tablero</h2>
         </header>
         {/* El área del tablero se expande, el scroll es SOLO horizontal */}
-        <section className="flex-1 overflow-x-auto overflow-y-hidden px-4 md:px-6 lg:px-8 pt-4">
+        <section className="flex-1 overflow-x-auto overflow-y-hidden px-4 md:px-6 lg:px-8 pt-4 pb-8">
           <KanbanBoard />
         </section>
       </main>
