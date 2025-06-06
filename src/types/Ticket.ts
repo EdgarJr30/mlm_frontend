@@ -18,5 +18,4 @@ export interface Ticket {
   email?: string;
   phone?: string;
   createdAt: string; // ISO date string
-  details?: string; // additional details
 }

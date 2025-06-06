@@ -1,10 +1,9 @@
 
-export const MAX_TITLE_LENGTH = 30
-export const MAX_DESCRIPTION_LENGTH = 60
+export const MAX_TITLE_LENGTH = 60
+export const MAX_DESCRIPTION_LENGTH = 120
 export const MAX_REQUESTER_LENGTH = 30
 export const MAX_EMAIL_LENGTH = 30
 export const MAX_PHONE_LENGTH = 20
-export const MAX_DETAILS_LENGTH = 120
 
 export function validateTitle(title: string): string | null {
   if (!title.trim()) return "El título es obligatorio."
@@ -47,11 +46,5 @@ export function validateEmail(email: string): string | null {
 export function validatePhone(phone?: string): string | null {
   if (!phone) return null
   if (phone.length > MAX_PHONE_LENGTH) return `El teléfono no puede superar los ${MAX_PHONE_LENGTH} caracteres.`
-  return null
-}
-
-export function validateDetails(details?: string): string | null {
-  if (!details) return null
-  if (details.length > MAX_DETAILS_LENGTH) return `Las notas no pueden superar los ${MAX_DETAILS_LENGTH} caracteres.`
   return null
 }

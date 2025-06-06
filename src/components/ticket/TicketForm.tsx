@@ -17,7 +17,6 @@ import {
   validateIncidentDate,
   validateEmail,
   validatePhone,
-  validateDetails,
 } from "../../utils/validators"
 import { showSuccessAlert } from "../../utils/showAlert"
 import { getNowInTimezoneForStorage } from "../../utils/formatDate";
@@ -35,7 +34,6 @@ interface TicketFormData {
   email: string
   phone?: string
   createdAt?: string // ISO date string
-  details?: string // additional details
 }
 
 const initialForm: TicketFormData = {
@@ -52,15 +50,6 @@ const initialForm: TicketFormData = {
   phone: "",
   createdAt: getNowInTimezoneForStorage("America/Santo_Domingo"),
   // createdAt is set to the current date by default
-  // but can be overridden if needed
-  // when the ticket is created
-  // in the handleSubmit function
-  // this will be set to the current date
-  // when the ticket is created
-  // so it can be used to sort tickets by creation date
-  // or for any other purpose
-  details: "",
-  // additional details can be added later
 }
 
 export default function TicketForm() {
@@ -132,7 +121,6 @@ useEffect(() => {
 
     if (step === 3) {
       newErrors.incidentDate = validateIncidentDate(form.incidentDate) ?? undefined
-      newErrors.details = validateDetails(form.details) ?? undefined
       if (!form.image) {
         newErrors.image = "La imagen es obligatoria."
       }
