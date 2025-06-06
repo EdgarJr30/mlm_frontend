@@ -187,7 +187,7 @@ export default function TicketForm() {
             </button> */}
             <div className="mt-4">
               <h1 className="text-2xl font-extrabold text-gray-900">Crear Ticket de Mantenimiento</h1>
-              <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p>
+              {/* <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p> */}
             </div>
             <span className="w-[100px] min-w-[100px] max-w-[100px] text-center py-1 px-2 rounded-full border text-sm font-medium bg-white shadow whitespace-nowrap">
               Paso {step} de 4
