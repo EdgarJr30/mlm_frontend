@@ -24,7 +24,7 @@ import {
   MAX_PHONE_LENGTH
 } from "../../utils/validators"
 import { showSuccessAlert } from "../../utils/showAlert"
-import { getNowInTimezoneForStorage } from "../../utils/formatDate";
+import { getNowInTimezoneForStorage, getTodayISODate } from "../../utils/formatDate";
 
 interface TicketFormData {
   title: string
@@ -391,6 +391,7 @@ export default function TicketForm() {
                     className="cursor-pointer"
                     value={form.incidentDate}
                     onChange={(e) => handleChange("incidentDate", e.target.value)}
+                    max={getTodayISODate()}
                     required
                   />
                   {errors.incidentDate && <p className="text-sm text-red-500">{errors.incidentDate}</p>}
