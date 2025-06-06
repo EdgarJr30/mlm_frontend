@@ -82,11 +82,11 @@ export default function KanbanBoard() {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full w-full p-4 overflow-x-hidden">
+        <div className="flex gap-6 h-full w-full p-4 overflow-x-auto">
             {STATUSES.map((status) => (
                 <div
                     key={status}
-                    className="bg-white rounded-lg shadow-lg p-4 w-80 min-w-[20rem] flex flex-col h-full"
+                    className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col"
                 >
                     <h3 className="font-semibold text-lg mb-4 flex items-center">
                         {/* <span className="mr-2 text-xl">{STATUS_ICONS[status]}</span> */}
