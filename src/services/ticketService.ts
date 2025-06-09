@@ -19,7 +19,7 @@ export async function getAllTickets(): Promise<Ticket[]> {
   const { data, error } = await supabase
     .from("tickets")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("id", { ascending: false });
 
   if (error) {
     console.error("Error al obtener tickets:", error.message);
