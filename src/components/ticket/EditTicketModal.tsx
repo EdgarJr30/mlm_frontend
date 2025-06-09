@@ -142,8 +142,8 @@ export default function EditTicketModal({
             <label className="block text-sm font-medium">Fecha del Incidente</label>
             <input
               type="date"
-              name="incidentDate"
-              value={formatDate(edited.incidentDate)}
+              name="incident_date"
+              value={formatDate(edited.incident_date)}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
@@ -319,8 +319,8 @@ export default function EditTicketModal({
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
-                name="isUrgent"
-                checked={edited.isUrgent || false}
+                name="is_urgent"
+                checked={edited.is_urgent || false}
                 onChange={handleChange}
                 className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
               />
@@ -389,8 +389,8 @@ export default function EditTicketModal({
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  name="isUrgent"
-                  checked={edited.isUrgent || false}
+                  name="is_urgent"
+                  checked={edited.is_urgent || false}
                   onChange={handleChange}
                   className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
                 />

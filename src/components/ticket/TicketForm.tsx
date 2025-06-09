@@ -1,6 +1,5 @@
-import { useState, /*useEffect*/ } from "react"
-// import { useNavigate } from "react-router-dom"
-import { LOCATIONS } from "../constants/locations";
+import { useState } from "react"
+import { Locations } from "../../types/Ticket";
 import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"
 import { Label } from "../ui/label"
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "../ui/button"
 import { Progress } from "../ui/progress"
 import { Checkbox } from "../ui/checkbox"
-import { getTicketsFromStorage, saveTicketsToStorage } from "../../utils/localStorageTickets"
+import { createTicket } from "../../services/ticketService";
 import {
   validateTitle,
   validateDescription,
@@ -29,31 +28,31 @@ import { getNowInTimezoneForStorage, getTodayISODate } from "../../utils/formatD
 interface TicketFormData {
   title: string
   description: string
-  isUrgent?: boolean
+  is_urgent: boolean
   requester: string
-  priority?: "baja" | "media" | "alta"
-  incidentDate: string
-  deadlineDate?: string // ISO date string
+  priority: "baja" | "media" | "alta"
+  incident_date: string
+  deadline_date?: string // ISO date string
   image?: string // base64
   location: string
   email: string
   phone?: string
-  createdAt?: string // ISO date string
+  created_at: string // ISO date string
 }
 
 const initialForm: TicketFormData = {
   title: "",
   description: "",
-  isUrgent: false,
+  is_urgent: false,
   requester: "",
   priority: "baja", // Default priority
-  incidentDate: "",
-  deadlineDate: "", // Optional, can be set later
+  incident_date: "",
+  deadline_date: undefined, // Optional, can be set later
   image: "",
   location: "",
   email: "",
   phone: "",
-  createdAt: getNowInTimezoneForStorage("America/Santo_Domingo"),
+  created_at: getNowInTimezoneForStorage("America/Santo_Domingo"),
   // createdAt is set to the current date by default
 }
 
@@ -62,22 +61,7 @@ export default function TicketForm() {
   const [imagePreview, setImagePreview] = useState("")
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData, string>>>({})
   const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
-
-
-// useEffect(() => {
-//   const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-//     e.preventDefault()
-//     e.returnValue = "Prueba" // Esto muestra el diálogo de confirmación
-//   }
-
-//   window.addEventListener("beforeunload", handleBeforeUnload)
-//   return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-// }, [])
-
-
-  // const navigate = useNavigate()
 
   const handleChange = (
     name: keyof TicketFormData,
@@ -125,7 +109,7 @@ export default function TicketForm() {
     }
 
     if (step === 3) {
-      newErrors.incidentDate = validateIncidentDate(form.incidentDate) ?? undefined
+      newErrors.incident_date = validateIncidentDate(form.incident_date) ?? undefined
       if (!form.image) {
         newErrors.image = "La imagen es obligatoria."
       }
@@ -140,7 +124,6 @@ export default function TicketForm() {
     return Object.keys(filtered).length === 0
   }
 
-
   const handleNext = () => {
     if (validateStep()) {
       setStep(step + 1)
@@ -150,25 +133,40 @@ export default function TicketForm() {
     setStep(step - 1)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (step !== 4) return
     if (!validateStep()) return
 
     setIsSubmitting(true)
-    const newTicket = {
-      ...form,
-      id: Date.now(),
-      status: "Pendiente",
-      responsible: "Sin asignar",
+    try {
+      const ticketToSave = {
+        ...form,
+        priority: form.priority ?? "baja",
+        status: "Pendiente",
+        responsible: "Sin asignar",
+      };
+
+      console.log("📤 Enviando ticket a Supabase:", ticketToSave);
+
+      await createTicket(ticketToSave);
+
+      await showSuccessAlert(
+        "Ticket creado",
+        "Tu ticket ha sido registrado exitosamente."
+      );
+
+      window.location.reload();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error al crear el ticket:", error.message);
+      } else {
+        console.error("Error al crear el ticket:", error);
+      }
+      alert("Hubo un error al crear el ticket. Inténtalo de nuevo.");
+    } finally {
+      setIsSubmitting(false);
     }
-    const tickets = [newTicket, ...getTicketsFromStorage()]
-    saveTicketsToStorage(tickets)
-
-    showSuccessAlert("Ticket creado", "Tu ticket ha sido registrado exitosamente.").then(() => {
-      window.location.reload()
-    })
-
   }
 
   const progress = (step / 4) * 100
@@ -179,16 +177,6 @@ export default function TicketForm() {
       <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-4">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
-            {/* <button
-              type="button"
-              onClick={() => navigate("/kanban")}
-              className="text-base font-medium text-black hover:underline flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-              Volver
-            </button> */}
             <div className="mt-4">
               <h1 className="text-2xl font-extrabold text-gray-900">Crear Ticket de Mantenimiento</h1>
               {/* <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p> */}
@@ -272,11 +260,11 @@ export default function TicketForm() {
 
               <div className="flex items-center gap-2 pt-1">
                 <Checkbox
-                  id="isUrgent"
-                  checked={form.isUrgent}
-                  onCheckedChange={(value) => handleChange("isUrgent", value === true)}
+                  id="is_urgent"
+                  checked={form.is_urgent}
+                  onCheckedChange={(value) => handleChange("is_urgent", value === true)}
                 />
-                <Label htmlFor="isUrgent" className="flex items-center gap-2 text-sm cursor-pointer">
+                <Label htmlFor="is_urgent" className="flex items-center gap-2 text-sm cursor-pointer">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                   </svg>
@@ -354,7 +342,7 @@ export default function TicketForm() {
                       <SelectValue placeholder="Selecciona una ubicación" />
                     </SelectTrigger>
                     <SelectContent>
-                      {LOCATIONS.map((loc) => (
+                      {Locations.map((loc) => (
                         <SelectItem key={loc} value={loc}>
                           {loc}
                         </SelectItem>
@@ -389,13 +377,13 @@ export default function TicketForm() {
                     id="incidentDate"
                     type="date"
                     className="cursor-pointer"
-                    value={form.incidentDate}
-                    onChange={(e) => handleChange("incidentDate", e.target.value)}
+                    value={form.incident_date}
+                    onChange={(e) => handleChange("incident_date", e.target.value)}
                     max={getTodayISODate()}
                     onFocus={(e) => e.target.showPicker && e.target.showPicker()}
                     required
                   />
-                  {errors.incidentDate && <p className="text-sm text-red-500">{errors.incidentDate}</p>}
+                  {errors.incident_date && <p className="text-sm text-red-500">{errors.incident_date}</p>}
                 </div>
               </div>
               <div className="space-y-2">
@@ -427,7 +415,7 @@ export default function TicketForm() {
                   <h3 className="text-md font-semibold text-gray-700 mb-1">📝 Información del Ticket</h3>
                   <p><strong>Título:</strong> {form.title}</p>
                   <p><strong>Descripción:</strong> {form.description}</p>
-                  <p><strong>Urgente:</strong> {form.isUrgent ? "Sí 🚨" : "No"}</p>
+                  <p><strong>Urgente:</strong> {form.is_urgent ? "Sí 🚨" : "No"}</p>
                 </div>
 
                 <div>
@@ -444,7 +432,7 @@ export default function TicketForm() {
 
                 <div>
                   <h3 className="text-md font-semibold text-gray-700 mb-1">📆 Fechas</h3>
-                  <p><strong>Fecha del incidente:</strong> {form.incidentDate}</p>
+                  <p><strong>Fecha del incidente:</strong> {form.incident_date}</p>
                 </div>
 
                 {imagePreview && (

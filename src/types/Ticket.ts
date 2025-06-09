@@ -1,9 +1,8 @@
-
 export interface Ticket {
   id: string;
   title: string;
   description: string;
-  isUrgent: boolean;
+  is_urgent: boolean;
   priority: "baja" | "media" | "alta";
   status:
     | "Pendiente"
@@ -12,10 +11,22 @@ export interface Ticket {
   requester: string;
   location: string;
   responsible?: string;
-  incidentDate: string;
-  deadlineDate?: string; // ISO date string
+  incident_date: string;
+  deadline_date?: string; // ISO date string
   image?: string; // base64
   email?: string;
   phone?: string;
-  createdAt: string; // ISO date string
+  created_at: string; // ISO date string
 }
+
+export const Locations = [
+  "Operadora de Servicios Alimenticios",
+  "Adrian Tropical 27",
+  "Adrian Tropical Malecón",
+  "Adrian Tropical Lincoln",
+  "Adrian Tropical San Vicente",
+  "Atracciones el Lago",
+  "M7",
+  "E. Arturo Trading",
+  "Edificio Comunitario",
+];

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Modal from "../Modal";
 import EditTicketModal from "../ticket/EditTicketModal";
-import { getTicketsFromStorage, saveTicketsToStorage } from "../../utils/localStorageTickets";
 import type { Ticket } from "../../types/Ticket";
+import { getAllTickets, updateTicket } from "../../services/ticketService";
 
 const STATUSES: Ticket["status"][] = [
     "Pendiente",
@@ -36,21 +36,33 @@ export default function KanbanBoard() {
 
 
     useEffect(() => {
-        setTickets(getTicketsFromStorage());
+        async function fetchTickets() {
+            const ticketsFromSupabase = await getAllTickets();
+            setTickets(ticketsFromSupabase);
+        }
+        fetchTickets();
     }, []);
 
-    const handleSave = (editedTicket: Ticket) => {
-        const newTickets = getTicketsFromStorage().map((t: Ticket) =>
-            t.id === editedTicket.id ? editedTicket : t
-        );
-        saveTicketsToStorage(newTickets);
-        setTickets(newTickets);
+    const handleSave = async (editedTicket: Ticket) => {
+        try {
+            await updateTicket(editedTicket.id, editedTicket);
+            const updatedTickets = await getAllTickets();
+            setTickets(updatedTickets);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error("Error al actualizar el ticket:", error.message);
+            } else {
+                console.error("Error desconocido al actualizar el ticket:", error);
+            }
+            alert("No se pudo actualizar el ticket. Intenta de nuevo.");
+        }
     };
 
-    const closeModal = () => {
+    const closeModal = async () => {
         setModalOpen(false);
         setSelectedTicket(null);
-        setTickets(getTicketsFromStorage());
+        const updated = await getAllTickets();
+        setTickets(updated);
     };
 
     const openModal = (ticket: Ticket) => {
@@ -115,8 +127,8 @@ export default function KanbanBoard() {
                                             className="text-gray-900 hover:text-gray-600"
                                             title="Ver más detalles"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="size-6 cursor-pointer">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 cursor-pointer">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
                                             </svg>
 
                                         </button>
@@ -124,7 +136,7 @@ export default function KanbanBoard() {
                                     <p className="text-xs text-gray-600 line-clamp-2 mb-2">{ticket.description || "Sin descripción"}</p>
 
                                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                                        {ticket.isUrgent && (
+                                        {ticket.is_urgent && (
                                             <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
                                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -151,7 +163,7 @@ export default function KanbanBoard() {
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z" />
                                             </svg>
-                                            Fecha: {ticket.incidentDate || "No especificada"}
+                                            Fecha: {ticket.incident_date || "No especificada"}
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <strong className="text-xs">ID:</strong> {ticket.id}
