@@ -3,6 +3,7 @@ import Modal from "../Modal";
 import EditTicketModal from "../ticket/EditTicketModal";
 import type { Ticket } from "../../types/Ticket";
 import { getAllTickets, updateTicket } from "../../services/ticketService";
+import { formatDateInTimezone } from "../../utils/formatDate";
 
 const STATUSES: Ticket["status"][] = [
     "Pendiente",
@@ -163,7 +164,7 @@ export default function KanbanBoard() {
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z" />
                                             </svg>
-                                            Fecha: {ticket.incident_date || "No especificada"}
+                                            Fecha: {ticket.incident_date ? formatDateInTimezone(ticket.incident_date) : "No especificada"}
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <strong className="text-xs">ID:</strong> {ticket.id}

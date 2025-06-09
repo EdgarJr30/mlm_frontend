@@ -32,10 +32,10 @@ export const formatDateInTimezone = (
   const zoned = toZonedTime(date, tz);
 
   if (mode === "input") {
-    return format(zoned, "yyyy-MM-dd'T'HH:mm", { timeZone: tz });
+    return format(zoned, "yyyy-MM-dd", { timeZone: tz });
   }
 
-  return format(zoned, "dd/MM/yyyy, hh:mm a", { timeZone: tz });
+  return format(zoned, "dd/MM/yyyy", { timeZone: tz });
 };
 
 export function getTodayISODate(): string {
