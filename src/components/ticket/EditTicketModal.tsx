@@ -165,7 +165,7 @@ export default function EditTicketModal({
               name="description"
               value={edited.description}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800 min-h-[100px] max-h-[150px] resize-y"
             />
           </div>
 

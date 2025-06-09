@@ -247,6 +247,7 @@ export default function TicketForm() {
                   rows={4}
                   value={form.description}
                   onChange={(e) => handleChange("description", e.target.value)}
+                  className="min-h-[100px] max-h-[150px] resize-y"
                 />
                 <div className="flex justify-between items-center">
                   {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
