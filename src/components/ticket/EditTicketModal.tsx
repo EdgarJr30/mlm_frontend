@@ -224,8 +224,8 @@ export default function EditTicketModal({
           <div>
             <label className="block text-sm font-medium">Responsable</label>
             <select
-              name="responsible"
-              value={edited.responsible || ""}
+              name="assignee"
+              value={edited.assignee || ""}
               onChange={handleChange}
               className="mt-1 p-2 w-full border rounded cursor-pointer"
             >

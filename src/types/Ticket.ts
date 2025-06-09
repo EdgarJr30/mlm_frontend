@@ -10,7 +10,7 @@ export interface Ticket {
     | "Finalizadas";
   requester: string;
   location: string;
-  responsible?: string;
+  assignee?: string;
   incident_date: string;
   deadline_date?: string; // ISO date string
   image?: string; // base64

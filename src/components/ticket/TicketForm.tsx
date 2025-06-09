@@ -144,7 +144,7 @@ export default function TicketForm() {
         ...form,
         priority: form.priority ?? "baja",
         status: "Pendiente",
-        responsible: "Sin asignar",
+        assignee: "Sin asignar",
       };
 
       // console.log("📤 Enviando ticket a Supabase:", ticketToSave);
