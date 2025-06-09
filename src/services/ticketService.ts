@@ -7,7 +7,9 @@ export async function createTicket(ticket: Omit<Ticket, "id" | "status">) {
       ...ticket,
       status: "Pendiente",
     }
-  ]);
+  ])
+  .select("id")
+  .single();
 
   if (error) throw new Error(error.message);
   return data;

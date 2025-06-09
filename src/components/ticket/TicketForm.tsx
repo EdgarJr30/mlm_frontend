@@ -147,13 +147,14 @@ export default function TicketForm() {
         responsible: "Sin asignar",
       };
 
-      console.log("📤 Enviando ticket a Supabase:", ticketToSave);
+      // console.log("📤 Enviando ticket a Supabase:", ticketToSave);
 
-      await createTicket(ticketToSave);
+      const created = await createTicket(ticketToSave);
+      const ticketId = created.id;
 
       await showSuccessAlert(
         "Ticket creado",
-        "Tu ticket ha sido registrado exitosamente."
+        `Tu ticket #${ticketId} ha sido registrado exitosamente.`
       );
 
       window.location.reload();
