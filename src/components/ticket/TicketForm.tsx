@@ -33,9 +33,9 @@ interface TicketFormData {
   priority: "baja" | "media" | "alta"
   incident_date: string
   deadline_date?: string // ISO date string
-  image?: string // base64
+  image: string // base64
   location: string
-  email: string
+  email?: string
   phone?: string
   created_at: string // ISO date string
 }
@@ -103,7 +103,7 @@ export default function TicketForm() {
 
     if (step === 2) {
       newErrors.requester = validateRequester(form.requester) ?? undefined
-      newErrors.email = validateEmail(form.email) ?? undefined
+      newErrors.email = validateEmail(form.email ?? "") ?? undefined
       newErrors.location = validateLocation(form.location) ?? undefined
       newErrors.phone = validatePhone(form.phone) ?? undefined
     }
@@ -306,7 +306,7 @@ export default function TicketForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email de Contacto <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="email">Email de Contacto</Label>
                   <Input
                     id="email"
                     type="email"
@@ -314,7 +314,6 @@ export default function TicketForm() {
                     placeholder="tuemail@cilm.do"
                     value={form.email}
                     onChange={(e) => handleChange("email", e.target.value)}
-                    required
                   />
                   {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>

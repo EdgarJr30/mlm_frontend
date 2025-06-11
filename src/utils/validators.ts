@@ -150,23 +150,20 @@ export function validateIncidentDate(date: string): string | null {
   return null;
 }
 
-
 export function validateEmail(email: string): string | null {
   const trimmed = email.trim();
 
-  if (!trimmed) return "El correo es obligatorio.";
+  // Si está vacío, no se valida (es opcional)
+  if (!trimmed) return null;
 
   if (trimmed.length > MAX_EMAIL_LENGTH)
     return `El correo no puede superar los ${MAX_EMAIL_LENGTH} caracteres.`;
 
-  // Regla estricta: nombre@dominio.extensión
   const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
 
-  // Validación básica de estructura
   if (!emailRegex.test(trimmed))
     return "Formato de correo inválido. Usa solo letras, números, puntos, guiones y una extensión válida.";
 
-  // No puede comenzar o terminar con punto en el nombre de usuario
   const [local, domain] = trimmed.split("@");
   if (!local || !domain)
     return "Formato de correo inválido.";
@@ -179,6 +176,7 @@ export function validateEmail(email: string): string | null {
 
   return null;
 }
+
 
 export function validatePhone(phone?: string): string | null {
   if (!phone || !phone.trim()) return null;
