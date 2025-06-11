@@ -268,7 +268,7 @@ export default function EditTicketModal({
               <img
                 src={ticket.image}
                 alt="Adjunto"
-                className="w-full h-36 object-contain rounded cursor-pointer border bg-gray-100"
+                className="w-full h-36 object-contain rounded cursor-pointer border"
                 onClick={() => setShowFullImage(true)}
               />
 
