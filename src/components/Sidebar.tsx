@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import Logo from '../assets/logo_horizontal_blanc.svg';
 
 const menu = [
   {
@@ -53,7 +54,7 @@ export default function Sidebar() {
   `}
       >
         <div className="p-6 text-2xl font-bold tracking-wide text-blue-400 border-b border-gray-700 mb-4">
-          Easy Maint
+          <img src={Logo} alt="Easy Maint Logo" className="h-8 w-auto" />
         </div>
         <nav className="flex flex-col gap-1 flex-1 px-2">
           {menu.map((item) => (
