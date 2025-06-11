@@ -10,7 +10,7 @@ export async function createTicket(ticket: Omit<Ticket, "id" | "status">) {
       status: "Pendiente",
     }
   ])
-  .select("id")
+  .select("id, title")
   .single();
 
   if (error) throw new Error(error.message);

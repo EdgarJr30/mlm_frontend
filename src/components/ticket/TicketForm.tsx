@@ -151,10 +151,11 @@ export default function TicketForm() {
 
       const created = await createTicket(ticketToSave);
       const ticketId = created.id;
+      const ticketTitle = created.title;
 
       await showSuccessAlert(
-        "Ticket creado",
-        `Tu ticket #${ticketId} ha sido registrado exitosamente.`
+        `Ticket [##${ticketId}##] creado.`,
+        `Tu ticket "${ticketTitle}" ha sido registrado con éxito.`
       );
 
       window.location.reload();
