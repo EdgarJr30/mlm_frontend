@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from '../assets/logo_horizontal_blanc.svg';
+import { logout } from "../utils/fakeAuth";
 
 const menu = [
   {
@@ -22,7 +23,13 @@ const menu = [
 export default function Sidebar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
+  // Handler para el logout
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
   return (
     <>
       {/* Botón hamburguesa solo en móvil */}
@@ -54,7 +61,7 @@ export default function Sidebar() {
   `}
       >
         <div className="p-6 text-2xl font-bold tracking-wide text-blue-400 border-b border-gray-700 mb-4">
-          <img src={Logo} alt="Easy Maint Logo" className="h-8 w-auto" />
+          <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
         </div>
         <nav className="flex flex-col gap-1 flex-1 px-2">
           {menu.map((item) => (
@@ -74,6 +81,27 @@ export default function Sidebar() {
             </Link>
           ))}
         </nav>
+
+        {/* BOTÓN DE LOGOUT */}
+        <button
+          onClick={handleLogout}
+          className="
+            w-full flex items-center gap-2 px-4 py-3 mb-2 rounded
+            text-red-500 hover:bg-gray-800 transition font-medium
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 cursor-pointer
+            focus-visible:ring-offset-2
+            focus-visible:ring-offset-gray-900
+          "
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"
+            className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m-3-3h8.25m0 0-3-3m3 3-3 3" />
+          </svg>
+          Cerrar sesión
+        </button>
+
         <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800">
           © 2025 CILM
         </div>
