@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import EditTicketModal from "../ticket/EditTicketModal";
 import { updateTicket } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
@@ -17,6 +17,10 @@ export default function KanbanBoard() {
     const [reloadKey, setReloadKey] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [showFullImage, setShowFullImage] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Contador de columnas cargadas (para controlar cuando quitar el loading)
+    const loadedColumns = useRef(0);
 
     const openModal = (ticket: Ticket) => {
         setSelectedTicket(ticket);
@@ -72,6 +76,20 @@ export default function KanbanBoard() {
     const capitalize = (word?: string) =>
         typeof word === "string" ? word.charAt(0).toUpperCase() + word.slice(1) : "";
 
+    // Callback que le pasamos a cada columna, la columna lo llama cuando termina su primer carga
+    const handleColumnLoaded = () => {
+        loadedColumns.current += 1;
+        if (loadedColumns.current >= STATUSES.length) {
+            setIsLoading(false);
+        }
+    };
+
+    // Si recargas las columnas, resetea el loading
+    React.useEffect(() => {
+        setIsLoading(true);
+        loadedColumns.current = 0;
+    }, [reloadKey]);
+
     return (
         <div className="flex gap-6 h-full w-full p-4 overflow-x-auto">
             {STATUSES.map((status) => (
@@ -82,6 +100,8 @@ export default function KanbanBoard() {
                     getPriorityStyles={getPriorityStyles}
                     getStatusStyles={getStatusStyles}
                     capitalize={capitalize}
+                    isLoading={isLoading}
+                    onFirstLoad={handleColumnLoaded}
                 />
             ))}
 
