@@ -94,7 +94,7 @@ export default function KanbanBoard() {
         <div className="flex gap-6 h-full w-full p-4 overflow-x-auto">
             {STATUSES.map((status) => (
                 <KanbanColumn
-                    key={`${status}-${reloadKey}`}
+                    key={status}
                     status={status}
                     onOpenModal={openModal}
                     getPriorityStyles={getPriorityStyles}
@@ -102,6 +102,7 @@ export default function KanbanBoard() {
                     capitalize={capitalize}
                     isLoading={isLoading}
                     onFirstLoad={handleColumnLoaded}
+                    reloadSignal={reloadKey}
                 />
             ))}
 
