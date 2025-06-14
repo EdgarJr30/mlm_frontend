@@ -10,18 +10,41 @@ const STATUSES: Ticket["status"][] = [
   "Finalizadas",
 ];
 
-// const STATUS_STYLES: Record<Ticket["status"], string> = {
-//   "Pendiente": "bg-yellow-100 text-yellow-800",
-//   "En Ejecución": "bg-blue-100 text-blue-800",
-//   "Finalizadas": "bg-green-100 text-green-800",
-// };
+const RESPONSABLES_SECCIONES: Record<string, string[]> = {
+  "SIN ASIGNAR": ["<< SIN ASIGNAR >>"],
+  "Internos": [
+    "Edwin Brito",
+    "Anibelka Varga",
+    "Miguel Angel Castro",
+    "Yeicor Yamel Castillo Feliz",
+    "Joel Mieses",
+    "Aneudy Jesus Altagracia",
+    "Antonio Riveras",
+    "Estarlin Javier Suero",
+    "Ostakio Veloz Ramón",
+    "Jenssy Leroy",
+    "Richardson Minaya"
+  ],
+  "TERCEROS": [
+    "Angel Pinales Corporan",
+    "Carlos Manuel de Sena Reyes",
+    "Daniel Cordero Nuñez",
+    "Elixandro Nova Beriguete",
+    "Francisco Natera Ramirez",
+    "Jose Castillo Paula",
+    "Jose Luis Garcia Taveraz",
+    "Jose Ramon Almonte",
+    "Luis Vasquez Zapata",
+    "Miguel Angel Castillo Feliz",
+    "Pedro Jose Frías (El mello)",
+    "Pedro Pineda",
+    "Ramon del Carmen Zapata Ureña",
+    "Ugo Santo Gobessi",
+    "Vianela Castillo Castillo",
+    "Weldyn Martinez"
+  ]
+};
 
-const RESPONSABLES = [
-  "Sin asignar",
-  "Juan Mantenimiento",
-  "Pedro Electricista",
-  "María Técnica",
-];
 
 interface EditTicketModalProps {
   isOpen: boolean;
@@ -229,8 +252,14 @@ export default function EditTicketModal({
               onChange={handleChange}
               className="mt-1 p-2 w-full border rounded cursor-pointer"
             >
-              {RESPONSABLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+              {Object.entries(RESPONSABLES_SECCIONES).map(([grupo, responsables]) => (
+                <optgroup key={grupo} label={grupo}>
+                  {responsables.map((nombre) => (
+                    <option key={nombre} value={nombre}>
+                      {nombre}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
