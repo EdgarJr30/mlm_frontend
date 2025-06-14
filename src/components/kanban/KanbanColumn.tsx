@@ -218,10 +218,14 @@ export default function KanbanColumn({
                                     {ticket.assignee && (
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="h-6 w-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-semibold text-gray-700">
-                                                {ticket.assignee
-                                                    .split(" ")
-                                                    .map((n) => n[0])
-                                                    .join("")}
+                                                {(!ticket.assignee || ticket.assignee === "<< SIN ASIGNAR >>")
+                                                    ? "SA"
+                                                    : ticket.assignee
+                                                        .split(" ")
+                                                        .slice(0, 2)
+                                                        .map((n) => n[0])
+                                                        .join("")
+                                                        .toUpperCase()}
                                             </div>
                                             <span className="text-xs text-gray-600">{ticket.assignee}</span>
                                         </div>
