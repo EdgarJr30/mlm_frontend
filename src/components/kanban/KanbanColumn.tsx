@@ -13,6 +13,7 @@ interface Props {
     isLoading: boolean;
     pageSize?: number;
     reloadSignal: number;
+    lastUpdatedTicket: Ticket | null;
 }
 
 export default function KanbanColumn({
@@ -25,6 +26,7 @@ export default function KanbanColumn({
     // isLoading,
     pageSize = 20,
     reloadSignal,
+    lastUpdatedTicket,
 
 }: Props) {
     const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -122,6 +124,30 @@ export default function KanbanColumn({
 
         return () => observer.current?.disconnect();
     }, [tickets.length, hasMore]);
+
+    useEffect(() => {
+        if (!lastUpdatedTicket) return;
+
+        // Si el ticket ahora pertenece a esta columna (mismo status)
+        if (lastUpdatedTicket.status === status) {
+            setTickets((prev) => {
+                const exists = prev.some((t) => t.id === lastUpdatedTicket.id);
+                if (exists) {
+                    // Si existe, lo actualizamos
+                    return prev.map((t) =>
+                        t.id === lastUpdatedTicket.id ? lastUpdatedTicket : t
+                    );
+                } else {
+                    // Si no está (por ejemplo, se movió de otra columna), lo agregamos arriba
+                    return [lastUpdatedTicket, ...prev];
+                }
+            });
+        } else {
+            // Si el ticket estaba aquí pero ya no pertenece, lo removemos
+            setTickets((prev) => prev.filter((t) => t.id !== lastUpdatedTicket.id));
+        }
+    }, [lastUpdatedTicket, status]);
+
 
     return (
         <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col">

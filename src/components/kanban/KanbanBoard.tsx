@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import EditTicketModal from "../ticket/EditTicketModal";
 import { updateTicket } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
@@ -14,10 +14,12 @@ const STATUSES: Ticket["status"][] = [
 
 export default function KanbanBoard() {
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-    const [reloadKey, setReloadKey] = useState<number>(0);
+    const [reloadKey] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [showFullImage, setShowFullImage] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [lastUpdatedTicket, setLastUpdatedTicket] = useState<Ticket | null>(null);
+
 
     // Contador de columnas cargadas (para controlar cuando quitar el loading)
     const loadedColumns = useRef(0);
@@ -35,13 +37,11 @@ export default function KanbanBoard() {
     const handleSave = async (updatedTicket: Ticket) => {
         try {
             await updateTicket(updatedTicket.id, updatedTicket);
+            setLastUpdatedTicket(updatedTicket);
             console.log("✅ Ticket actualizado");
 
             // Opcional: mostrar alerta de éxito
             // await showSuccessAlert("Actualizado", `Ticket #${updatedTicket.id} guardado correctamente.`);
-
-            // ✅ Notificamos a columnas que deben recargarse
-            setReloadKey(Date.now()); // forzamos re-render en columnas con key
 
             setModalOpen(false);
             setSelectedTicket(null);
@@ -90,6 +90,13 @@ export default function KanbanBoard() {
         loadedColumns.current = 0;
     }, [reloadKey]);
 
+    useEffect(() => {
+        if (lastUpdatedTicket) {
+            const timeout = setTimeout(() => setLastUpdatedTicket(null), 1000);
+            return () => clearTimeout(timeout);
+        }
+    }, [lastUpdatedTicket]);
+
     return (
         <div className="flex gap-6 h-full w-full p-4 overflow-x-auto">
             {STATUSES.map((status) => (
@@ -103,6 +110,7 @@ export default function KanbanBoard() {
                     isLoading={isLoading}
                     onFirstLoad={handleColumnLoaded}
                     reloadSignal={reloadKey}
+                    lastUpdatedTicket={lastUpdatedTicket}
                 />
             ))}
 
