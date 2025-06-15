@@ -4,7 +4,7 @@ import { updateTicket } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
 import KanbanColumn from "./KanbanColumn";
 import Modal from "../Modal";
-// import { formatDateInTimezone } from "../../utils/formatDate";
+import { showToastSuccess, showToastError } from "../../notifications/toast";
 
 const STATUSES: Ticket["status"][] = [
     "Pendiente",
@@ -39,10 +39,7 @@ export default function KanbanBoard() {
             await updateTicket(updatedTicket.id, updatedTicket);
             setLastUpdatedTicket(updatedTicket);
             console.log("✅ Ticket actualizado");
-
-            // Opcional: mostrar alerta de éxito
-            // await showSuccessAlert("Actualizado", `Ticket #${updatedTicket.id} guardado correctamente.`);
-
+            showToastSuccess("Ticket actualizado correctamente.")
             setModalOpen(false);
             setSelectedTicket(null);
         } catch (error: unknown) {
@@ -51,7 +48,8 @@ export default function KanbanBoard() {
             } else {
                 console.error("❌ Error desconocido:", error);
             }
-            alert("No se pudo actualizar el ticket. Intenta de nuevo.");
+            showToastError("No se pudo actualizar el ticket. Intenta de nuevo.");
+            console.error("No se pudo actualizar el ticket. Intenta de nuevo.");
         }
     };
 
