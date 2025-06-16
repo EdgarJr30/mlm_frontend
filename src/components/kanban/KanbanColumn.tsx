@@ -37,9 +37,20 @@ export default function KanbanColumn({
     const [hasMore, setHasMore] = useState(true);
     const [firstLoaded, setFirstLoaded] = useState(false);
 
+    const pageRef = useRef(0);
+    const isPaginatingRef = useRef(false);
+
     const columnRef = useRef<HTMLDivElement | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const observer = useRef<IntersectionObserver | null>(null);
+
+    useEffect(() => {
+        pageRef.current = page;
+    }, [page]);
+
+    useEffect(() => {
+        isPaginatingRef.current = isPaginating;
+    }, [isPaginating]);
 
     // Cuando termina de cargar los tickets por primera vez, notificamos al board
     useEffect(() => {
@@ -55,17 +66,19 @@ export default function KanbanColumn({
     const loadMoreTickets = useCallback(
         async (force = false) => {
             // Si es la carga inicial, usa isInitialLoading; si no, usa isPaginating
-            if ((isInitialLoading || isPaginating) && !force) return;
+            if ((isInitialLoading || isPaginatingRef.current) && !force) return;
             if (!hasMore) return;
 
             if (force) {
                 setIsInitialLoading(true);
+                pageRef.current = 0;
+                setPage(0);
             } else {
                 setIsPaginating(true);
             }
 
-            const currentPage = force ? 0 : page;
-            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize);
+            const currentPage = force ? 0 : pageRef.current;
+            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20);
 
             setTickets((prev) => {
                 const merged = force ? [...newTickets] : [...prev, ...newTickets];
@@ -75,16 +88,19 @@ export default function KanbanColumn({
 
             if (newTickets.length < pageSize) {
                 setHasMore(false);
+            } else {
+                // Avanza la página SOLO si realmente trajo tickets nuevos
+                pageRef.current = currentPage + 1;
+                setPage(currentPage + 1);
             }
 
-            setPage((prev) => (force ? 1 : prev + 1));
             if (force) {
                 setIsInitialLoading(false);
             } else {
                 setIsPaginating(false);
             }
         },
-        [isInitialLoading, isPaginating, hasMore, status, page, pageSize]
+        [isInitialLoading, hasMore, status, page, pageSize]
     );
 
     useEffect(() => {
