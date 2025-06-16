@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login, isAuthenticated } from "../utils/fakeAuth";
 import Logo from '../assets/logo_horizontal.svg';
+import AppVersion from "../components/AppVersion";
 
 export default function LoginPage() {
-//   const [email, setEmail] = useState("");
+  //   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ export default function LoginPage() {
                   Inovación & Desarrollo CILM
                 </a>
               </p>
-              {/* <AppVersion /> */}
+              <AppVersion className="text-center mt-4" />
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             </div>
           </div>

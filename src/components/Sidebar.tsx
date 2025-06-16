@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from '../assets/logo_horizontal_blanc.svg';
 import { logout } from "../utils/fakeAuth";
+import AppVersion from "./AppVersion";
 
 const menu = [
   {
@@ -105,6 +106,8 @@ export default function Sidebar() {
         <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800">
           © 2025 CILM
         </div>
+        <AppVersion className="text-center mt-auto" />
+
       </aside>
     </>
   );
