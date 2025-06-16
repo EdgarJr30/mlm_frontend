@@ -24,6 +24,8 @@ import {
 } from "../../utils/validators"
 import { showSuccessAlert } from "../../utils/showAlert"
 import { getNowInTimezoneForStorage, getTodayISODate } from "../../utils/formatDate";
+// import { sendTicketEmail } from "../../services/emailService";
+// import type { TicketEmailData } from "../../services/emailService";
 
 interface TicketFormData {
   title: string
@@ -134,11 +136,11 @@ export default function TicketForm() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (step !== 4) return
-    if (!validateStep()) return
+    e.preventDefault();
+    if (step !== 4) return;
+    if (!validateStep()) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       const ticketToSave = {
         ...form,
@@ -147,11 +149,24 @@ export default function TicketForm() {
         assignee: "Sin asignar",
       };
 
-      // console.log("📤 Enviando ticket a Supabase:", ticketToSave);
-
       const created = await createTicket(ticketToSave);
       const ticketId = created.id;
       const ticketTitle = created.title;
+
+      // TODO: Manejar el envio de creación de ticket cuando termine el backend
+      // try {
+      //   const emailData: TicketEmailData = {
+      //     title: form.title,
+      //     description: form.description,
+      //     requester: form.requester,
+      //     email: form.email ?? "",
+      //     location: form.location,
+      //     incident_date: form.incident_date,
+      //   };
+      //   await sendTicketEmail(emailData);
+      // } catch (emailError) {
+      //   console.error("Error enviando correo:", emailError);
+      // }
 
       await showSuccessAlert(
         `Ticket [##${ticketId}##] creado.`,
@@ -169,7 +184,7 @@ export default function TicketForm() {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   const progress = (step / 4) * 100
 
