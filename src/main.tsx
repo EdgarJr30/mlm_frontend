@@ -24,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/create-ticket" element={<CreateTicketPage />} />
+        <Route path="/crear-ticket" element={<CreateTicketPage />} />
         <Route path="/kanban" element={
           <ProtectedRoute>
             <KanbanPage />

@@ -7,7 +7,7 @@ import AppVersion from "./AppVersion";
 const menu = [
   {
     name: "Crear Ticket",
-    path: "/create-ticket",
+    path: "/crear-ticket",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" fill="none"
         viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"
