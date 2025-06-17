@@ -18,6 +18,7 @@ MLM is a web-based application designed to streamline maintenance request manage
 - **Status Management**: Three-stage workflow (Pending, In Progress, Completed)
 - **Visual Indicators**: Color-coded tags and icons for quick status identification
 - **Sequential Numbering**: Automatic ticket numbering for internal tracking
+Prueba
 
 ## 🏢 Supported Locations
 
