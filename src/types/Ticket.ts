@@ -17,6 +17,7 @@ export interface Ticket {
   email?: string;
   phone?: string;
   created_at: string; // ISO date string
+  comments?: string;
 }
 
 export const Locations = [

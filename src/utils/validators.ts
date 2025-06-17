@@ -1,9 +1,9 @@
-
 export const MAX_TITLE_LENGTH = 60
 export const MAX_DESCRIPTION_LENGTH = 120
 export const MAX_REQUESTER_LENGTH = 30
 export const MAX_EMAIL_LENGTH = 30
 export const MAX_PHONE_LENGTH = 20
+export const MAX_COMMENTS_LENGTH = 200
 
 export function validateTitle(title: string): string | null {
   const trimmed = title.trim();
@@ -177,7 +177,6 @@ export function validateEmail(email: string): string | null {
   return null;
 }
 
-
 export function validatePhone(phone?: string): string | null {
   if (!phone || !phone.trim()) return null;
 
@@ -199,6 +198,42 @@ export function validatePhone(phone?: string): string | null {
   const digits = trimmed.replace(/\D/g, "");
   if (digits.length < 10)
     return "El teléfono debe tener al menos 10 dígitos.";
+
+  return null;
+}
+
+export function validateComments(comments: string): string | null {
+  const trimmed = comments.trim();
+
+  if (!trimmed) return null;
+
+  if (trimmed.length < 4)
+    return "Los comentarios deben tener al menos 4 caracteres.";
+
+  if (trimmed.length > MAX_COMMENTS_LENGTH)
+    return `Los comentarios no pueden superar los ${MAX_COMMENTS_LENGTH} caracteres.`;
+
+  // Requiere al menos una palabra con 2 letras o más
+  if (!/\b[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ]{2,}\b/.test(trimmed))
+    return "Los comentarios deben incluir palabras válidas con más de una letra.";
+
+  // Debe tener vocales
+  const hasVowel = /[aeiouáéíóúü]/i.test(trimmed);
+  if (!hasVowel)
+    return "Los comentarios deben contener palabras con vocales.";
+
+  // Verificar que no todas las palabras sean iguales (si hay 2 o más)
+  const words = trimmed.toLowerCase().split(/\s+/);
+  if (words.length >= 2) {
+    const allSame = words.every((w) => w === words[0]);
+    if (allSame)
+      return "Los comentarios no deben repetir la misma palabra sin contexto.";
+  }
+
+  // Debe tener cierta variedad de caracteres
+  const uniqueChars = new Set(trimmed.replace(/\s/g, "").toLowerCase());
+  if (uniqueChars.size < 4)
+    return "Los comentarios deben tener más variedad de caracteres.";
 
   return null;
 }

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login, isAuthenticated } from "../utils/fakeAuth";
 import Logo from '../assets/logo_horizontal.svg';
+import Collage from '../assets/COLLAGE_MLM.webp';
 import AppVersion from "../components/AppVersion";
 
 export default function LoginPage() {
@@ -11,10 +12,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   // Si ya está logueado, manda directo a /kanban
-  if (isAuthenticated()) {
-    navigate("/kanban", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate("/kanban", { replace: true });
+    }
+  }, [navigate]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +117,7 @@ export default function LoginPage() {
               <p className="mt-10 text-center text-sm/6 text-gray-500">
                 Desarrollado por{" "}
                 <a href="" className="font-semibold text-indigo-600 hover:text-indigo-500">
-                  Inovación & Desarrollo CILM
+                  Innovación & Desarrollo CILM
                 </a>
               </p>
               <AppVersion className="text-center mt-4" />
@@ -126,8 +128,10 @@ export default function LoginPage() {
       </div>
       <div className="relative hidden w-0 flex-1 lg:block">
         <img
-          alt=""
-          src="https://images.unsplash.com/photo-1496917756835-20cb06e75b4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1908&q=80"
+          alt="Collage MLM"
+          src={Collage}
+          aria-hidden="true"
+          loading="lazy"
           className="absolute inset-0 size-full object-cover"
         />
       </div>

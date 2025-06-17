@@ -1,4 +1,4 @@
-const FAKE_PASSWORD = "mlmprueba";
+const FAKE_PASSWORD = "624*247mN";
 const TOKEN_KEY = "fake_auth_token";
 
 export function login(password: string) {

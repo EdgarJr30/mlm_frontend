@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { Ticket } from "../../types/Ticket";
 import { LOCATIONS } from "../constants/locations";
 import { formatDate } from "../../utils/formatDate";
+import { MAX_COMMENTS_LENGTH } from '../../utils/validators'
 
 const STATUSES: Ticket["status"][] = [
   "Pendiente",
@@ -141,6 +142,19 @@ export default function EditTicketModal({
               value={edited.description}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800 min-h-[100px] max-h-[150px] resize-y"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Comentarios</label>
+            <textarea
+              name="comments"
+              maxLength={MAX_COMMENTS_LENGTH}
+              value={edited.comments || ""}
+              onChange={handleChange}
+              placeholder="Agrega un comentario..."
+              rows={3}
+              className="mt-1 p-2 w-full border rounded min-h-[100px] max-h-[150px] resize-y"
             />
           </div>
 
