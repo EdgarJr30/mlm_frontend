@@ -39,8 +39,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-1">
-      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+    <div className="flex h-screen">
+      <div className="flex flex-1 flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
             <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
@@ -49,7 +49,7 @@ export default function LoginPage() {
             </h2>
           </div>
 
-          <div className="mt-10">
+          <div className="mt-6 sm:mt-10">
             <div>
               <form onSubmit={handleLogin} className="space-y-6">
                 {/* <div>
