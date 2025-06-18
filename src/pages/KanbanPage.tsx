@@ -1,11 +1,15 @@
 import Sidebar from "../components/Sidebar";
 import KanbanBoard from "../components/kanban/KanbanBoard";
+import Navbar from "../components/navigation/Navbar";
 
 export default function KanbanPage() {
   return (
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
-      <main className="flex flex-col h-[100dvh] overflow-hidden w-full md:pl-[4rem]">
+      <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
+        <div className="w-full">
+          <Navbar />
+        </div>
         {/* Encabezado del Kanban */}
         <header className="px-4 md:px-6 lg:px-8 pb-0 pt-20 sm:pt-10 md:pt-8">
           <h2 className="text-3xl font-bold">Tablero</h2>
