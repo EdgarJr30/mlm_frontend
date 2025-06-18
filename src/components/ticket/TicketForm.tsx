@@ -190,7 +190,7 @@ export default function TicketForm() {
   const progress = (step / 4) * 100
 
   return (
-    <div className="min-h-screen">
+    <div className="h-[100dvh]">
       {/* HEADER CON PROGRESS COMPONENT */}
       <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-4">
         <div className="max-w-5xl mx-auto">
