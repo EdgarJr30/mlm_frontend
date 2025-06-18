@@ -96,7 +96,7 @@ export default function KanbanBoard() {
     }, [lastUpdatedTicket]);
 
     return (
-        <div className="flex gap-6 h-full w-full p-4 overflow-x-auto">
+        <div className="flex gap-6 h-full w-full overflow-x-auto">
             {STATUSES.map((status) => (
                 <KanbanColumn
                     key={status}

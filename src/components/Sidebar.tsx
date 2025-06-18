@@ -58,7 +58,7 @@ export default function Sidebar() {
     fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50 
     transform transition-transform duration-300
     ${isOpen ? "translate-x-0" : "-translate-x-full"}
-    md:translate-x-0 md:static md:flex h-screen md:h-screen
+    md:translate-x-0 md:static md:flex h-screen overflow-y-auto
   `}
       >
         <div className="p-6 text-2xl font-bold tracking-wide text-blue-400 border-b border-gray-700 mb-4">
