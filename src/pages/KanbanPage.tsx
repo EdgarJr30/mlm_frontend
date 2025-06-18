@@ -11,7 +11,7 @@ export default function KanbanPage() {
           <Navbar />
         </div>
         {/* Encabezado del Kanban */}
-        <header className="px-4 md:px-6 lg:px-8 pb-0 pt-20 sm:pt-10 md:pt-8">
+        <header className="px-4 md:px-6 lg:px-8 pb-0 pt-8 md:pt-8">
           <h2 className="text-3xl font-bold">Tablero</h2>
         </header>
         {/* El área del tablero se expande, el scroll es SOLO horizontal */}
