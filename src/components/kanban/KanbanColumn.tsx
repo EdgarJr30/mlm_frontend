@@ -4,6 +4,8 @@ import type { Ticket } from "../../types/Ticket";
 import { formatDateInTimezone } from "../../utils/formatDate";
 
 interface Props {
+    tickets?: Ticket[];
+    isSearching: boolean;
     status: Ticket["status"];
     onOpenModal: (ticket: Ticket) => void;
     getPriorityStyles: (priority: Ticket["priority"]) => string;
@@ -17,32 +19,38 @@ interface Props {
 }
 
 export default function KanbanColumn({
+    tickets,
+    isSearching,
     status,
     onOpenModal,
     getPriorityStyles,
     getStatusStyles,
     capitalize,
     onFirstLoad,
-    // isLoading,
-    pageSize = 20,
+    pageSize = 10,
     reloadSignal,
     lastUpdatedTicket,
 
 }: Props) {
-    const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
     const [page, setPage] = useState(0);
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [isPaginating, setIsPaginating] = useState(false);
-    // const [isLoading, setIsLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [firstLoaded, setFirstLoaded] = useState(false);
 
     const pageRef = useRef(0);
     const isPaginatingRef = useRef(false);
-
     const columnRef = useRef<HTMLDivElement | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
     const observer = useRef<IntersectionObserver | null>(null);
+
+    // Skeleton loader
+    const skeletonTickets = Array.from({ length: 5 });
+    // Decide qué tickets renderizar
+    const ticketsToRender = isSearching ? (tickets ?? []) : localTickets;
+    // Loading solo cuando no hay tickets para mostrar y está cargando
+    const showSkeleton = isInitialLoading && !isSearching;
 
     useEffect(() => {
         pageRef.current = page;
@@ -52,72 +60,35 @@ export default function KanbanColumn({
         isPaginatingRef.current = isPaginating;
     }, [isPaginating]);
 
+    // Efecto: resetea y carga los tickets solo si NO estás buscando
+    // Resetea y recarga cada vez que:
+    // - sales del modo búsqueda (isSearching pasa a false)
+    // - cambia el status (columna)
+    // - cambia reloadSignal (se fuerza recarga global)
+    useEffect(() => {
+        if (!isSearching) {
+            setLocalTickets([]);
+            setPage(0);
+            setHasMore(true);
+            setFirstLoaded(false);
+            setIsInitialLoading(true);
+            loadMoreTickets(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isSearching, status, reloadSignal]);
+
     // Cuando termina de cargar los tickets por primera vez, notificamos al board
     useEffect(() => {
-        if (!firstLoaded) {
+        if (!firstLoaded && (isSearching || localTickets.length > 0)) {
             setFirstLoaded(true);
             onFirstLoad();
         }
-    }, [tickets.length]);
+    }, [isSearching, localTickets.length, firstLoaded, onFirstLoad]);
 
-    // Skeleton loader
-    const skeletonTickets = Array.from({ length: 5 });
-
-    const loadMoreTickets = useCallback(
-        async (force = false) => {
-            // Si es la carga inicial, usa isInitialLoading; si no, usa isPaginating
-            if ((isInitialLoading || isPaginatingRef.current) && !force) return;
-            if (!hasMore) return;
-
-            if (force) {
-                setIsInitialLoading(true);
-                pageRef.current = 0;
-                setPage(0);
-            } else {
-                setIsPaginating(true);
-            }
-
-            const currentPage = force ? 0 : pageRef.current;
-            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20);
-
-            setTickets((prev) => {
-                const merged = force ? [...newTickets] : [...prev, ...newTickets];
-                const unique = Array.from(new Map(merged.map((t) => [t.id, t])).values());
-                return unique;
-            });
-
-            if (newTickets.length < pageSize) {
-                setHasMore(false);
-            } else {
-                // Avanza la página SOLO si realmente trajo tickets nuevos
-                pageRef.current = currentPage + 1;
-                setPage(currentPage + 1);
-            }
-
-            if (force) {
-                setIsInitialLoading(false);
-            } else {
-                setIsPaginating(false);
-            }
-        },
-        [isInitialLoading, hasMore, status, page, pageSize]
-    );
-
+    // Observador de intersección para el sentinel
     useEffect(() => {
-        setTickets([]);
-        setPage(0);
-        setHasMore(true);
-        setFirstLoaded(false);
-        setIsInitialLoading(true);
-        loadMoreTickets(true);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reloadSignal]);
+        if (isSearching) return; // No observar en modo búsqueda
 
-    useEffect(() => {
-        loadMoreTickets();
-    }, []);
-
-    useEffect(() => {
         if (!sentinelRef.current || !columnRef.current || !hasMore) return;
 
         if (observer.current) observer.current.disconnect();
@@ -139,31 +110,87 @@ export default function KanbanColumn({
         observer.current.observe(sentinelRef.current);
 
         return () => observer.current?.disconnect();
-    }, [tickets.length, hasMore]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isSearching, localTickets.length, hasMore]);
 
+    // Efecto: actualiza los tickets locales cuando hay un ticket actualizado
+    // y no estás buscando
+    // Esta lógica se mantiene igual que antes, pero ahora se asegura de que
+    // no se ejecute si estás buscando tickets.
+    // Esto evita que se actualicen los tickets mientras estás en modo búsqueda,
+    // lo cual podría causar inconsistencias o problemas de rendimiento.
+    // Si estás buscando, simplemente ignoramos este efecto.
+    // Si no estás buscando, se aplica la lógica de actualización de tickets.
+    // Si el ticket actualizado tiene el mismo estado que la columna,
+    // lo actualizamos o lo agregamos a la lista local.
+    // Si el ticket actualizado tiene un estado diferente, lo eliminamos de la lista local.
+    // Esto asegura que la columna siempre muestre los tickets correctos según su estado,
+    // incluso si se actualizan en tiempo real mientras estás en modo búsqueda.
+    // Si estás buscando, simplemente ignoramos este efecto.
     useEffect(() => {
-        if (!lastUpdatedTicket) return;
+        if (isSearching || !lastUpdatedTicket) return;
 
-        // Si el ticket ahora pertenece a esta columna (mismo status)
+        // Misma lógica que antes
         if (lastUpdatedTicket.status === status) {
-            setTickets((prev) => {
+            setLocalTickets((prev) => {
                 const exists = prev.some((t) => t.id === lastUpdatedTicket.id);
                 if (exists) {
-                    // Si existe, lo actualizamos
                     return prev.map((t) =>
                         t.id === lastUpdatedTicket.id ? lastUpdatedTicket : t
                     );
                 } else {
-                    // Si no está (por ejemplo, se movió de otra columna), lo agregamos arriba
                     return [lastUpdatedTicket, ...prev];
                 }
             });
         } else {
-            // Si el ticket estaba aquí pero ya no pertenece, lo removemos
-            setTickets((prev) => prev.filter((t) => t.id !== lastUpdatedTicket.id));
+            setLocalTickets((prev) => prev.filter((t) => t.id !== lastUpdatedTicket.id));
         }
-    }, [lastUpdatedTicket, status]);
+    }, [isSearching, lastUpdatedTicket, status]);
 
+    useEffect(() => {
+        if (!isSearching) {
+            loadMoreTickets();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isSearching]);
+
+    // Pagina y agrega tickets SOLO en modo normal
+    const loadMoreTickets = useCallback(
+        async (force = false) => {
+            if (isSearching) return; // ← aquí ignoramos si estamos buscando
+
+            if ((isInitialLoading || isPaginatingRef.current) && !force) return;
+            if (!hasMore) return;
+
+            if (force) {
+                setIsInitialLoading(true);
+                pageRef.current = 0;
+                setPage(0);
+            } else {
+                setIsPaginating(true);
+            }
+
+            const currentPage = force ? 0 : pageRef.current;
+            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20);
+
+            setLocalTickets((prev) => {
+                const merged = force ? [...newTickets] : [...prev, ...newTickets];
+                const unique = Array.from(new Map(merged.map((t) => [t.id, t])).values());
+                return unique;
+            });
+
+            if (newTickets.length < pageSize) {
+                setHasMore(false);
+            } else {
+                pageRef.current = currentPage + 1;
+                setPage(currentPage + 1);
+            }
+
+            if (force) setIsInitialLoading(false);
+            else setIsPaginating(false);
+        },
+        [isSearching, isInitialLoading, hasMore, status, page, pageSize]
+    );
 
     return (
         <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col">
@@ -175,7 +202,7 @@ export default function KanbanColumn({
                 </span>
             </h3>
             <div ref={columnRef} className="flex flex-col gap-3 overflow-y-auto max-h-[80vh]">
-                {isInitialLoading
+                {showSkeleton
                     ? skeletonTickets.map((_, idx) => (
                         // {/* ...skeleton ... */}
                         <div
@@ -194,7 +221,7 @@ export default function KanbanColumn({
                     :
                     (
                         <>
-                            {tickets.map((ticket) => (
+                            {ticketsToRender.map((ticket) => (
                                 // {/* ...ticket ... */}
                                 <div
                                     key={ticket.id}
@@ -273,7 +300,7 @@ export default function KanbanColumn({
                                         </div>
                                     )}
                                 </div>
-                            ))}{isPaginating && (
+                            ))}{isPaginating && !isSearching && (
                                 <div className="flex justify-center py-3">
                                     <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />

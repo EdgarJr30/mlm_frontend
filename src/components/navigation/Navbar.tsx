@@ -1,6 +1,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
-import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
+// import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
+// import SearchTickets from "../SearchTickets";
 
 export default function Example() {
   return (
@@ -44,7 +45,10 @@ export default function Example() {
             </div>
           </div>
           <div className="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
-            <div className="grid w-full max-w-lg grid-cols-1 lg:max-w-xs">
+            {/* <SearchTickets onSearch={(term) => {
+              // Aquí levantamos el estado al padre, se completa en el siguiente paso
+            }} /> */}
+            {/* <div className="grid w-full max-w-lg grid-cols-1 lg:max-w-xs">
               <input
                 name="search"
                 type="search"
@@ -55,7 +59,7 @@ export default function Example() {
                 aria-hidden="true"
                 className="pointer-events-none col-start-1 row-start-1 ml-3 size-5 self-center text-gray-400"
               />
-            </div>
+            </div> */}
           </div>
           <div className="flex items-center lg:hidden">
             {/* Mobile menu button */}

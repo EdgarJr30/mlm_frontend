@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { getFilteredTickets } from "../../services/ticketService";
 import EditTicketModal from "../ticket/EditTicketModal";
 import { updateTicket } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
@@ -12,14 +13,46 @@ const STATUSES: Ticket["status"][] = [
     "Finalizadas",
 ];
 
-export default function KanbanBoard() {
+interface Props {
+    searchTerm: string;
+}
+
+export default function KanbanBoard({ searchTerm }: Props) {
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const [reloadKey] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [showFullImage, setShowFullImage] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [lastUpdatedTicket, setLastUpdatedTicket] = useState<Ticket | null>(null);
+    const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
 
+    // useEffect(() => {
+    //     const fetchFiltered = async () => {
+    //         console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
+    //         setIsLoading(true);
+    //         const results = await getFilteredTickets(searchTerm);
+    //         console.table(results);
+    //         setFilteredTickets(results);
+    //         setIsLoading(false);
+    //     };
+
+    //     fetchFiltered();
+    // }, [searchTerm]);
+
+    // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
+    useEffect(() => {
+        if (searchTerm.length >= 2) {
+            console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
+            setIsLoading(true);
+            getFilteredTickets(searchTerm)
+                .then(results => {
+                    setFilteredTickets(results);
+                    setIsLoading(false);
+                });
+        }
+    }, [searchTerm]);
+
+    const isSearching = searchTerm.length >= 2;
 
     // Contador de columnas cargadas (para controlar cuando quitar el loading)
     const loadedColumns = useRef(0);
@@ -101,6 +134,8 @@ export default function KanbanBoard() {
                 <KanbanColumn
                     key={status}
                     status={status}
+                    isSearching={isSearching}
+                    tickets={isSearching ? filteredTickets.filter(t => t.status === status) : undefined}
                     onOpenModal={openModal}
                     getPriorityStyles={getPriorityStyles}
                     getStatusStyles={getStatusStyles}

@@ -67,3 +67,35 @@ export async function getTicketsByStatusPaginated(status: string, page: number, 
   console.table(data);
   return data;
 }
+
+export async function getFilteredTickets(term: string): Promise<Ticket[]> {
+  const query = supabase
+    .from("tickets")
+    .select("*")
+    .order("id", { ascending: false });
+
+  if (term.length >= 2) {
+    const filters = [
+      // `id.ilike.%${term}%`,
+      `title.ilike.%${term}%`,
+      `requester.ilike.%${term}%`,
+    ];
+
+    if (!isNaN(Number(term))) {
+      filters.push(`id.eq.${term}`);
+    }
+
+    query.or(filters.join(","));
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("❌ Error buscando tickets:", error.message);
+    return [];
+  }
+
+  return data as Ticket[];
+}
+
+
