@@ -2,7 +2,7 @@ import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import KanbanBoard from "../components/kanban/KanbanBoard";
 import Navbar from "../components/navigation/Navbar";
-import SearchTickets from "../components/SearchTickets";
+// import SearchTickets from "../components/SearchTickets";
 
 export default function KanbanPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -10,12 +10,9 @@ export default function KanbanPage() {
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <div className="w-full px-4 md:px-6 lg:px-8 pt-4">
+        <div className="w-full">
           {/* Navbar y búsqueda */}
-          <div className="flex justify-between items-center">
-            <Navbar />
-            <SearchTickets onSearch={setSearchTerm} />
-          </div>
+          <Navbar onSearch={setSearchTerm} />
         </div>
 
         <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6">
