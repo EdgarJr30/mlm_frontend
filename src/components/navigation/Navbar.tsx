@@ -60,11 +60,11 @@ export default function Navbar({ onSearch }: NavbarProps) {
             </div>
           </div>
           <div className="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
-            <div className="grid w-full max-w-lg grid-cols-1 lg:max-w-xs">
+            <div className="grid w-full max-w-lg grid-cols-1 lg:max-w-xs pl-12 md:pl-0">
               <input
                 name="search"
                 type="search"
-                placeholder="Buscar por ID, título, solicitante o ubicación..."
+                placeholder="Buscar por título o solicitante"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 className="col-start-1 row-start-1 block w-full rounded-md bg-white py-1.5 pr-3 pl-10 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
