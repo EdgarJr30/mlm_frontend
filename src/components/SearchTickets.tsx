@@ -18,7 +18,7 @@ export default function SearchTickets({ onSearch }: Props) {
 
     useEffect(() => {
         if (debouncedInput.length >= 2 || debouncedInput.length === 0) {
-            console.log("🔍 Buscando con:", debouncedInput); // 👈 AÑADIR ESTO
+            console.log("🔍 Buscando con:", debouncedInput);
             onSearch(debouncedInput);
         }
     }, [debouncedInput, onSearch]);

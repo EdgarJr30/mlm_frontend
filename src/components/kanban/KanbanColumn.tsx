@@ -189,6 +189,7 @@ export default function KanbanColumn({
             if (force) setIsInitialLoading(false);
             else setIsPaginating(false);
         },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [isSearching, isInitialLoading, hasMore, status, page, pageSize]
     );
 

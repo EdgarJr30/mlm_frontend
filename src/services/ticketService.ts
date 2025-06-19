@@ -46,7 +46,6 @@ export async function updateTicket(id: string, updatedData: Partial<Ticket>) {
   }
 }
 
-
 export async function getTicketsByStatusPaginated(status: string, page: number, pageSize: number) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
