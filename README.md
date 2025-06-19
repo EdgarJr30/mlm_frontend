@@ -19,6 +19,9 @@ MLM is a web-based application designed to streamline maintenance request manage
 - **Visual Indicators**: Color-coded tags and icons for quick status identification
 - **Sequential Numbering**: Automatic ticket numbering for internal tracking
 
+## ✨ New Features
+- **Global Search 🔎**: Global search within the Kanban board that performs database searches by the fields title and requester to find tickets.
+
 ## 🏢 Supported Locations
 
 - Operadora de Servicios Alimenticios
