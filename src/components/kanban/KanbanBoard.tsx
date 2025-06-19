@@ -19,38 +19,12 @@ interface Props {
 
 export default function KanbanBoard({ searchTerm }: Props) {
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-    const [reloadKey] = useState<number>(0);
+    const [reloadKey, setReloadKey] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [showFullImage, setShowFullImage] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [lastUpdatedTicket, setLastUpdatedTicket] = useState<Ticket | null>(null);
     const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
-
-    // useEffect(() => {
-    //     const fetchFiltered = async () => {
-    //         console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
-    //         setIsLoading(true);
-    //         const results = await getFilteredTickets(searchTerm);
-    //         console.table(results);
-    //         setFilteredTickets(results);
-    //         setIsLoading(false);
-    //     };
-
-    //     fetchFiltered();
-    // }, [searchTerm]);
-
-    // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
-    useEffect(() => {
-        if (searchTerm.length >= 2) {
-            console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
-            setIsLoading(true);
-            getFilteredTickets(searchTerm)
-                .then(results => {
-                    setFilteredTickets(results);
-                    setIsLoading(false);
-                });
-        }
-    }, [searchTerm]);
 
     const isSearching = searchTerm.length >= 2;
 
@@ -114,6 +88,27 @@ export default function KanbanBoard({ searchTerm }: Props) {
             setIsLoading(false);
         }
     };
+
+    // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
+    useEffect(() => {
+        if (searchTerm.length >= 2) {
+            console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
+            setIsLoading(true);
+            getFilteredTickets(searchTerm)
+                .then(results => {
+                    setFilteredTickets(results);
+                    setIsLoading(false);
+                });
+        }
+    }, [searchTerm]);
+
+    useEffect(() => {
+        if (searchTerm.length < 2) {
+            setFilteredTickets([]);
+            setIsLoading(true);
+            setReloadKey(prev => prev + 1);
+        }
+    }, [searchTerm]);
 
     // Si recargas las columnas, resetea el loading
     React.useEffect(() => {
