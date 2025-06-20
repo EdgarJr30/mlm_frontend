@@ -3,6 +3,9 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react
 // import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { useTicketNotification } from "../../context/TicketNotificationContext";
+import { useTicketNotificationPolling } from "../../hooks/useTicketNotificationPolling";
+import { getTotalTicketsCount } from "../../services/ticketService";
 
 interface NavbarProps {
   onSearch: (term: string) => void;
@@ -11,6 +14,22 @@ interface NavbarProps {
 export default function Navbar({ onSearch }: NavbarProps) {
   const [input, setInput] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
+
+  const {
+    newTicketsCount,
+    setTotalTicketsWhenOpened,
+    setNewTicketsCount,
+  } = useTicketNotification();
+
+  useTicketNotificationPolling();
+
+  // Lógica al refrescar tickets (puedes ajustar según tu flujo)
+  const handleRefreshTickets = async () => {
+    if (typeof onSearch === "function") onSearch(""); // o la función que refresca tu tabla
+    const total = await getTotalTicketsCount();
+    setTotalTicketsWhenOpened(total);
+    setNewTicketsCount(0);
+  };
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -32,7 +51,7 @@ export default function Navbar({ onSearch }: NavbarProps) {
       <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
         <div className="flex h-16 justify-between">
           <div className="flex px-2 lg:px-0">
-            
+
             <div className="hidden lg:ml-6 lg:flex lg:space-x-8">
               <a
                 href="#"
@@ -89,10 +108,14 @@ export default function Navbar({ onSearch }: NavbarProps) {
             <button
               type="button"
               className="relative shrink-0 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-hidden"
+              onClick={handleRefreshTickets}
             >
               <span className="absolute -inset-1.5" />
               <span className="sr-only">View notifications</span>
               <BellIcon aria-hidden="true" className="size-6" />
+              {newTicketsCount > 0 && (
+                <span className="absolute -top-1 -right-1 rounded-full bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center animate-bounce shadow">{newTicketsCount}</span>
+              )}
             </button>
 
             {/* Profile dropdown */}

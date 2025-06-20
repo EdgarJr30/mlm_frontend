@@ -97,4 +97,14 @@ export async function getFilteredTickets(term: string): Promise<Ticket[]> {
   return data as Ticket[];
 }
 
+export async function getTotalTicketsCount() {
+  const { count, error } = await supabase
+    .from('tickets')
+    .select('id', { count: 'exact', head: true });
 
+  if (error) {
+    console.error("Error al contar tickets:", error.message);
+    return 0;
+  }
+  return count || 0;
+}

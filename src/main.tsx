@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/Routes/ProtectedRoute'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { TicketNotificationProvider } from "./context/TicketNotificationContext";
+
 
 if (process.env.NODE_ENV !== 'development') {
   // Vacía todos los logs en desarrollo
@@ -33,17 +35,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         pauseOnHover
         theme="colored"
       />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/crear-ticket" element={<CreateTicketPage />} />
-        <Route path="/kanban" element={
-          <ProtectedRoute>
-            <KanbanPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/" element={<Navigate to="/kanban" />} />
-        <Route path="*" element={<Navigate to="/kanban" />} />
-      </Routes>
+      <TicketNotificationProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/crear-ticket" element={<CreateTicketPage />} />
+          <Route path="/kanban" element={
+            <ProtectedRoute>
+              <KanbanPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/" element={<Navigate to="/kanban" />} />
+          <Route path="*" element={<Navigate to="/kanban" />} />
+        </Routes>
+      </TicketNotificationProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )
