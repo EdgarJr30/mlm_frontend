@@ -8,7 +8,15 @@ import ProtectedRoute from './components/Routes/ProtectedRoute'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+if (process.env.NODE_ENV !== 'development') {
+  // Vacía todos los logs en producción
+  console.log = function () { };
+  console.warn = function () { };
+  console.error = function () { }; // Puedes decidir si ocultar errores o no
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
+
   <React.StrictMode>
     <BrowserRouter>
       <ToastContainer
