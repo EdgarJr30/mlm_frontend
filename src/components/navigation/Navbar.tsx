@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
+import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
+// import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -95,7 +96,7 @@ export default function Navbar({ onSearch }: NavbarProps) {
             </button>
 
             {/* Profile dropdown */}
-            <Menu as="div" className="relative ml-4 shrink-0">
+            {/* <Menu as="div" className="relative ml-4 shrink-0">
               <div>
                 <MenuButton className="relative flex rounded-full bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-hidden">
                   <span className="absolute -inset-1.5" />
@@ -136,7 +137,7 @@ export default function Navbar({ onSearch }: NavbarProps) {
                   </a>
                 </MenuItem>
               </MenuItems>
-            </Menu>
+            </Menu> */}
           </div>
         </div>
       </div>
