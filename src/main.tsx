@@ -9,11 +9,14 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 if (process.env.NODE_ENV !== 'development') {
-  // Vacía todos los logs en producción
+  // Vacía todos los logs en desarrollo
   console.log = function () { };
   console.warn = function () { };
-  console.error = function () { }; // Puedes decidir si ocultar errores o no
+  console.table = function () { };
+  console.error = function () { };
 }
+
+console.log("🚀 Aplicación iniciada en modo:", process.env.NODE_ENV);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
 
