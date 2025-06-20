@@ -21,6 +21,7 @@ MLM is a web-based application designed to streamline maintenance request manage
 
 ## ✨ New Features
 - **Global Search 🔎**: Global search within the Kanban board that performs database searches by the fields title and requester to find tickets.
+- **Badge Notifications ❶**: Badge de notificaciones en la campana para nuevos tickets insertados en la BD
 
 ## 🏢 Supported Locations
 
