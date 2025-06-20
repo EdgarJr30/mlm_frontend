@@ -15,7 +15,7 @@ const AppVersion: React.FC<AppVersionProps> = ({
 
   return (
     <div
-      className={`text-xs font-mono text-gray-400 px-3 py-1 border-t border-gray-800 bg-gray-900 ${className}`}
+      className={`text-xs text-gray-400 px-3 py-1 border-gray-800 ${className}`}
     >
       <span>
         v{version} {isQA && <span className="text-yellow-400 ml-1">(QA)</span>}
