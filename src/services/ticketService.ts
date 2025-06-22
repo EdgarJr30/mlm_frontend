@@ -109,3 +109,22 @@ export async function getTotalTicketsCount() {
   console.log(`Total de tickets: ${count}`);
   return count || 0;
 }
+
+export async function getUnacceptedTicketsPaginated(page: number, pageSize: number) {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await supabase
+    .from("tickets")
+    .select("*", { count: "exact" }) // Incluye el conteo total
+    .eq("is_accepted", false)
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("❌ Error al cargar tickets no aceptados:", error.message);
+    return { data: [], count: 0 };
+  }
+
+  return { data: data as Ticket[], count: count || 0 };
+}
