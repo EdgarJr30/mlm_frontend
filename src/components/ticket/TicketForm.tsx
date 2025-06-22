@@ -31,6 +31,7 @@ import { getNowInTimezoneForStorage, getTodayISODate } from "../../utils/formatD
 interface TicketFormData {
   title: string
   description: string
+  is_accepted: boolean;
   is_urgent: boolean
   requester: string
   priority: "baja" | "media" | "alta"
@@ -46,6 +47,7 @@ interface TicketFormData {
 const initialForm: TicketFormData = {
   title: "",
   description: "",
+  is_accepted: false,
   is_urgent: false,
   requester: "",
   priority: "baja", // Default priority

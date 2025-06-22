@@ -2,6 +2,7 @@ export interface Ticket {
   id: string;
   title: string;
   description: string;
+  is_accepted: boolean;
   is_urgent: boolean;
   priority: "baja" | "media" | "alta";
   status:
