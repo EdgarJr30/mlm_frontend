@@ -76,6 +76,7 @@ export async function getFilteredTickets(term: string): Promise<Ticket[]> {
   const query = supabase
     .from("tickets")
     .select("*")
+    .eq("is_accepted", true)
     .order("id", { ascending: false });
 
   if (term.length >= 2) {
