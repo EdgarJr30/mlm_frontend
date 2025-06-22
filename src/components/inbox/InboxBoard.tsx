@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react'
-import { getFilteredTickets, getUnacceptedTicketsPaginated } from '../../services/ticketService';
 import type { Ticket } from '../../types/Ticket';
+import { getFilteredTickets, getUnacceptedTicketsPaginated, acceptTickets } from '../../services/ticketService';
+import { showToastError, showToastSuccess } from '../../notifications';
 interface Props {
     searchTerm: string;
 }
@@ -35,6 +36,29 @@ export default function InboxBoard({ searchTerm }: Props) {
         setSelectedTicket(checked || indeterminate ? [] : tickets)
         setChecked(!checked && !indeterminate)
         setIndeterminate(false)
+    }
+
+    async function handleAcceptTickets() {
+        if (selectedTicket.length === 0) return;
+        setIsLoading(true);
+        try {
+            const ids = selectedTicket.map((t) => t.id);
+            await acceptTickets(ids);
+            showToastSuccess(
+                ids.length === 1
+                    ? "Ticket aceptado correctamente."
+                    : `Se aceptaron ${ids.length} tickets correctamente.`
+            );
+            setSelectedTicket([]);
+            // Recarga los tickets sin aceptar
+            const { data, count } = await getUnacceptedTicketsPaginated(page, PAGE_SIZE);
+            setTickets(data);
+            setTotalCount(count);
+        } catch (error) {
+            showToastError(`Hubo un error al aceptar los tickets. Error: ${error instanceof Error ? error.message : 'Desconocido'}`);
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
@@ -99,8 +123,10 @@ export default function InboxBoard({ searchTerm }: Props) {
                                     <button
                                         type="button"
                                         className="inline-flex items-center rounded-sm bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white"
+                                        onClick={handleAcceptTickets}
+                                        // disabled={selectedTicket.length === 0 || isLoading}
                                     >
-                                        Bulk edit
+                                        Aceptar tickets
                                     </button>
                                     <button
                                         type="button"

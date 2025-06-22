@@ -128,3 +128,12 @@ export async function getUnacceptedTicketsPaginated(page: number, pageSize: numb
 
   return { data: data as Ticket[], count: count || 0 };
 }
+
+export async function acceptTickets(ticketIds: string[]): Promise<void> {
+  const { error } = await supabase
+    .from("tickets")
+    .update({ is_accepted: true })
+    .in("id", ticketIds);
+
+  if (error) throw new Error(error.message);
+}
