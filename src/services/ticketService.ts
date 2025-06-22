@@ -63,7 +63,7 @@ export async function getTicketsByStatusPaginated(status: string, page: number, 
   }
 
   console.log(`📥 Estado "${status}" - Página ${page + 1} - Se cargaron ${data.length} tickets:`);
-  console.table(data);
+  // console.table(data);
   return data;
 }
 
@@ -106,5 +106,6 @@ export async function getTotalTicketsCount() {
     console.error("Error al contar tickets:", error.message);
     return 0;
   }
+  console.log(`Total de tickets: ${count}`);
   return count || 0;
 }

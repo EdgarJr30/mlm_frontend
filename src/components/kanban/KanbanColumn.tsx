@@ -52,6 +52,45 @@ export default function KanbanColumn({
     // Loading solo cuando no hay tickets para mostrar y está cargando
     const showSkeleton = isInitialLoading && !isSearching;
 
+    // Pagina y agrega tickets SOLO en modo normal
+    const loadMoreTickets = useCallback(
+        async (force = false) => {
+            if (isSearching) return; // ← aquí ignoramos si estamos buscando
+
+            if ((isInitialLoading || isPaginatingRef.current) && !force) return;
+            if (!hasMore) return;
+
+            if (force) {
+                setIsInitialLoading(true);
+                pageRef.current = 0;
+                setPage(0);
+            } else {
+                setIsPaginating(true);
+            }
+
+            const currentPage = force ? 0 : pageRef.current;
+            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20);
+
+            setLocalTickets((prev) => {
+                const merged = force ? [...newTickets] : [...prev, ...newTickets];
+                const unique = Array.from(new Map(merged.map((t) => [t.id, t])).values());
+                return unique;
+            });
+
+            if (newTickets.length < pageSize) {
+                setHasMore(false);
+            } else {
+                pageRef.current = currentPage + 1;
+                setPage(currentPage + 1);
+            }
+
+            if (force) setIsInitialLoading(false);
+            else setIsPaginating(false);
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [isSearching, isInitialLoading, hasMore, status, page, pageSize]
+    );
+
     useEffect(() => {
         pageRef.current = page;
     }, [page]);
@@ -146,52 +185,6 @@ export default function KanbanColumn({
             setLocalTickets((prev) => prev.filter((t) => t.id !== lastUpdatedTicket.id));
         }
     }, [isSearching, lastUpdatedTicket, status]);
-
-    useEffect(() => {
-        if (!isSearching) {
-            loadMoreTickets();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSearching]);
-
-    // Pagina y agrega tickets SOLO en modo normal
-    const loadMoreTickets = useCallback(
-        async (force = false) => {
-            if (isSearching) return; // ← aquí ignoramos si estamos buscando
-
-            if ((isInitialLoading || isPaginatingRef.current) && !force) return;
-            if (!hasMore) return;
-
-            if (force) {
-                setIsInitialLoading(true);
-                pageRef.current = 0;
-                setPage(0);
-            } else {
-                setIsPaginating(true);
-            }
-
-            const currentPage = force ? 0 : pageRef.current;
-            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20);
-
-            setLocalTickets((prev) => {
-                const merged = force ? [...newTickets] : [...prev, ...newTickets];
-                const unique = Array.from(new Map(merged.map((t) => [t.id, t])).values());
-                return unique;
-            });
-
-            if (newTickets.length < pageSize) {
-                setHasMore(false);
-            } else {
-                pageRef.current = currentPage + 1;
-                setPage(currentPage + 1);
-            }
-
-            if (force) setIsInitialLoading(false);
-            else setIsPaginating(false);
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [isSearching, isInitialLoading, hasMore, status, page, pageSize]
-    );
 
     return (
         <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col">

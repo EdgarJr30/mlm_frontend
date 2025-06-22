@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { getTotalTicketsCount } from "../services/ticketService";
 import { useTicketNotification } from "../context/TicketNotificationContext";
 
-export function useTicketNotificationPolling(pollingIntervalMs = 10000) {
+export function useTicketNotificationPolling(pollingIntervalMs = 3600000) {
   const {
     totalTicketsWhenOpened,
     setTotalTicketsWhenOpened,
