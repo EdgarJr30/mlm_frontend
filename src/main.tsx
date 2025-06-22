@@ -2,8 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import CreateTicketPage from './pages/CreateTicketPage'
-import KanbanPage from './pages/KanbanPage'
 import LoginPage from './pages/LoginPage'
+import KanbanPage from './pages/KanbanPage'
+import InboxPage from './pages/InboxPage';
 import ProtectedRoute from './components/Routes/ProtectedRoute'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -42,6 +43,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/kanban" element={
             <ProtectedRoute>
               <KanbanPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/inbox" element={
+            <ProtectedRoute>
+              <InboxPage />
             </ProtectedRoute>
           } />
           <Route path="/" element={<Navigate to="/kanban" />} />
