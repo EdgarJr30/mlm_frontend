@@ -50,22 +50,27 @@ export async function getTicketsByStatusPaginated(status: string, page: number, 
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("tickets")
     .select("*")
     .eq("status", status)
     .order("id", { ascending: false })
     .range(from, to);
 
+  if (status === "Pendiente") {
+    query = query.eq("is_accepted", true);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
     console.error(`❌ Error al cargar tickets con estado "${status}":`, error.message);
     return [];
   }
 
-  console.log(`📥 Estado "${status}" - Página ${page + 1} - Se cargaron ${data.length} tickets:`);
-  // console.table(data);
-  return data;
+  return data as Ticket[];
 }
+
 
 export async function getFilteredTickets(term: string): Promise<Ticket[]> {
   const query = supabase
