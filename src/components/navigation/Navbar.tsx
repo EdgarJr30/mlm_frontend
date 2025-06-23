@@ -4,7 +4,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useTicketNotification } from "../../context/TicketNotificationContext";
-import { useTicketNotificationPolling } from "../../hooks/useTicketNotificationPolling";
+// import { useTicketNotificationPolling } from "../../hooks/useTicketNotificationPolling";
 import { getTotalTicketsCount } from "../../services/ticketService";
 import { LOCATIONS } from "../constants/locations";
 
@@ -24,7 +24,7 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
     setNewTicketsCount,
   } = useTicketNotification();
 
-  useTicketNotificationPolling();
+  // useTicketNotificationPolling();
 
   // Lógica al refrescar tickets (puedes ajustar según tu flujo)
   const handleRefreshTickets = async () => {
