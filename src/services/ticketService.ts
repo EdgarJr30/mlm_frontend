@@ -46,7 +46,7 @@ export async function updateTicket(id: string, updatedData: Partial<Ticket>) {
   }
 }
 
-export async function getTicketsByStatusPaginated(status: string, page: number, pageSize: number) {
+export async function getTicketsByStatusPaginated(status: string, page: number, pageSize: number, location?: string) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
@@ -60,6 +60,9 @@ export async function getTicketsByStatusPaginated(status: string, page: number, 
   if (status === "Pendiente") {
     query = query.eq("is_accepted", true);
   }
+  if (location) {
+    query = query.eq("location", location);
+  }
 
   const { data, error } = await query;
 
@@ -67,30 +70,27 @@ export async function getTicketsByStatusPaginated(status: string, page: number, 
     console.error(`❌ Error al cargar tickets con estado "${status}":`, error.message);
     return [];
   }
-
   return data as Ticket[];
 }
 
-
-export async function getFilteredTickets(term: string): Promise<Ticket[]> {
-  const query = supabase
+export async function getFilteredTickets(term: string, location?: string): Promise<Ticket[]> {
+  let query = supabase
     .from("tickets")
     .select("*")
     .eq("is_accepted", true)
     .order("id", { ascending: false });
 
+  if (location) {
+    query = query.eq("location", location);
+  }
+
   if (term.length >= 2) {
     const filters = [
-      // `id.ilike.%${term}%`,
       `title.ilike.%${term}%`,
       `requester.ilike.%${term}%`,
     ];
-
-    if (!isNaN(Number(term))) {
-      filters.push(`id.eq.${term}`);
-    }
-
-    query.or(filters.join(","));
+    if (!isNaN(Number(term))) filters.push(`id.eq.${term}`);
+    query = query.or(filters.join(","));
   }
 
   const { data, error } = await query;
@@ -99,7 +99,6 @@ export async function getFilteredTickets(term: string): Promise<Ticket[]> {
     console.error("❌ Error buscando tickets:", error.message);
     return [];
   }
-
   return data as Ticket[];
 }
 

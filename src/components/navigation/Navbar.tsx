@@ -6,12 +6,15 @@ import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useTicketNotification } from "../../context/TicketNotificationContext";
 import { useTicketNotificationPolling } from "../../hooks/useTicketNotificationPolling";
 import { getTotalTicketsCount } from "../../services/ticketService";
+import { LOCATIONS } from "../constants/locations";
 
 interface NavbarProps {
   onSearch: (term: string) => void;
+  onFilterLocation: (location: string) => void;
+  selectedLocation: string;
 }
 
-export default function Navbar({ onSearch }: NavbarProps) {
+export default function Navbar({ onSearch, selectedLocation, onFilterLocation }: NavbarProps) {
   const [input, setInput] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
 
@@ -51,6 +54,20 @@ export default function Navbar({ onSearch }: NavbarProps) {
       <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
         <div className="flex h-16 justify-between items-center">
           {/* Filtros (solo desktop) */}
+          <div className="mr-3 w-[180px]">
+            <select
+              value={selectedLocation}
+              onChange={e => onFilterLocation(e.target.value)}
+              className="block w-full rounded-md bg-white border border-gray-300 py-1.5 pl-2 pr-8 text-base text-gray-900 focus:outline-2 focus:outline-indigo-600 sm:text-sm"
+            >
+              <option value="">Todas las ubicaciones</option>
+              {LOCATIONS.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="hidden lg:ml-6 lg:flex lg:space-x-8">
             <a
               href="#"

@@ -16,6 +16,7 @@ interface Props {
     pageSize?: number;
     reloadSignal: number;
     lastUpdatedTicket: Ticket | null;
+    location?: string;
 }
 
 export default function KanbanColumn({
@@ -30,6 +31,7 @@ export default function KanbanColumn({
     pageSize = 10,
     reloadSignal,
     lastUpdatedTicket,
+    location,
 
 }: Props) {
     const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
@@ -69,7 +71,7 @@ export default function KanbanColumn({
             }
 
             const currentPage = force ? 0 : pageRef.current;
-            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20);
+            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20, location);
 
             setLocalTickets((prev) => {
                 const merged = force ? [...newTickets] : [...prev, ...newTickets];

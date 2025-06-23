@@ -15,9 +15,10 @@ const STATUSES: Ticket["status"][] = [
 
 interface Props {
     searchTerm: string;
+    location: string;
 }
 
-export default function KanbanBoard({ searchTerm }: Props) {
+export default function KanbanBoard({ searchTerm, location }: Props) {
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const [reloadKey, setReloadKey] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
@@ -91,24 +92,27 @@ export default function KanbanBoard({ searchTerm }: Props) {
 
     // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
     useEffect(() => {
-        if (searchTerm.length >= 2) {
+        if (searchTerm.length >= 2 || location.length) {
+            // Si hay un término de búsqueda o una ubicación, hacemos la búsqueda
             console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
             setIsLoading(true);
-            getFilteredTickets(searchTerm)
+            getFilteredTickets(searchTerm, location)
                 .then(results => {
                     setFilteredTickets(results);
                     setIsLoading(false);
                 });
         }
-    }, [searchTerm]);
+    }, [searchTerm, location]);
 
     useEffect(() => {
-        if (searchTerm.length < 2) {
+        if (searchTerm.length < 2 && !location) {
+            // Si el término de búsqueda es menor a 2 caracteres o no hay ubicación, reseteamos el estado
+            console.log("🔴 Reseteando búsqueda en KanbanBoard");
             setFilteredTickets([]);
             setIsLoading(true);
             setReloadKey(prev => prev + 1);
         }
-    }, [searchTerm]);
+    }, [searchTerm, location]);
 
     // Si recargas las columnas, resetea el loading
     React.useEffect(() => {
@@ -139,6 +143,7 @@ export default function KanbanBoard({ searchTerm }: Props) {
                     onFirstLoad={handleColumnLoaded}
                     reloadSignal={reloadKey}
                     lastUpdatedTicket={lastUpdatedTicket}
+                    location={location}
                 />
             ))}
 
