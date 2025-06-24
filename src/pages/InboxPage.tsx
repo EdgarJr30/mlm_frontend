@@ -24,7 +24,7 @@ export default function InboxPage() {
                     <h2 className="text-3xl font-bold">Bandeja de entrada</h2>
                 </header>
 
-                <section className="flex-1 overflow-x-auto overflow-y-hidden px-4 md:px-6 lg:px-8 pt-4 pb-8">
+                <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
                     <InboxBoard searchTerm={searchTerm} />
                 </section>
             </main>

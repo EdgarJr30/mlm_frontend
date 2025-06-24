@@ -92,14 +92,13 @@ export default function InboxBoard({ searchTerm }: Props) {
         };
     }, [page]);
 
-
     return (
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="px-0 sm:px-0 lg:px-0 h-full flex flex-col">
             <div className="sm:flex sm:items-center">
                 <div className="sm:flex-auto">
                     {/* <h1 className="text-base font-semibold text-gray-900">Tickets</h1> */}
                     <p className="mt-2 text-sm text-gray-700">
-                        Listado de tickets pendientes de aceptación. Puedes seleccionar varios tickets para aceptarlos de una vez.
+                        Tickets pendientes de aceptación. Puede seleccionar varios tickets para aceptarlos de una vez.
                     </p>
                     <span className="text-sm text-gray-500">
                         Página {page + 1} de {Math.ceil(totalCount / PAGE_SIZE) || 1}
@@ -114,36 +113,36 @@ export default function InboxBoard({ searchTerm }: Props) {
                     </button>
                 </div> */}
             </div>
-            <div className="mt-8 flow-root">
-                <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                    <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+            <div className="flex-auto flex flex-col">
+                <div className="overflow-x-auto flex-1">
+                    <div className="min-w-full py-2 align-middle">
                         <div className="relative">
                             {selectedTicket.length > 0 && (
                                 <div className="absolute top-0 left-14 flex h-12 items-center space-x-3 bg-white sm:left-12">
                                     <button
                                         type="button"
-                                        className="inline-flex items-center rounded-sm bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white"
+                                        className="inline-flex items-center rounded-sm bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white cursor-pointer"
                                         onClick={handleAcceptTickets}
-                                        // disabled={selectedTicket.length === 0 || isLoading}
+                                    // disabled={selectedTicket.length === 0 || isLoading}
                                     >
                                         Aceptar tickets
                                     </button>
-                                    <button
+                                    {/* <button
                                         type="button"
                                         className="inline-flex items-center rounded-sm bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white"
                                     >
                                         Delete all
-                                    </button>
+                                    </button> */}
                                 </div>
                             )}
-                            <table className="min-w-full table-fixed divide-y divide-gray-300">
+                            <table className="min-w-full divide-y divide-gray-300">
                                 <thead>
                                     <tr>
                                         <th scope="col" className="relative px-7 sm:w-12 sm:px-6">
                                             <div className="group absolute top-1/2 left-4 -mt-2 grid size-4 grid-cols-1">
                                                 <input
                                                     type="checkbox"
-                                                    className="col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 indeterminate:border-indigo-600 indeterminate:bg-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
+                                                    className="cursor-pointer col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 indeterminate:border-indigo-600 indeterminate:bg-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
                                                     ref={checkbox}
                                                     checked={checked}
                                                     onChange={toggleAll}
@@ -175,21 +174,21 @@ export default function InboxBoard({ searchTerm }: Props) {
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Solicitante</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Ubicación</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Fecha de creación</th>
-                                        <th scope="col" className="relative py-3.5 pr-4 pl-3 sm:pr-3">
+                                        {/* <th scope="col" className="relative py-3.5 pr-4 pl-3 sm:pr-3">
                                             <span className="sr-only">Edit</span>
-                                        </th>
+                                        </th> */}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white">
                                     {isLoading ? (
                                         <tr>
-                                            <td colSpan={5} className="text-center py-8 text-gray-400">
+                                            <td colSpan={6} className="text-center py-8 text-gray-400">
                                                 Cargando...
                                             </td>
                                         </tr>
                                     ) : tickets.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="text-center py-8 text-gray-400">
+                                            <td colSpan={6} className="text-center py-8 text-gray-400">
                                                 No hay tickets pendientes.
                                             </td>
                                         </tr>
@@ -203,7 +202,7 @@ export default function InboxBoard({ searchTerm }: Props) {
                                                     <div className="group absolute top-1/2 left-4 -mt-2 grid size-4 grid-cols-1">
                                                         <input
                                                             type="checkbox"
-                                                            className="col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 indeterminate:border-indigo-600 indeterminate:bg-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
+                                                            className="cursor-pointer col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 indeterminate:border-indigo-600 indeterminate:bg-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 forced-colors:appearance-auto"
                                                             value={ticket.id}
                                                             checked={selectedTicket.includes(ticket)}
                                                             onChange={(e) =>
@@ -247,11 +246,12 @@ export default function InboxBoard({ searchTerm }: Props) {
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.title}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.requester}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.location}</td>
-                                                <td className="py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-3">
+                                                <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.created_at}</td>
+                                                {/* <td className="py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-3">
                                                     <a href="#" className="text-indigo-600 hover:text-indigo-900">
                                                         Edit<span className="sr-only">, {ticket.is_accepted}</span>
                                                     </a>
-                                                </td>
+                                                </td> */}
                                             </tr>
                                         ))
                                     )}
@@ -263,18 +263,19 @@ export default function InboxBoard({ searchTerm }: Props) {
                 </div>
             </div>
             {/* Paginación */}
+            
             <div className="flex justify-end gap-2 mt-4">
                 <button
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                     disabled={page === 0}
-                    className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40"
+                    className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
                 >
                     Anterior
                 </button>
                 <button
                     onClick={() => setPage((p) => (p + 1 < Math.ceil(totalCount / PAGE_SIZE) ? p + 1 : p))}
                     disabled={page + 1 >= Math.ceil(totalCount / PAGE_SIZE)}
-                    className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40"
+                    className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
                 >
                     Siguiente
                 </button>
