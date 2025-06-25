@@ -96,7 +96,7 @@ export default function KanbanBoard({ searchTerm, location }: Props) {
             // Si hay un término de búsqueda o una ubicación, hacemos la búsqueda
             console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
             setIsLoading(true);
-            getFilteredTickets(searchTerm, location)
+            getFilteredTickets(searchTerm, location, true)
                 .then(results => {
                     setFilteredTickets(results);
                     setIsLoading(false);

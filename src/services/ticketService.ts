@@ -73,12 +73,16 @@ export async function getTicketsByStatusPaginated(status: string, page: number, 
   return data as Ticket[];
 }
 
-export async function getFilteredTickets(term: string, location?: string): Promise<Ticket[]> {
+export async function getFilteredTickets(term: string, location?: string, isAccepted?: boolean): Promise<Ticket[]> {
   let query = supabase
     .from("tickets")
     .select("*")
-    .eq("is_accepted", true)
     .order("id", { ascending: false });
+
+  // Aquí decides a quién buscas
+  if (typeof isAccepted === "boolean") {
+    query = query.eq("is_accepted", isAccepted);
+  }
 
   if (location) {
     query = query.eq("location", location);
@@ -94,13 +98,13 @@ export async function getFilteredTickets(term: string, location?: string): Promi
   }
 
   const { data, error } = await query;
-
   if (error) {
     console.error("❌ Error buscando tickets:", error.message);
     return [];
   }
   return data as Ticket[];
 }
+
 
 export async function getTotalTicketsCount() {
   const { count, error } = await supabase

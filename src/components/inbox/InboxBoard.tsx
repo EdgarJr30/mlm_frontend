@@ -22,7 +22,10 @@ export default function InboxBoard({ searchTerm }: Props) {
     const [page, setPage] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const [, setFilteredTickets] = useState<Ticket[]>([]);
+    const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
+
+    const isSearching = searchTerm.length >= 2;
+    const ticketsToShow = isSearching ? filteredTickets : tickets;
 
     useLayoutEffect(() => {
         const isIndeterminate = selectedTicket.length > 0 && selectedTicket.length < tickets.length
@@ -62,36 +65,44 @@ export default function InboxBoard({ searchTerm }: Props) {
         }
     }
 
-    // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
     useEffect(() => {
-        if (searchTerm.length >= 2) {
+        if (isSearching) {
             console.log("🟢 Ejecutando búsqueda desde InboxBoard:", searchTerm);
             setIsLoading(true);
-            getFilteredTickets(searchTerm)
+            getFilteredTickets(searchTerm, undefined, false)
                 .then(results => {
                     setFilteredTickets(results);
                     setIsLoading(false);
                 });
         }
-    }, [searchTerm]);
+    }, [searchTerm, isSearching]);
+
+    // Limpiar resultados al salir de búsqueda
+    useEffect(() => {
+        if (!isSearching) {
+            setFilteredTickets([]);
+        }
+    }, [isSearching]);
 
     // Carga tickets cada vez que cambia la página
     useEffect(() => {
-        let mounted = true;
-        setIsLoading(true);
+        if (!isSearching) {
+            let mounted = true;
+            setIsLoading(true);
 
-        getUnacceptedTicketsPaginated(page, PAGE_SIZE).then(({ data, count }) => {
-            if (mounted) {
-                setTickets(data);
-                setTotalCount(count);
-                setIsLoading(false);
-            }
-        });
+            getUnacceptedTicketsPaginated(page, PAGE_SIZE).then(({ data, count }) => {
+                if (mounted) {
+                    setTickets(data);
+                    setTotalCount(count);
+                    setIsLoading(false);
+                }
+            });
 
-        return () => {
-            mounted = false;
-        };
-    }, [page]);
+            return () => {
+                mounted = false;
+            };
+        }
+    }, [page, isSearching]);
 
     return (
         <div className="px-0 sm:px-0 lg:px-0 h-full flex flex-col">
@@ -187,14 +198,14 @@ export default function InboxBoard({ searchTerm }: Props) {
                                                 Cargando...
                                             </td>
                                         </tr>
-                                    ) : tickets.length === 0 ? (
+                                    ) : ticketsToShow.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="text-center py-8 text-gray-400">
                                                 No hay tickets pendientes.
                                             </td>
                                         </tr>
                                     ) : (
-                                        tickets.map((ticket) => (
+                                        ticketsToShow.map((ticket) => (
                                             <tr key={ticket.id} className={selectedTicket.includes(ticket) ? 'bg-gray-50' : undefined}>
                                                 <td className="relative px-7 sm:w-12 sm:px-6">
                                                     {selectedTicket.includes(ticket) && (
@@ -264,23 +275,24 @@ export default function InboxBoard({ searchTerm }: Props) {
                 </div>
             </div>
             {/* Paginación */}
-            
-            <div className="flex justify-end gap-2 mt-4">
-                <button
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                    className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
-                >
-                    Anterior
-                </button>
-                <button
-                    onClick={() => setPage((p) => (p + 1 < Math.ceil(totalCount / PAGE_SIZE) ? p + 1 : p))}
-                    disabled={page + 1 >= Math.ceil(totalCount / PAGE_SIZE)}
-                    className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
-                >
-                    Siguiente
-                </button>
-            </div>
+            {!isSearching && (
+                <div className="flex justify-end gap-2 mt-4">
+                    <button
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                        disabled={page === 0}
+                        className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+                    >
+                        Anterior
+                    </button>
+                    <button
+                        onClick={() => setPage((p) => (p + 1 < Math.ceil(totalCount / PAGE_SIZE) ? p + 1 : p))}
+                        disabled={page + 1 >= Math.ceil(totalCount / PAGE_SIZE)}
+                        className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+                    >
+                        Siguiente
+                    </button>
+                </div>
+            )}
         </div>
     )
 }
