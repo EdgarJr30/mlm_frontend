@@ -25,7 +25,10 @@ export default function InboxPage() {
                 </header>
 
                 <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
-                    <InboxBoard searchTerm={searchTerm} />
+                    <InboxBoard
+                        searchTerm={searchTerm}
+                        selectedLocation={selectedLocation}
+                    />
                 </section>
             </main>
         </div>

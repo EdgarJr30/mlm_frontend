@@ -119,16 +119,22 @@ export async function getTotalTicketsCount() {
   return count || 0;
 }
 
-export async function getUnacceptedTicketsPaginated(page: number, pageSize: number) {
+export async function getUnacceptedTicketsPaginated(page: number, pageSize: number, location?: string) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("tickets")
-    .select("*", { count: "exact" }) // Incluye el conteo total
+    .select("*", { count: "exact" })
     .eq("is_accepted", false)
     .order("id", { ascending: false })
     .range(from, to);
+
+  if (location) {
+    query = query.eq("location", location);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("❌ Error al cargar tickets no aceptados:", error.message);
@@ -137,6 +143,7 @@ export async function getUnacceptedTicketsPaginated(page: number, pageSize: numb
 
   return { data: data as Ticket[], count: count || 0 };
 }
+
 
 export async function acceptTickets(ticketIds: string[]): Promise<void> {
   const { error } = await supabase

@@ -5,6 +5,7 @@ import { showToastError, showToastSuccess } from '../../notifications';
 import { formatDateInTimezone } from '../../utils/formatDate';
 interface Props {
     searchTerm: string;
+    selectedLocation: string;
 }
 
 const PAGE_SIZE = 10;
@@ -13,7 +14,7 @@ function classNames(...classes: string[]) {
     return classes.filter(Boolean).join(' ')
 }
 
-export default function InboxBoard({ searchTerm }: Props) {
+export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
     const checkbox = useRef<HTMLInputElement>(null)
     const [checked, setChecked] = useState(false)
     const [indeterminate, setIndeterminate] = useState(false)
@@ -65,17 +66,18 @@ export default function InboxBoard({ searchTerm }: Props) {
         }
     }
 
+    // Efecto para búsqueda por texto + ubicación
     useEffect(() => {
         if (isSearching) {
             console.log("🟢 Ejecutando búsqueda desde InboxBoard:", searchTerm);
             setIsLoading(true);
-            getFilteredTickets(searchTerm, undefined, false)
+            getFilteredTickets(searchTerm, selectedLocation, false)
                 .then(results => {
                     setFilteredTickets(results);
                     setIsLoading(false);
                 });
         }
-    }, [searchTerm, isSearching]);
+    }, [searchTerm, isSearching, selectedLocation]);
 
     // Limpiar resultados al salir de búsqueda
     useEffect(() => {
@@ -89,8 +91,7 @@ export default function InboxBoard({ searchTerm }: Props) {
         if (!isSearching) {
             let mounted = true;
             setIsLoading(true);
-
-            getUnacceptedTicketsPaginated(page, PAGE_SIZE).then(({ data, count }) => {
+            getUnacceptedTicketsPaginated(page, PAGE_SIZE, selectedLocation).then(({ data, count }) => {
                 if (mounted) {
                     setTickets(data);
                     setTotalCount(count);
@@ -102,7 +103,7 @@ export default function InboxBoard({ searchTerm }: Props) {
                 mounted = false;
             };
         }
-    }, [page, isSearching]);
+    }, [page, isSearching, selectedLocation]);
 
     return (
         <div className="px-0 sm:px-0 lg:px-0 h-full flex flex-col">
