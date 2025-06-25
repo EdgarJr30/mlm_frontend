@@ -1,29 +1,38 @@
 # MLM (Manteniendo la Misión)
 
-A modern maintenance ticket management system built with React and TypeScript, featuring a Kanban board interface for efficient workflow management.
+Un sistema moderno de gestión de tickets de mantenimiento, desarrollado con React y TypeScript, que incluye una interfaz de tablero Kanban para una gestión eficiente del flujo de trabajo.
 
-## 🚀 Overview
+## 🚀 Resumen
 
-MLM is a web-based application designed to streamline maintenance request management across multiple locations. The system provides an intuitive Kanban board interface for tracking tickets from creation to completion.
+MLM es una aplicación web diseñada para optimizar la gestión de solicitudes de mantenimiento en múltiples ubicaciones. El sistema ofrece una interfaz Kanban intuitiva para el seguimiento de tickets desde su creación hasta su cierre.
 
-## ✨ Features
+## ✨ Funcionalidades
 
-- **Kanban Board Interface**: Visual workflow management
-- **Ticket Creation**: Comprehensive form for creating maintenance requests
-- **User Authentication**: Secure login system with protected routes
-- **Priority Management**: Urgent ticket flagging system
-- **Photo Attachments**: Ability to attach images to maintenance requests
-- **Location Tracking**: Dropdown selection for various facility locations
-- **Incident Dating**: Track when issues originally occurred
-- **Status Management**: Three-stage workflow (Pending, In Progress, Completed)
-- **Visual Indicators**: Color-coded tags and icons for quick status identification
-- **Sequential Numbering**: Automatic ticket numbering for internal tracking
+- **Tablero Kanban**: Gestión visual del flujo de trabajo.
+- **Creación de Tickets**: Formulario completo para registrar solicitudes de mantenimiento.
+- **Autenticación de Usuarios**: Inicio de sesión seguro y rutas protegidas.
+- **Gestión de Prioridad**: Sistema de marcado de tickets urgentes.
+- **Adjuntos de Fotos**: Permite adjuntar imágenes a las solicitudes.
+- **Ubicaciones**: Selección mediante lista desplegable de las diferentes ubicaciones.
+- **Fecha del Incidente**: Registro de la fecha de ocurrencia del problema.
+- **Gestión de Estados**: Flujo de tres etapas (Pendiente, En Ejecución, Finalizadas).
+- **Indicadores Visuales**: Etiquetas e íconos con código de colores para identificar el estado rápidamente.
+- **Numeración Secuencial**: Asignación automática de número de ticket para seguimiento interno.
 
-## ✨ New Features
-- **Global Search 🔎**: Global search within the Kanban board that performs database searches by the fields title and requester to find tickets.
-- **Badge Notifications ❶**: Badge de notificaciones en la campana para nuevos tickets insertados en la BD
+## ✨ Nuevas Funcionalidades
 
-## 🏢 Supported Locations
+- **Búsqueda Global 🔎**: Busca tickets por título y solicitante directamente en la base de datos desde el Kanban.
+- **Notificaciones con Badge ❶**: Muestra el número de nuevos tickets en la campana de notificaciones.
+- **Módulo Bandeja de Entrada (Inbox)**:  
+  - Permite aceptar tickets uno a uno o por lotes de 10.
+  - Integra búsqueda global y filtrado específico por ubicación.
+  - Los tickets aceptados pasan automáticamente al tablero Kanban.
+  - (Funcionalidad de rechazo de tickets pendiente de implementación)
+- **Tablero Kanban Mejorado**:  
+  - Filtrado específico por ubicación.
+  - Solo muestra tickets previamente aceptados.
+
+## 🏢 Ubicaciones Soportadas
 
 - Operadora de Servicios Alimenticios
 - Adrian Tropical 27
@@ -35,96 +44,96 @@ MLM is a web-based application designed to streamline maintenance request manage
 - E. Arturo Trading
 - Edificio Comunitario
 
-## 🛠️ Tech Stack
+## 🛠️ Tecnologías
 
 - **Frontend**: React 19.1.0 + TypeScript
 - **Build Tool**: Vite 6.3.5
-- **Styling**: TailwindCSS 4.1.8
-- **Database**: Supabase
-- **Routing**: React Router DOM 7.6.1
-- **UI Components**: Radix UI, Heroicons, Lucide React
-- **Notifications**: React Toastify, SweetAlert2
+- **Estilos**: TailwindCSS 4.1.8
+- **Base de Datos**: Supabase
+- **Ruteo**: React Router DOM 7.6.1
+- **Componentes UI**: Radix UI, Heroicons, Lucide React
+- **Notificaciones**: React Toastify, SweetAlert2
 
-## 📦 Installation
+## 📦 Instalación
 
-1. **Clone the repository**
+1. **Clonar el repositorio**
    ```bash
    git clone https://github.com/EdgarJr30/cilm_easy_mant.git
    cd cilm_easy_mant
    ```
 
-2. **Install dependencies**
+2. **Instalar dependencias**
    ```bash
    npm install
    ```
 
-3. **Set up environment variables**
-   Create a `.env` file in the root directory with your Supabase credentials:
+3. **Configurar variables de entorno**
+   Crea un archivo `.env` en la raíz con tus credenciales de Supabase:
    ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_SUPABASE_URL=tu_supabase_url
+   VITE_SUPABASE_ANON_KEY=tu_supabase_anon_key
    ```
 
-4. **Set up the database**
-   Run the SQL script to create the necessary tables:
+4. **Configurar la base de datos**
+   Ejecuta el script SQL para crear las tablas necesarias:
    ```bash
-   # Execute the create_database.sql file in your Supabase dashboard
+   # Ejecuta el archivo create_database.sql desde el panel de Supabase
    ```
 
-## 🚦 Usage
+## 🚦 Uso
 
-### Development
+### Desarrollo
 
 ```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+La aplicación estará disponible en `http://localhost:5173`
 
-### Build for Production
+### Construir para Producción
 
 ```bash
 npm run build
 ```
 
-### Preview Production Build
+### Previsualizar Build de Producción
 
 ```bash
 npm run preview
 ```
 
-### Linting
+### Linter
 
 ```bash
 npm run lint
 ```
-## 📱 Application Structure
 
-- `/login` - User authentication
-- `/crear-ticket` - New maintenance request form
-- `/kanban` - Main dashboard with ticket management (protected route)
-- `/` - Redirects to Kanban board
+## 📱 Estructura de la Aplicación
 
-## 🔐 Authentication
+- `/login` - Autenticación de usuarios
+- `/crear-ticket` - Formulario para nuevas solicitudes de mantenimiento
+- `/kanban` - Tablero principal con gestión de tickets (ruta protegida)
+- `/` - Redirecciona al tablero Kanban
 
-The application uses protected routes to ensure only authenticated users can access the main dashboard. Ticket creation is available for all users to allow easy request submission.
+## 🔐 Autenticación
 
-## 🎨 UI/UX Features
+La aplicación utiliza rutas protegidas para garantizar que solo los usuarios autenticados accedan al tablero principal. La creación de tickets está disponible para todos los usuarios, facilitando la solicitud de servicios.
 
-- Responsive design for desktop and mobile
-- Toast notifications for user feedback
-- Color-coded status indicators
-- Modern, clean design with TailwindCSS
+## 🎨 Experiencia de Usuario (UI/UX)
 
-## 📊 Database
+- Diseño responsive para escritorio y móvil
+- Notificaciones tipo Toast para retroalimentación al usuario
+- Indicadores visuales con código de colores
+- Diseño moderno y limpio usando TailwindCSS
 
-The application includes a pre-configured database structure. Import the `MLM.csv` file to populate initial data if needed.
+## 📊 Base de Datos
 
-## 📄 License
+La aplicación incluye una estructura de base de datos preconfigurada. Puedes importar el archivo `MLM.csv` para poblar datos iniciales si lo necesitas.
 
-This project is private and proprietary.
+## 📄 Licencia
+
+Este proyecto es privado y propietario.
 
 ---
 
-Built with ❤️ for efficient maintenance management
-```
+Desarrollado con ❤️ para una gestión de mantenimiento eficiente.
