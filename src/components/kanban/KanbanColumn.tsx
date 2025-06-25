@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getTicketsByStatusPaginated } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
-import { formatDateInTimezone } from "../../utils/formatDate";
-
 interface Props {
     tickets?: Ticket[];
     isSearching: boolean;
@@ -190,7 +188,6 @@ export default function KanbanColumn({
 
     return (
         <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col">
-            {/* //TODO: Ver con cual de los dos estilos queda mejor */}
             {/* <div className="bg-white rounded-lg shadow-lg p-4 w-[350px] min-w-[300px] flex-shrink-0 flex flex-col"> */}
             <h3 className="font-semibold text-lg mb-4 flex items-center">
                 <span className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles(status)}`}>
@@ -280,7 +277,7 @@ export default function KanbanColumn({
                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z" />
                                             </svg>
-                                            Fecha: {ticket.incident_date ? formatDateInTimezone(ticket.incident_date) : "No especificada"}
+                                            Fecha: {ticket.incident_date ? (ticket.incident_date) : "No especificada"}
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <strong className="text-xs">ID:</strong> {ticket.id}

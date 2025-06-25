@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../../types/Ticket";
 import { LOCATIONS } from "../constants/locations";
-import { formatDate } from "../../utils/formatDate";
 import { MAX_COMMENTS_LENGTH } from '../../utils/validators'
 
 const STATUSES: Ticket["status"][] = [
@@ -117,9 +116,9 @@ export default function EditTicketModal({
           <div>
             <label className="block text-sm font-medium">Fecha del Incidente</label>
             <input
-              type="date"
+              type="text"
               name="incident_date"
-              value={formatDate(edited.incident_date)}
+              value={edited.incident_date}
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />

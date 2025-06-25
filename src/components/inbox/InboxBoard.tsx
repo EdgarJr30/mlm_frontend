@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, useEffect } from 'react'
 import type { Ticket } from '../../types/Ticket';
 import { getFilteredTickets, getUnacceptedTicketsPaginated, acceptTickets } from '../../services/ticketService';
 import { showToastError, showToastSuccess } from '../../notifications';
+import { formatDateInTimezone } from '../../utils/formatDate';
 interface Props {
     searchTerm: string;
 }
@@ -246,7 +247,7 @@ export default function InboxBoard({ searchTerm }: Props) {
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.title}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.requester}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.location}</td>
-                                                <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.created_at}</td>
+                                                <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{formatDateInTimezone(ticket.created_at)}</td>
                                                 {/* <td className="py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-3">
                                                     <a href="#" className="text-indigo-600 hover:text-indigo-900">
                                                         Edit<span className="sr-only">, {ticket.is_accepted}</span>
