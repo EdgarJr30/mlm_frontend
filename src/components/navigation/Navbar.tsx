@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
+import { Disclosure } from '@headlessui/react'
 // import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
-import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { useTicketNotification } from "../../context/TicketNotificationContext";
+// import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+// import { useTicketNotification } from "../../context/TicketNotificationContext";
 // import { useTicketNotificationPolling } from "../../hooks/useTicketNotificationPolling";
-import { getTotalTicketsCount } from "../../services/ticketService";
+// import { getTotalTicketsCount } from "../../services/ticketService";
 import { LOCATIONS } from "../constants/locations";
 
 interface NavbarProps {
@@ -18,21 +18,21 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
   const [input, setInput] = useState("");
   const [debouncedInput, setDebouncedInput] = useState("");
 
-  const {
-    newTicketsCount,
-    setTotalTicketsWhenOpened,
-    setNewTicketsCount,
-  } = useTicketNotification();
+  // const {
+  //   newTicketsCount,
+  //   setTotalTicketsWhenOpened,
+  //   setNewTicketsCount,
+  // } = useTicketNotification();
 
   // useTicketNotificationPolling();
 
   // Lógica al refrescar tickets (puedes ajustar según tu flujo)
-  const handleRefreshTickets = async () => {
-    if (typeof onSearch === "function") onSearch(""); // o la función que refresca tu tabla
-    const total = await getTotalTicketsCount();
-    setTotalTicketsWhenOpened(total);
-    setNewTicketsCount(0);
-  };
+  // const handleRefreshTickets = async () => {
+  //   if (typeof onSearch === "function") onSearch(""); // o la función que refresca tu tabla
+  //   const total = await getTotalTicketsCount();
+  //   setTotalTicketsWhenOpened(total);
+  //   setNewTicketsCount(0);
+  // };
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -68,14 +68,14 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
               ))}
             </select>
           </div>
-          <div className="hidden lg:ml-6 lg:flex lg:space-x-8">
+          {/* <div className="hidden lg:ml-6 lg:flex lg:space-x-8">
             <a
               href="#"
               className="inline-flex items-center border-b-2 border-indigo-500 px-1 pt-1 text-sm font-medium text-gray-900"
             >
               Filtros
             </a>
-          </div>
+          </div> */}
 
           {/* Buscador responsive */}
           <div className="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
@@ -96,7 +96,7 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
           </div>
 
           {/* Campanita en móvil */}
-          <div className="flex items-center lg:hidden mr-2">
+          {/* <div className="flex items-center lg:hidden mr-2">
             <button
               type="button"
               className="relative shrink-0 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-hidden"
@@ -109,20 +109,20 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
                 <span className="absolute -top-1 -right-1 rounded-full bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center animate-bounce shadow">{newTicketsCount}</span>
               )}
             </button>
-          </div>
+          </div> */}
 
           {/* Menú hamburguesa en móvil */}
-          <div className="flex items-center lg:hidden">
+          {/* <div className="flex items-center lg:hidden">
             <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden focus:ring-inset">
               <span className="absolute -inset-0.5" />
               <span className="sr-only">Open main menu</span>
               <Bars3Icon aria-hidden="true" className="block size-6 group-data-open:hidden" />
               <XMarkIcon aria-hidden="true" className="hidden size-6 group-data-open:block" />
             </DisclosureButton>
-          </div>
+          </div> */}
 
           {/* Campanita solo en desktop */}
-          <div className="hidden lg:ml-4 lg:flex lg:items-center">
+          {/* <div className="hidden lg:ml-4 lg:flex lg:items-center">
             <button
               type="button"
               className="relative shrink-0 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-hidden"
@@ -135,11 +135,11 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
                 <span className="absolute -top-1 -right-1 rounded-full bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center animate-bounce shadow">{newTicketsCount}</span>
               )}
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
-      <DisclosurePanel className="lg:hidden">
+      {/* <DisclosurePanel className="lg:hidden">
         <div className="space-y-1 pt-2 pb-3">
           <DisclosureButton
             as="a"
@@ -149,7 +149,7 @@ export default function Navbar({ onSearch, selectedLocation, onFilterLocation }:
             Filtros
           </DisclosureButton>
         </div>
-      </DisclosurePanel>
+      </DisclosurePanel> */}
     </Disclosure>
   )
 }

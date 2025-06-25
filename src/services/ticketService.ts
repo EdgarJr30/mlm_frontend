@@ -105,19 +105,18 @@ export async function getFilteredTickets(term: string, location?: string, isAcce
   return data as Ticket[];
 }
 
+// export async function getTotalTicketsCount() {
+//   const { count, error } = await supabase
+//     .from('tickets')
+//     .select('id', { count: 'exact', head: true });
 
-export async function getTotalTicketsCount() {
-  const { count, error } = await supabase
-    .from('tickets')
-    .select('id', { count: 'exact', head: true });
-
-  if (error) {
-    console.error("Error al contar tickets:", error.message);
-    return 0;
-  }
-  console.log(`Total de tickets: ${count}`);
-  return count || 0;
-}
+//   if (error) {
+//     console.error("Error al contar tickets:", error.message);
+//     return 0;
+//   }
+//   console.log(`Total de tickets: ${count}`);
+//   return count || 0;
+// }
 
 export async function getUnacceptedTicketsPaginated(page: number, pageSize: number, location?: string) {
   const from = page * pageSize;
@@ -143,7 +142,6 @@ export async function getUnacceptedTicketsPaginated(page: number, pageSize: numb
 
   return { data: data as Ticket[], count: count || 0 };
 }
-
 
 export async function acceptTickets(ticketIds: string[]): Promise<void> {
   const { error } = await supabase
