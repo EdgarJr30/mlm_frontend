@@ -25,7 +25,10 @@ export default function KanbanPage() {
         </header>
 
         <section className="flex-1 overflow-x-auto overflow-y-hidden px-4 md:px-6 lg:px-8 pt-4 pb-8">
-          <KanbanBoard searchTerm={searchTerm} location={selectedLocation} />
+          <KanbanBoard
+            searchTerm={searchTerm}
+            selectedLocation={selectedLocation}
+          />
         </section>
       </main>
     </div>

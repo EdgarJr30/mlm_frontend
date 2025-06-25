@@ -14,7 +14,8 @@ interface Props {
     pageSize?: number;
     reloadSignal: number;
     lastUpdatedTicket: Ticket | null;
-    location?: string;
+    selectedLocation?: string;
+    isFiltering: boolean;
 }
 
 export default function KanbanColumn({
@@ -29,7 +30,8 @@ export default function KanbanColumn({
     pageSize = 10,
     reloadSignal,
     lastUpdatedTicket,
-    location,
+    selectedLocation,
+    isFiltering
 
 }: Props) {
     const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
@@ -48,14 +50,14 @@ export default function KanbanColumn({
     // Skeleton loader
     const skeletonTickets = Array.from({ length: 5 });
     // Decide qué tickets renderizar
-    const ticketsToRender = isSearching ? (tickets ?? []) : localTickets;
+    const ticketsToRender = isFiltering ? (tickets ?? []) : localTickets;
     // Loading solo cuando no hay tickets para mostrar y está cargando
-    const showSkeleton = isInitialLoading && !isSearching;
+    const showSkeleton = isInitialLoading && !isFiltering;
 
     // Pagina y agrega tickets SOLO en modo normal
     const loadMoreTickets = useCallback(
         async (force = false) => {
-            if (isSearching) return; // ← aquí ignoramos si estamos buscando
+            if (isFiltering) return;
 
             if ((isInitialLoading || isPaginatingRef.current) && !force) return;
             if (!hasMore) return;
@@ -69,7 +71,7 @@ export default function KanbanColumn({
             }
 
             const currentPage = force ? 0 : pageRef.current;
-            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20, location);
+            const newTickets = await getTicketsByStatusPaginated(status, currentPage, pageSize ?? 20, selectedLocation);
 
             setLocalTickets((prev) => {
                 const merged = force ? [...newTickets] : [...prev, ...newTickets];
@@ -88,7 +90,7 @@ export default function KanbanColumn({
             else setIsPaginating(false);
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [isSearching, isInitialLoading, hasMore, status, page, pageSize]
+        [isFiltering, isInitialLoading, hasMore, status, page, pageSize, selectedLocation]
     );
 
     useEffect(() => {
@@ -105,7 +107,7 @@ export default function KanbanColumn({
     // - cambia el status (columna)
     // - cambia reloadSignal (se fuerza recarga global)
     useEffect(() => {
-        if (!isSearching) {
+        if (!isFiltering) {
             setLocalTickets([]);
             setPage(0);
             setHasMore(true);
@@ -114,7 +116,7 @@ export default function KanbanColumn({
             loadMoreTickets(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSearching, status, reloadSignal]);
+    }, [isFiltering, status, reloadSignal, selectedLocation]);
 
     // Cuando termina de cargar los tickets por primera vez, notificamos al board
     useEffect(() => {

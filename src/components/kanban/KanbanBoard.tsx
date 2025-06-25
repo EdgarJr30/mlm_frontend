@@ -15,10 +15,10 @@ const STATUSES: Ticket["status"][] = [
 
 interface Props {
     searchTerm: string;
-    location: string;
+    selectedLocation: string;
 }
 
-export default function KanbanBoard({ searchTerm, location }: Props) {
+export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
     const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
     const [reloadKey, setReloadKey] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
@@ -31,6 +31,8 @@ export default function KanbanBoard({ searchTerm, location }: Props) {
 
     // Contador de columnas cargadas (para controlar cuando quitar el loading)
     const loadedColumns = useRef(0);
+
+    const isFiltering = searchTerm.length >= 2 || selectedLocation.length > 0;
 
     const openModal = (ticket: Ticket) => {
         setSelectedTicket(ticket);
@@ -92,27 +94,27 @@ export default function KanbanBoard({ searchTerm, location }: Props) {
 
     // Solo buscar cuando searchTerm está activo (>= 2 caracteres)
     useEffect(() => {
-        if (searchTerm.length >= 2 || location.length) {
+        if (isFiltering) {
             // Si hay un término de búsqueda o una ubicación, hacemos la búsqueda
             console.log("🟢 Ejecutando búsqueda desde KanbanBoard:", searchTerm);
             setIsLoading(true);
-            getFilteredTickets(searchTerm, location, true)
+            getFilteredTickets(searchTerm, selectedLocation, true)
                 .then(results => {
                     setFilteredTickets(results);
                     setIsLoading(false);
                 });
         }
-    }, [searchTerm, location]);
+    }, [isFiltering, searchTerm, selectedLocation]);
 
+    // Si el término de búsqueda es menor a 2 caracteres o no hay ubicación, reseteamos el estado
     useEffect(() => {
-        if (searchTerm.length < 2 && !location) {
-            // Si el término de búsqueda es menor a 2 caracteres o no hay ubicación, reseteamos el estado
+        if (!isFiltering) {
             console.log("🔴 Reseteando búsqueda en KanbanBoard");
             setFilteredTickets([]);
             setIsLoading(true);
             setReloadKey(prev => prev + 1);
         }
-    }, [searchTerm, location]);
+    }, [isFiltering, searchTerm, selectedLocation]);
 
     // Si recargas las columnas, resetea el loading
     React.useEffect(() => {
@@ -134,7 +136,8 @@ export default function KanbanBoard({ searchTerm, location }: Props) {
                     key={status}
                     status={status}
                     isSearching={isSearching}
-                    tickets={isSearching ? filteredTickets.filter(t => t.status === status) : undefined}
+                    isFiltering={isFiltering}
+                    tickets={isFiltering ? filteredTickets.filter(t => t.status === status) : undefined}
                     onOpenModal={openModal}
                     getPriorityStyles={getPriorityStyles}
                     getStatusStyles={getStatusStyles}
@@ -143,7 +146,7 @@ export default function KanbanBoard({ searchTerm, location }: Props) {
                     onFirstLoad={handleColumnLoaded}
                     reloadSignal={reloadKey}
                     lastUpdatedTicket={lastUpdatedTicket}
-                    location={location}
+                    selectedLocation={selectedLocation}
                 />
             ))}
 
