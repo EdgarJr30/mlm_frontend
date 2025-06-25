@@ -55,10 +55,14 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                     : `Se aceptaron ${ids.length} tickets correctamente.`
             );
             setSelectedTicket([]);
-            // Recarga los tickets sin aceptar
-            const { data, count } = await getUnacceptedTicketsPaginated(page, PAGE_SIZE);
-            setTickets(data);
-            setTotalCount(count);
+            if (isSearching) {
+                setFilteredTickets((prev) => prev.filter(ticket => !ids.includes(ticket.id)));
+            } else {
+                // Recarga los tickets sin aceptar
+                const { data, count } = await getUnacceptedTicketsPaginated(page, PAGE_SIZE);
+                setTickets(data);
+                setTotalCount(count);
+            }
         } catch (error) {
             showToastError(`Hubo un error al aceptar los tickets. Error: ${error instanceof Error ? error.message : 'Desconocido'}`);
         } finally {
