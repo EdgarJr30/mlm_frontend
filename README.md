@@ -88,7 +88,7 @@ MLM es una aplicación web diseñada para optimizar la gestión de solicitudes d
 npm run dev
 ```
 
-La aplicación estará disponible en `http://localhost:5173`
+La aplicación estará disponible en `http://localhost:puerto
 
 ### Construir para Producción
 
