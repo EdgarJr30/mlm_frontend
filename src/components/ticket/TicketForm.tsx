@@ -326,7 +326,7 @@ export default function TicketForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email de Contacto</Label>
+                  <Label htmlFor="email">Email de Contacto <span className="">(Opcional)</span></Label>
                   <Input
                     id="email"
                     type="email"
