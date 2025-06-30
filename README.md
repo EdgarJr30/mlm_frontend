@@ -136,4 +136,4 @@ Este proyecto es privado y propietario.
 
 ---
 
-Desarrollado con ❤️ para una gestión de mantenimiento eficiente.
+Desarrollado con ❤️ para una gestión de mantenimiento eficiente
