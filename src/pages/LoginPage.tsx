@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { login, isAuthenticated } from "../utils/fakeAuth";
 import Logo from '../assets/logo_horizontal.svg';
 import Collage from '../assets/COLLAGE_MLM.webp';
-import AppVersion from "../components/AppVersion";
+import AppVersion from "../components/ui/AppVersion";
 
 export default function LoginPage() {
   //   const [email, setEmail] = useState("");

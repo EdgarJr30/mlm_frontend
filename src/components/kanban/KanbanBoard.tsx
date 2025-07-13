@@ -4,7 +4,7 @@ import EditTicketModal from "../ticket/EditTicketModal";
 import { updateTicket } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
 import KanbanColumn from "./KanbanColumn";
-import Modal from "../Modal";
+import Modal from "../ui/Modal";
 import { showToastSuccess, showToastError } from "../../notifications/toast";
 
 const STATUSES: Ticket["status"][] = [

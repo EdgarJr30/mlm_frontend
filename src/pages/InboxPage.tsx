@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../components/ui/Sidebar";
 import Navbar from "../components/navigation/Navbar";
 import InboxBoard from "../components/inbox/InboxBoard";
 // import SearchTickets from "../components/SearchTickets";

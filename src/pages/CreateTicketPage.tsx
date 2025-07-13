@@ -1,5 +1,5 @@
 import TicketForm from "../components/ticket/TicketForm";
-import Footer from '../components/Footer';
+import Footer from '../components/ui/Footer';
 
 export default function CreateTicketPage() {
   return (

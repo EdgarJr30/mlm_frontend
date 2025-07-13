@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import Logo from '../assets/logo_horizontal_blanc.svg';
-import { logout } from "../utils/fakeAuth";
+import Logo from '../../assets/logo_horizontal_blanc.svg';
+import { logout } from "../../utils/fakeAuth";
 import AppVersion from "./AppVersion";
 
 const menu = [
