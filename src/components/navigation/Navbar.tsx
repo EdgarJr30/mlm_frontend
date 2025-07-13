@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Disclosure } from '@headlessui/react'
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid'
-import { LOCATIONS } from "../constants/locations";
+import { LOCATIONS } from "../../constants/locations";
 
 function FilterIcon(props: React.SVGProps<SVGSVGElement>) {
   return (

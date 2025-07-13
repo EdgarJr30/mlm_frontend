@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../../types/Ticket";
-import { LOCATIONS } from "../constants/locations";
+import { LOCATIONS } from "../../constants/locations";
 import { getTicketImagePaths, getPublicImageUrl } from "../../services/storageService";
 import { MAX_COMMENTS_LENGTH } from '../../utils/validators'
 
