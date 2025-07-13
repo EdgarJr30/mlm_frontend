@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../../types/Ticket";
 import { LOCATIONS } from "../constants/locations";
+import { getTicketImagePaths, getPublicImageUrl } from "../../services/storageService";
 import { MAX_COMMENTS_LENGTH } from '../../utils/validators'
 
 const STATUSES: Ticket["status"][] = [
@@ -43,7 +44,6 @@ const RESPONSABLES_SECCIONES: Record<string, string[]> = {
     "Weldyn Martinez"
   ]
 };
-
 interface EditTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -57,10 +57,12 @@ export default function EditTicketModal({
   onClose,
   ticket,
   onSave,
-  showFullImage,
+  // showFullImage,
   setShowFullImage,
 }: EditTicketModalProps) {
   const [edited, setEdited] = useState<Ticket>(ticket);
+  const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
+
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -257,7 +259,7 @@ export default function EditTicketModal({
             </select>
           </div>
 
-          {ticket.image && (
+          {/* {ticket.image && (
             <>
               <img
                 src={ticket.image}
@@ -300,7 +302,26 @@ export default function EditTicketModal({
                 </div>
               )}
             </>
-          )}
+          )} */}
+
+          {/* IMÁGENES DEL TICKET */}
+          {ticket.image && (() => {
+            const imagePaths = getTicketImagePaths(ticket.image ?? "[]");
+            if (imagePaths.length === 0) return null;
+            return (
+              <div className="flex gap-2 flex-wrap my-2">
+                {imagePaths.map((path, idx) => (
+                  <img
+                    key={idx}
+                    src={getPublicImageUrl(path)}
+                    alt={`Adjunto ${idx + 1}`}
+                    className="w-20 h-20 object-contain rounded cursor-pointer border bg-gray-100 hover:scale-105 transition"
+                    onClick={() => setFullImageIdx(idx)}
+                  />
+                ))}
+              </div>
+            );
+          })()}
 
           <div className="flex items-center gap-6 flex-wrap">
             {/* <div className="flex items-center gap-2">
@@ -394,6 +415,57 @@ export default function EditTicketModal({
           </div>
         </div> */}
       </div>
+
+      {fullImageIdx !== null && (() => {
+        const imagePaths = getTicketImagePaths(ticket.image ?? "[]");
+        const path = imagePaths[fullImageIdx];
+        if (!path) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/20"
+            onClick={() => setFullImageIdx(null)}
+          >
+            <div className="relative" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => setFullImageIdx(null)}
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <img
+                src={getPublicImageUrl(path)}
+                alt="Vista ampliada"
+                className="max-w-full max-h-[80vh] rounded shadow-lg"
+              />
+              {/* Flechas para navegar entre imágenes */}
+              {imagePaths.length > 1 && (
+                <>
+                  <button
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
+                    onClick={() => setFullImageIdx((prev) => (prev! > 0 ? prev! - 1 : imagePaths.length - 1))}
+                    type="button"
+                  >◀️</button>
+                  <button
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
+                    onClick={() => setFullImageIdx((prev) => (prev! < imagePaths.length - 1 ? prev! + 1 : 0))}
+                    type="button"
+                  >▶️</button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
 
       <div className="flex justify-end gap-2 mt-6">

@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "../ui/button"
 import { Progress } from "../ui/progress"
 import { Checkbox } from "../ui/checkbox"
-import { createTicket } from "../../services/ticketService";
+import { createTicket, updateTicket } from "../../services/ticketService";
+import { uploadImageToBucket } from '../../services/storageService';
 import {
   validateTitle,
   validateDescription,
@@ -63,7 +64,8 @@ const initialForm: TicketFormData = {
 
 export default function TicketForm() {
   const [form, setForm] = useState(initialForm)
-  const [imagePreview, setImagePreview] = useState("")
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [imagePreview, setImagePreview] = useState<string[]>([])
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
@@ -76,26 +78,39 @@ export default function TicketForm() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || []);
+    if (!files) return
+
+    // Limita el máximo de 3 imágenes por ticket
+    if (files.length > 3) {
+      setErrors((prev) => ({ ...prev, image: "Máximo 3 imágenes por ticket." }));
+      setSelectedFiles([]);
+      setImagePreview([]);
+      return;
+    }
 
     // Validación de tamaño
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, image: "La imagen no puede superar los 10MB." }))
-      setForm((prev) => ({ ...prev, image: "" }))
-      setImagePreview("")
-      return
+    for (const file of files) {
+      if (file.size > 2 * 1024 * 1024) { // 2 MB
+        setErrors((prev) => ({ ...prev, image: "Cada imagen debe ser menor a 2MB." }));
+        setSelectedFiles([]);
+        setImagePreview([]);
+        return;
+      }
     }
 
-    // Si todo está bien, limpia errores y carga imagen
-    setErrors((prev) => ({ ...prev, image: undefined }))
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string
-      setForm((prev) => ({ ...prev, image: base64 }))
-      setImagePreview(base64)
-    }
-    reader.readAsDataURL(file)
+    // Si todo está bien, limpia errores
+    setErrors((prev) => ({ ...prev, image: undefined }));
+    setSelectedFiles(files);
+
+    // Previews
+    Promise.all(files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    })).then(setImagePreview);
   }
 
   const validateStep = (): boolean => {
@@ -115,8 +130,8 @@ export default function TicketForm() {
 
     if (step === 3) {
       newErrors.incident_date = validateIncidentDate(form.incident_date) ?? undefined
-      if (!form.image) {
-        newErrors.image = "La imagen es obligatoria."
+      if (selectedFiles.length === 0) {
+        newErrors.image = "Debes adjuntar al menos una imagen."
       }
     }
 
@@ -145,8 +160,10 @@ export default function TicketForm() {
 
     setIsSubmitting(true);
     try {
+      // 1. Crear ticket sin imágenes
       const ticketToSave = {
         ...form,
+        image: "[]",
         priority: form.priority ?? "baja",
         status: "Pendiente",
         assignee: "Sin asignar",
@@ -155,6 +172,19 @@ export default function TicketForm() {
       const created = await createTicket(ticketToSave);
       const ticketId = created.id;
       const ticketTitle = created.title;
+
+      // 2. Sube cada imagen al bucket
+      const imagePaths: string[] = [];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const path = await uploadImageToBucket(file, ticketId, i);
+        imagePaths.push(path);
+      }
+
+      // 3. Actualiza el ticket con los paths de las imágenes (como array o string jsonificado)
+      // Si tu base de datos tiene el campo image como string, guarda como JSON.stringify(imagePaths)
+      // Si puedes, mejor usa array de texto
+      await updateTicket(ticketId, { image: JSON.stringify(imagePaths) });
 
       // TODO: Manejar el envio de creación de ticket cuando termine el backend
       // try {
@@ -409,10 +439,19 @@ export default function TicketForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="image">Imagen del incidente <span className="text-red-500">*</span></Label>
-                <Input type="file" accept="image/*" multiple={false} onChange={handleFileChange} className="cursor-pointer" />
+                <Input type="file" accept="image/*" multiple onChange={handleFileChange} className="cursor-pointer" />
                 {errors.image && <p className="text-sm text-red-500">{errors.image}</p>}
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
+                {imagePreview.length > 0 && (
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {imagePreview.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`Preview ${i + 1}`}
+                        className="max-h-32 object-contain rounded border"
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -459,8 +498,16 @@ export default function TicketForm() {
                 {imagePreview && (
                   <div>
                     <h3 className="text-md font-semibold text-gray-700 mb-1">📎 Imagen Adjunta</h3>
-                    <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
+                    {imagePreview.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`Preview ${i + 1}`}
+                        className="mt-2 max-h-32 object-contain rounded border"
+                      />
+                    ))}
                   </div>
+                  // <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
                 )}
               </div>
             </div>

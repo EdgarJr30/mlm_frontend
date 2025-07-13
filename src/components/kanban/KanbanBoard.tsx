@@ -46,7 +46,7 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
 
     const handleSave = async (updatedTicket: Ticket) => {
         try {
-            await updateTicket(updatedTicket.id, updatedTicket);
+            await updateTicket(Number(updatedTicket.id), updatedTicket);
             setLastUpdatedTicket(updatedTicket);
             console.log("✅ Ticket actualizado");
             showToastSuccess("Ticket actualizado correctamente.")

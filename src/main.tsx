@@ -24,36 +24,36 @@ console.log("🚀 Aplicación iniciada en modo:", process.env.NODE_ENV);
 ReactDOM.createRoot(document.getElementById('root')!).render(
 
   <React.StrictMode>
-    <BrowserRouter>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
-      {/* <TicketNotificationProvider> */}
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/crear-ticket" element={<CreateTicketPage />} />
-          <Route path="/kanban" element={
-            <ProtectedRoute>
-              <KanbanPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/inbox" element={
-            <ProtectedRoute>
-              <InboxPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/" element={<Navigate to="/kanban" />} />
-          <Route path="*" element={<Navigate to="/kanban" />} />
-        </Routes>
-      {/* </TicketNotificationProvider> */}
-    </BrowserRouter>
-  </React.StrictMode>,
+  <BrowserRouter>
+    <ToastContainer
+      position="top-right"
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="colored"
+    />
+    {/* <TicketNotificationProvider> */}
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/crear-ticket" element={<CreateTicketPage />} />
+      <Route path="/kanban" element={
+        <ProtectedRoute>
+          <KanbanPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/inbox" element={
+        <ProtectedRoute>
+          <InboxPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/" element={<Navigate to="/kanban" />} />
+      <Route path="*" element={<Navigate to="/kanban" />} />
+    </Routes>
+    {/* </TicketNotificationProvider> */}
+  </BrowserRouter>
+  // </React.StrictMode>,
 )

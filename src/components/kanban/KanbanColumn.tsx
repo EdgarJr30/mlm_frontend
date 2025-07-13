@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getTicketsByStatusPaginated } from "../../services/ticketService";
 import type { Ticket } from "../../types/Ticket";
+import { getTicketsByStatusPaginated } from "../../services/ticketService";
+import { getPublicImageUrl, getTicketImagePaths } from '../../services/storageService';
 interface Props {
     tickets?: Ticket[];
     isSearching: boolean;
@@ -223,13 +224,29 @@ export default function KanbanColumn({
                                     onClick={() => onOpenModal(ticket)}
                                     className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
                                 >
-                                    {ticket.image && (
+                                    {/* {ticket.image && (
                                         <img
                                             src={ticket.image}
                                             alt="Adjunto"
                                             className="w-full h-24 object-contain rounded mb-3"
                                         />
-                                    )}
+                                    )} */}
+                                    {ticket.image && (() => {
+                                        const imagePaths = getTicketImagePaths(ticket.image);
+                                        if (imagePaths.length === 0) return null;
+                                        return (
+                                            <div className="flex gap-1 mb-3">
+                                                {imagePaths.map((path, idx) => (
+                                                    <img
+                                                        key={idx}
+                                                        src={getPublicImageUrl(path)}
+                                                        alt={`Adjunto ${idx + 1}`}
+                                                        className="w-full h-24 object-contain rounded mb-3"
+                                                    />
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
                                     <div className="flex items-start justify-between mb-1">
                                         <h4 className="font-semibold text-sm text-gray-900">{ticket.title.length > 100 ? `${ticket.title.slice(0, 100)}...` : ticket.title}</h4>
                                         <button
