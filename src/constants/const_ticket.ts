@@ -30,6 +30,7 @@ export const RESPONSABLES_SECCIONES: Record<string, string[]> = {
     "Jose Castillo Paula",
     "Jose Luis Garcia Taveraz",
     "Jose Ramon Almonte",
+    "Junior de Leon",
     "Luis Vasquez Zapata",
     "Miguel Angel Castillo Feliz",
     "Pedro Jose Frías (El mello)",
@@ -37,6 +38,6 @@ export const RESPONSABLES_SECCIONES: Record<string, string[]> = {
     "Ramon del Carmen Zapata Ureña",
     "Ugo Santo Gobessi",
     "Vianela Castillo Castillo",
-    "Weldyn Martinez"
+    "Weldyn Martinez",
   ]
 };
