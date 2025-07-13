@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react'
 import type { Ticket } from '../../types/Ticket';
 import { getFilteredTickets, getUnacceptedTicketsPaginated, acceptTickets } from '../../services/ticketService';
+import { getPublicImageUrl, getTicketImagePaths } from '../../services/storageService';
 import { showToastError, showToastSuccess } from '../../notifications';
 import { formatDateInTimezone } from '../../utils/formatDate';
 interface Props {
@@ -188,8 +189,10 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">ID</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Título</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Descripción</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Solicitante</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Ubicación</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Imagén</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Fecha de creación</th>
                                         {/* <th scope="col" className="relative py-3.5 pr-4 pl-3 sm:pr-3">
                                             <span className="sr-only">Edit</span>
@@ -199,13 +202,13 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                                 <tbody className="divide-y divide-gray-200 bg-white">
                                     {isLoading ? (
                                         <tr>
-                                            <td colSpan={6} className="text-center py-8 text-gray-400">
+                                            <td colSpan={8} className="text-center py-8 text-gray-400">
                                                 Cargando...
                                             </td>
                                         </tr>
                                     ) : ticketsToShow.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="text-center py-8 text-gray-400">
+                                            <td colSpan={8} className="text-center py-8 text-gray-400">
                                                 No hay tickets pendientes.
                                             </td>
                                         </tr>
@@ -261,8 +264,25 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                                                     {ticket.id}
                                                 </td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.title}</td>
+                                                <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.description}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.requester}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{ticket.location}</td>
+                                                <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500"> {ticket.image && (() => {
+                                                    const imagePaths = getTicketImagePaths(ticket.image);
+                                                    if (imagePaths.length === 0) return null;
+                                                    return (
+                                                        <div className="flex gap-1 mb-3">
+                                                            {imagePaths.map((path, idx) => (
+                                                                <img
+                                                                    key={idx}
+                                                                    src={getPublicImageUrl(path)}
+                                                                    alt={`Adjunto ${idx + 1}`}
+                                                                    className="w-full h-24 object-contain rounded mb-3"
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{formatDateInTimezone(ticket.created_at)}</td>
                                                 {/* <td className="py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-3">
                                                     <a href="#" className="text-indigo-600 hover:text-indigo-900">
