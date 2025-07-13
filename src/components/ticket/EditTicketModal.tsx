@@ -1,49 +1,10 @@
 import React, { useState, useEffect } from "react";
 import type { Ticket } from "../../types/Ticket";
 import { LOCATIONS } from "../../constants/locations";
+import { STATUSES, RESPONSABLES_SECCIONES } from "../../constants/const_ticket";
 import { getTicketImagePaths, getPublicImageUrl } from "../../services/storageService";
 import { MAX_COMMENTS_LENGTH } from '../../utils/validators'
 
-const STATUSES: Ticket["status"][] = [
-  "Pendiente",
-  "En Ejecución",
-  "Finalizadas",
-];
-
-const RESPONSABLES_SECCIONES: Record<string, string[]> = {
-  "SIN ASIGNAR": ["<< SIN ASIGNAR >>"],
-  "Internos": [
-    "Edwin Brito",
-    "Anibelka Varga",
-    "Miguel Angel Castro",
-    "Yeicor Yamel Castillo Feliz",
-    "Joel Mieses",
-    "Aneudy Jesus Altagracia",
-    "Antonio Riveras",
-    "Estarlin Javier Suero",
-    "Ostakio Veloz Ramón",
-    "Jenssy Leroy",
-    "Richardson Minaya"
-  ],
-  "TERCEROS": [
-    "Angel Pinales Corporan",
-    "Carlos Manuel de Sena Reyes",
-    "Daniel Cordero Nuñez",
-    "Elixandro Nova Beriguete",
-    "Francisco Natera Ramirez",
-    "Jose Castillo Paula",
-    "Jose Luis Garcia Taveraz",
-    "Jose Ramon Almonte",
-    "Luis Vasquez Zapata",
-    "Miguel Angel Castillo Feliz",
-    "Pedro Jose Frías (El mello)",
-    "Pedro Pineda",
-    "Ramon del Carmen Zapata Ureña",
-    "Ugo Santo Gobessi",
-    "Vianela Castillo Castillo",
-    "Weldyn Martinez"
-  ]
-};
 interface EditTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -258,51 +219,6 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
-
-          {/* {ticket.image && (
-            <>
-              <img
-                src={ticket.image}
-                alt="Adjunto"
-                className="w-full h-36 object-contain rounded cursor-pointer border"
-                onClick={() => setShowFullImage(true)}
-              />
-
-              {showFullImage && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10"
-                  onClick={() => setShowFullImage(false)} // Cierra al hacer clic afuera
-                >
-                  <div
-                    className="relative"
-                    onClick={(e) => e.stopPropagation()} // Evita que el clic dentro del modal lo cierre
-                  >
-                    <button
-                      onClick={() => setShowFullImage(false)}
-                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
-                      aria-label="Cerrar"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                    <img
-                      src={ticket.image}
-                      alt="Vista ampliada"
-                      className="max-w-full max-h-[80vh] rounded shadow-lg"
-                    />
-                  </div>
-                </div>
-              )}
-            </>
-          )} */}
 
           {/* IMÁGENES DEL TICKET */}
           {ticket.image && (() => {
