@@ -25,6 +25,8 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
+    const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
+    const [modalTicket, setModalTicket] = useState<Ticket | null>(null);
 
     const isSearching = searchTerm.length >= 2;
     const ticketsToShow = isSearching ? filteredTickets : tickets;
@@ -109,6 +111,19 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
             };
         }
     }, [page, isSearching, selectedLocation]);
+
+    useEffect(() => {
+        if (fullImageIdx === null) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                setFullImageIdx(null);
+                setModalTicket(null);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [fullImageIdx]);
+
 
     return (
         <div className="px-0 sm:px-0 lg:px-0 h-full flex flex-col">
@@ -277,7 +292,11 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                                                                     key={idx}
                                                                     src={getPublicImageUrl(path)}
                                                                     alt={`Adjunto ${idx + 1}`}
-                                                                    className="w-full h-24 object-contain rounded mb-3"
+                                                                    className="w-full h-24 object-contain rounded mb-3 cursor-pointer hover:scale-105 transition"
+                                                                    onClick={() => {
+                                                                        setModalTicket(ticket);       // Ticket actual
+                                                                        setFullImageIdx(idx);         // Imagen seleccionada
+                                                                    }}
                                                                 />
                                                             ))}
                                                         </div>
@@ -298,6 +317,68 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                         </div>
                     </div>
                 </div>
+                {modalTicket && fullImageIdx !== null && (() => {
+                    const imagePaths = getTicketImagePaths(modalTicket.image ?? '');
+                    const path = imagePaths[fullImageIdx];
+                    if (!path) return null;
+                    return (
+                        <div
+                            className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30"
+                            onClick={() => {
+                                setFullImageIdx(null);
+                                setModalTicket(null);
+                            }}
+                        >
+                            <div
+                                className="relative"
+                                onClick={e => e.stopPropagation()} // Evita cerrar al hacer clic dentro del modal
+                            >
+                                {/* Botón cerrar */}
+                                <button
+                                    onClick={() => {
+                                        setFullImageIdx(null);
+                                        setModalTicket(null);
+                                    }}
+                                    className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
+                                    aria-label="Cerrar"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={2}
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                {/* Imagen ampliada */}
+                                <img
+                                    src={getPublicImageUrl(path)}
+                                    alt="Vista ampliada"
+                                    className="max-w-full max-h-[80vh] rounded shadow-lg"
+                                />
+                                {/* Flechas si hay varias imágenes */}
+                                {imagePaths.length > 1 && (
+                                    <>
+                                        <button
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
+                                            onClick={() => setFullImageIdx((prev) => prev! > 0 ? prev! - 1 : imagePaths.length - 1)}
+                                            type="button"
+                                        >◀️</button>
+                                        <button
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
+                                            onClick={() => setFullImageIdx((prev) => prev! < imagePaths.length - 1 ? prev! + 1 : 0)}
+                                            type="button"
+                                        >▶️</button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+
             </div>
             {/* Paginación */}
             {!isSearching && (
