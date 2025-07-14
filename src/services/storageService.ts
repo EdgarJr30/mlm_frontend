@@ -13,7 +13,7 @@ export async function uploadImageToBucket(file: File, ticketId: number, idx: num
 
   if (error) throw error;
   return filePath;
-    //   El path será algo como: 123/123_1689532320_0.jpg, es decir, una carpeta por ticket con archivos únicos.
+    //   El path será algo como: 123/123_1689532320_0.webp, es decir, una carpeta por ticket con archivos únicos.
 }
 
 export function getPublicImageUrl(path: string) {

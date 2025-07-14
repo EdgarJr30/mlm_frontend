@@ -9,6 +9,7 @@ import { Progress } from "../ui/progress"
 import { Checkbox } from "../ui/checkbox"
 import { createTicket, updateTicket } from "../../services/ticketService";
 import { uploadImageToBucket } from '../../services/storageService';
+import imageCompression from 'browser-image-compression';
 import {
   validateTitle,
   validateDescription,
@@ -26,7 +27,7 @@ import {
 import { showSuccessAlert } from "../../utils/showAlert"
 import { getNowInTimezoneForStorage, getTodayISODate } from "../../utils/formatDate";
 // import AppVersion from "../AppVersion";
-// import { sendTicketEmail } from "../../services/emailService";
+// import { sendTicketEmail, async } from '../../services/emailService';
 // import type { TicketEmailData } from "../../services/emailService";
 
 interface TicketFormData {
@@ -77,7 +78,7 @@ export default function TicketForm() {
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files) return
 
@@ -89,28 +90,62 @@ export default function TicketForm() {
       return;
     }
 
-    // Validación de tamaño
-    for (const file of files) {
-      if (file.size > 2 * 1024 * 1024) { // 2 MB
-        setErrors((prev) => ({ ...prev, image: "Cada imagen debe ser menor a 2MB." }));
-        setSelectedFiles([]);
-        setImagePreview([]);
-        return;
-      }
-    }
+    // Opciones de compresión (ajustar según necesidad)
+    const options = {
+      maxSizeMB: 1,              // Tamaño máximo final por archivo (en MB)
+      maxWidthOrHeight: 1920,    // Resolución máxima (ajustar para menos calidad)
+      useWebWorker: true,        // Hace la compresión en un hilo separado para que la interfaz no se trabe (Buena practica siempre en true)
+      fileType: "image/webp",    // Formato de salida
+      initialQuality: 0.8,       // Calidad inicial (ajustar según necesidad)
+    };
 
-    // Si todo está bien, limpia errores
-    setErrors((prev) => ({ ...prev, image: undefined }));
-    setSelectedFiles(files);
+    // Proceso de compresión y validación
+    try {
+      const compressedFiles: File[] = [];
+      const previews: string[] = [];
 
-    // Previews
-    Promise.all(files.map(file => {
-      return new Promise<string>((resolve) => {
+      for (const file of files) {
+        // Comprime el archivo
+        const compressed = await imageCompression(file, options);
+
+        // Renombra a .webp
+        const webpFile = new File(
+          [compressed],
+          file.name.replace(/\.\w+$/, '.webp'), // Cambia la extensión al nombre original
+          { type: 'image/webp' }
+        );
+
+        // Si aún así supera 1MB (muy raro, pero posible con imágenes complejas), muéstralo
+        if (webpFile.size > 1 * 1024 * 1024) {
+          setErrors((prev) => ({
+            ...prev,
+            image: "Tras comprimir, la imagen sigue superando 1MB. Por favor usa una imagen diferente.",
+          }));
+          setSelectedFiles([]);
+          setImagePreview([]);
+          return;
+        }
+
+        compressedFiles.push(webpFile);
+
+        // Genera la previsualización
         const reader = new FileReader();
-        reader.onload = (event) => resolve(event.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-    })).then(setImagePreview);
+        const previewPromise = new Promise<string>((resolve) => {
+          reader.onload = (event) => resolve(event.target?.result as string);
+          reader.readAsDataURL(webpFile);
+        });
+        previews.push(await previewPromise);
+      }
+
+      // Limpiar errores y actualizar estados
+      setErrors((prev) => ({ ...prev, image: undefined }));
+      setSelectedFiles(compressedFiles);
+      setImagePreview(previews);
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, image: `Ocurrió un error al comprimir las imágenes. ${err}` }));
+      setSelectedFiles([]);
+      setImagePreview([]);
+    }
   }
 
   const validateStep = (): boolean => {
