@@ -93,7 +93,7 @@ export default function TicketForm() {
     // Opciones de compresión (ajustar según necesidad)
     const options = {
       maxSizeMB: 1,              // Tamaño máximo final por archivo (en MB)
-      maxWidthOrHeight: 1920,    // Resolución máxima (ajustar para menos calidad)
+      maxWidthOrHeight: 1000,    // Resolución máxima (ajustar para menos calidad)
       useWebWorker: true,        // Hace la compresión en un hilo separado para que la interfaz no se trabe (Buena practica siempre en true)
       fileType: "image/webp",    // Formato de salida
       initialQuality: 0.8,       // Calidad inicial (ajustar según necesidad)
