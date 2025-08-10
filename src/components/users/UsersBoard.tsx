@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import { getFilteredTickets } from "../../services/ticketService";
+import type { Ticket } from "../../types/Ticket";
+
 const people = [
     { name: 'Lindsay Walton', title: 'Front-end Developer', email: 'lindsay.walton@example.com', role: 'Member' },
     { name: 'Courtney Henry', title: 'Designer', email: 'courtney.henry@example.com', role: 'Admin' },
@@ -14,6 +18,24 @@ interface Props {
 
 
 const UsersBoard = ({ searchTerm, selectedLocation }: Props) => {
+
+    const [/*isLoading*/, setIsLoading] = useState(true);
+    const [/*filteredTickets*/, setFilteredTickets] = useState<Ticket[]>([]);
+    const isSearching = searchTerm.length >= 2;
+
+    // Efecto para búsqueda por texto + ubicación
+    useEffect(() => {
+        if (isSearching) {
+            console.log("🟢 Ejecutando búsqueda desde UsersBoard:", searchTerm);
+            setIsLoading(true);
+            getFilteredTickets(searchTerm, selectedLocation, false)
+                .then(results => {
+                    setFilteredTickets(results);
+                    setIsLoading(false);
+                });
+        }
+    }, [searchTerm, isSearching, selectedLocation]);
+
     return (
         <div className="px-4 sm:px-6 lg:px-8">
             <div className="sm:flex sm:items-center">
