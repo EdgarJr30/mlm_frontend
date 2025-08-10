@@ -473,7 +473,7 @@ export default function TicketForm() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="image">Imagen del incidente <span className="text-red-500">*</span></Label>
+                <Label htmlFor="image">Imagen del incidente, máximo 3 imágenes <span className="text-red-500">*</span></Label>
                 <Input type="file" accept="image/*" multiple onChange={handleFileChange} className="cursor-pointer" />
                 {errors.image && <p className="text-sm text-red-500">{errors.image}</p>}
                 {imagePreview.length > 0 && (
