@@ -8,6 +8,7 @@ import InboxPage from './pages/InboxPage';
 import ProtectedRoute from './components/Routes/ProtectedRoute'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import UsersPage from './pages/UsersPage';
 // import { TicketNotificationProvider } from "./context/TicketNotificationContext";
 
 
@@ -48,6 +49,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/inbox" element={
           <ProtectedRoute>
             <InboxPage />
+          </ProtectedRoute>
+        } />
+         <Route path="/admin_usuarios" element={
+          <ProtectedRoute>
+            <UsersPage />
           </ProtectedRoute>
         } />
         <Route path="/" element={<Navigate to="/kanban" />} />
