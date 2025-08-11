@@ -3,15 +3,21 @@ import type { Ticket } from "../types/Ticket";
 
 const PAGE_SIZE = 20;
 
-export async function createTicket(ticket: Omit<Ticket, "id" | "status">) {
-  const { data, error } = await supabase.from("tickets").insert([
-    {
+export async function createTicket(ticket: Omit<Ticket, "id" | "status" | "created_by">) {
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  if (!user) throw new Error("No hay sesión activa.");
+
+  const { data, error } = await supabase
+    .from("tickets")
+    .insert([{
       ...ticket,
       status: "Pendiente",
-    }
-  ])
-  .select("id, title")
-  .single();
+      assignee: "Sin asignar",
+      created_by: user.id,
+    }])
+    .select("id, title")
+    .single();
 
   if (error) throw new Error(error.message);
   return data;

@@ -9,9 +9,15 @@ export async function uploadImageToBucket(file: File, ticketId: number, idx: num
   const { error } = await supabase
     .storage
     .from("attachments")
-    .upload(filePath, file, { upsert: true });
+    .upload(filePath, file, { 
+      upsert: true, 
+      contentType: file.type ?? "image/webp" 
+    });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Upload error:", error.message);
+    throw error;
+  }
   return filePath;
     //   El path será algo como: 123/123_1689532320_0.webp, es decir, una carpeta por ticket con archivos únicos.
 }
