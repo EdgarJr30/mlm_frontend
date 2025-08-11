@@ -52,6 +52,18 @@ export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
   }
 }
 
+
+export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
+  const { data, error } = await supabase
+    .from("tickets")
+    .select("*")
+    .eq("created_by", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data as Ticket[];
+}
+
 export async function getTicketsByStatusPaginated(status: string, page: number, pageSize: number, location?: string) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
