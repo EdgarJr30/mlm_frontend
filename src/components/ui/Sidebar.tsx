@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from '../../assets/logo_horizontal_blanc.svg';
-import { logout } from "../../utils/fakeAuth";
+import { signOut } from "../../utils/auth";
 import AppVersion from "./AppVersion";
 
 const menu = [
@@ -54,9 +54,19 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   // Handler para el logout
-  const handleLogout = () => {
-    logout();
-    navigate("/login", { replace: true });
+  const handleLogout = async () => {
+    try {
+      const { error } = await signOut();
+      if (error) {
+        console.error("Error al cerrar sesión:", error.message);
+        return;
+      }
+      navigate("/login", { replace: true });
+    } catch (err: unknown) {
+      console.error(
+        err instanceof Error ? err.message : "Error inesperado al cerrar sesión"
+      );
+    }
   };
   return (
     <>
