@@ -92,7 +92,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
         e.preventDefault();
         setMsg(null);
 
-        if (!name || !email || !password || !rolId) {
+        if (!name || !lastName || !email || !password || !rolId) {
             setMsg({ type: "err", text: "Completa todos los campos." });
             return;
         }
