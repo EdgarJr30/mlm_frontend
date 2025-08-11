@@ -2,6 +2,15 @@ import { supabase } from "../lib/supabaseClient";
 
 export type RoleName = "super_admin" | "admin" | "user";
 
+export type UserProfile = {
+  id: string;
+  name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  location: string;
+};
+
 export async function getCurrentUserRole(): Promise<RoleName | null> {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) {
@@ -36,4 +45,22 @@ export async function getCurrentUserRole(): Promise<RoleName | null> {
   }
 
   return roleRow.name as RoleName;
+}
+
+export async function getCurrentUserProfile(): Promise<UserProfile | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, name, last_name, email, phone, location")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching user profile:", error.message);
+    return null;
+  }
+  return data as UserProfile;
 }

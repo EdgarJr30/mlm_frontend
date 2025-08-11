@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useEffect } from "react";
 import { Locations } from "../../../types/Ticket";
 import { Input } from "../../ui/input"
 import { Textarea } from "../../ui/textarea"
@@ -9,6 +10,7 @@ import { Progress } from "../../ui/progress"
 import { Checkbox } from "../../ui/checkbox"
 import { createTicket, updateTicket } from "../../../services/ticketService";
 import { uploadImageToBucket } from "../../../services/storageService";
+import { getCurrentUserProfile } from "../../../services/userService";
 import imageCompression from 'browser-image-compression';
 import {
   validateTitle,
@@ -26,10 +28,8 @@ import {
 } from "../../../utils/validators"
 import { showSuccessAlert } from "../../../utils/showAlert"
 import { getNowInTimezoneForStorage, getTodayISODate } from "../../../utils/formatDate";
-// import AppVersion from "../AppVersion";
 // import { sendTicketEmail, async } from '../../services/emailService';
 // import type { TicketEmailData } from "../../services/emailService";
-
 interface TicketFormData {
   title: string
   description: string
@@ -53,7 +53,7 @@ const initialForm: TicketFormData = {
   is_urgent: false,
   requester: "",
   priority: "baja", // Default priority
-  incident_date: "",
+  incident_date: getTodayISODate(), // Default to today
   deadline_date: undefined, // Optional, can be set later
   image: "",
   location: "",
@@ -70,6 +70,8 @@ export default function TicketForm() {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
+
+  const progress = (step / 4) * 100
 
   const handleChange = (
     name: keyof TicketFormData,
@@ -254,7 +256,27 @@ export default function TicketForm() {
     }
   };
 
-  const progress = (step / 4) * 100
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      const profile = await getCurrentUserProfile();
+      if (!isMounted || !profile) return;
+
+      // Concatenación Name + LastName => requester
+      const requester = `${profile.name ?? ""} ${profile.last_name ?? ""}`.trim();
+
+      setForm(prev => ({
+        ...prev,
+        requester,
+        email: profile.email ?? "",
+        phone: profile.phone ?? "",
+        location: profile.location ?? "",
+      }));
+    })();
+
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <div className="w-full">
@@ -386,6 +408,7 @@ export default function TicketForm() {
                     value={form.requester}
                     onChange={(e) => handleChange("requester", e.target.value)}
                     required
+                    readOnly
                   />
                   {errors.requester && <p className="text-sm text-red-500">{errors.requester}</p>}
                 </div>
@@ -399,6 +422,8 @@ export default function TicketForm() {
                     placeholder="tuemail@cilm.do"
                     value={form.email}
                     onChange={(e) => handleChange("email", e.target.value)}
+                    required
+                    readOnly
                   />
                   {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
