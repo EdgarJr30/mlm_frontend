@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Logo from '../assets/logo_horizontal.svg';
 import Collage from '../assets/COLLAGE_MLM.webp';
 import AppVersion from "../components/ui/AppVersion";
 import { getSession, signInWithPassword } from "../utils/auth";
+import { supabase } from "../lib/supabaseClient";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -11,58 +12,72 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const location = useLocation() as ReturnType<typeof useLocation> & {
-    state?: { from?: { pathname?: string } }
-  };
+  // const location = useLocation() as ReturnType<typeof useLocation> & {
+  //   state?: { from?: { pathname?: string } }
+  // };
 
-  // Si ya está logueado, manda directo a /kanban (o a donde venía)
+  type SessionUser = { id: string };
+
+  async function resolveUserRoleFromDB(sessionUser: SessionUser): Promise<string | null> {
+    const userId = sessionUser?.id;
+    if (!userId) return null;
+
+    // Opción 1 (tienes relación FK configurada y el nombre de la relación es "roles"):
+    // users: id (uuid), rol_id (bigint) → roles(id) y roles(name)
+    const { data, error } = await supabase
+      .from("users")
+      .select("rol_id, roles(name)")
+      .eq("id", userId)
+      .single();
+
+    // Si tu relación no se llama "roles", usa el alias explícito del FKey:
+    // .select("rol_id, roles:users_rol_id_fkey(name)")
+
+    if (error) return null;
+    type UserWithRole = { rol_id: number; roles: { name: string } };
+    const userWithRole = data as unknown as UserWithRole | null;
+    const roleName = userWithRole?.roles?.name ?? null;
+
+    return roleName ? String(roleName).trim().toLowerCase() : null;
+  }
+
   useEffect(() => {
     (async () => {
       const { data } = await getSession();
-      if (data.session) {
-        const dest = location.state?.from?.pathname || "/kanban";
-        navigate(dest, { replace: true });
+      const user = data.session?.user;
+      if (user) {
+        const role = await resolveUserRoleFromDB({ id: user.id });
+        navigate(role === "user" ? "/mi-usuario" : "/kanban", { replace: true });
       }
     })();
-  }, [navigate]); // intentionally not depending on location
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
+  e.preventDefault();
+  setSubmitting(true);
+  setError("");
 
-    try {
-      const { data, error } = await signInWithPassword(email.trim(), password);
-      if (error) {
-        const msg = error.message?.toLowerCase() || "";
-        if (msg.includes("invalid login credentials")) {
-          setError("Correo o contraseña incorrectos.");
-        } else {
-          setError(error.message || "No se pudo iniciar sesión.");
-        }
-        return;
-      }
-      if (data.session) {
-        const userRole =
-          data.session.user.user_metadata?.role ||
-          data.session.user.app_metadata?.role;
-
-        let dest = "/kanban"; // default para admins
-        if (userRole === "user") {
-          dest = "/mi-usuario";
-        }
-
-        navigate(dest, { replace: true });
-      }
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Error inesperado al iniciar sesión"
-      );
-    } finally {
-      setSubmitting(false);
+  try {
+    const { data, error } = await signInWithPassword(email.trim(), password);
+    if (error) {
+      const msg = error.message?.toLowerCase() || "";
+      setError(msg.includes("invalid login credentials")
+        ? "Correo o contraseña incorrectos."
+        : (error.message || "No se pudo iniciar sesión."));
+      return;
     }
-  };
 
+    if (data.session?.user) {
+      const role = await resolveUserRoleFromDB({ id: data.session.user.id });
+      navigate(role === "user" ? "/mi-usuario" : "/kanban", { replace: true });
+    }
+  } catch (err: unknown) {
+    setError(err instanceof Error ? err.message : "Error inesperado al iniciar sesión");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault();

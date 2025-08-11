@@ -50,12 +50,32 @@ const menu = [
 ];
 
 export default function Sidebar() {
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
-  const visibleMenu = role === "user"
+  // 1) Mientras carga auth/rol, NO mostramos items (evita el flash)
+  if (loading) {
+    return (
+      <>
+        {/* botón y skeleton mínimos */}
+        <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
+          <div className="p-6 border-b border-gray-700">
+            <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
+          </div>
+          <div className="p-4 space-y-2">
+            <div className="h-9 rounded bg-gray-800 animate-pulse" />
+            <div className="h-9 rounded bg-gray-800 animate-pulse" />
+            <div className="h-9 rounded bg-gray-800 animate-pulse" />
+          </div>
+          <AppVersion className="text-center mt-auto" />
+        </aside>
+      </>
+    );
+  }
+
+    const visibleMenu = role === "user"
     ? menu.filter((m) => m.name === "Crear Ticket")
     : menu;
 
@@ -74,6 +94,7 @@ export default function Sidebar() {
       );
     }
   };
+
   return (
     <>
       {/* Botón hamburguesa solo en móvil */}

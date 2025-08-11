@@ -10,13 +10,13 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import UsersPage from './pages/UsersPage';
 
-import RequireRole from './components/Routes/RequireRole' // 👈 agregado
-import { AuthProvider } from './context/AuthContext' // 👈 agregado
+import RequireRole from './components/Routes/RequireRole'
+import { AuthProvider } from './context/AuthContext'
 
 import ForbiddenPage from './pages/ForbiddenPage';
 import UserDashboard from './pages/UserDashboardPage';
+import AutoHome from './components/Routes/AutoHome';
 // import { TicketNotificationProvider } from "./context/TicketNotificationContext";
-
 
 if (process.env.NODE_ENV !== 'development') {
   // Vacía todos los logs en desarrollo
@@ -47,7 +47,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         {/* <TicketNotificationProvider> */}
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          
+
           <Route path="/crear-ticket" element={
             <ProtectedRoute>
               <RequireRole allow={["user", "admin", "super_admin"]}>
@@ -76,8 +76,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               </RequireRole>
             </ProtectedRoute>
           } />
-          <Route path="/" element={<Navigate to="/kanban" />} />
-          <Route path="*" element={<Navigate to="/kanban" />} />
+          <Route path="/" element={<ProtectedRoute><AutoHome /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/403" element={<ForbiddenPage />} />
           <Route path="/mi-usuario" element={<UserDashboard />} />
         </Routes>
