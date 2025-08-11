@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from '../../assets/logo_horizontal_blanc.svg';
 import { signOut } from "../../utils/auth";
 import AppVersion from "./AppVersion";
+import { useAuth } from "../../context/AuthContext";
 
 const menu = [
   {
@@ -49,9 +50,14 @@ const menu = [
 ];
 
 export default function Sidebar() {
+  const { role } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+
+  const visibleMenu = role === "user"
+    ? menu.filter((m) => m.name === "Crear Ticket")
+    : menu;
 
   // Handler para el logout
   const handleLogout = async () => {
@@ -102,17 +108,15 @@ export default function Sidebar() {
           <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
         </div>
         <nav className="flex flex-col gap-1 flex-1 px-2">
-          {menu.map((item) => (
+          {visibleMenu.map((item) => ( // 👈 usamos visibleMenu
             <Link
               key={item.name}
               to={item.path}
               onClick={() => setIsOpen(false)}
-              className={`
-      px-4 py-3 rounded transition font-medium flex items-center
-      ${location.pathname === item.path
+              className={`px-4 py-3 rounded transition font-medium flex items-center
+              ${location.pathname === item.path
                   ? "bg-blue-600 text-white"
-                  : "hover:bg-gray-800"}
-    `}
+                  : "hover:bg-gray-800"}`}
             >
               {item.icon}
               <span>{item.name}</span>
@@ -146,6 +150,7 @@ export default function Sidebar() {
         <AppVersion className="text-center mt-auto" />
 
       </aside>
+
     </>
   );
 }

@@ -43,15 +43,26 @@ export default function LoginPage() {
         return;
       }
       if (data.session) {
-        const dest = location.state?.from?.pathname || "/kanban";
+        const userRole =
+          data.session.user.user_metadata?.role ||
+          data.session.user.app_metadata?.role;
+
+        let dest = "/kanban"; // default para admins
+        if (userRole === "user") {
+          dest = "/mi-usuario";
+        }
+
         navigate(dest, { replace: true });
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error inesperado al iniciar sesión");
+      setError(
+        err instanceof Error ? err.message : "Error inesperado al iniciar sesión"
+      );
     } finally {
       setSubmitting(false);
     }
   };
+
 
   const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault();
