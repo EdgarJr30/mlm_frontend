@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Sidebar from "../components/ui/Sidebar";
+import Sidebar from "../components/dashboard/Sidebar";
 import Navbar from "../components/navigation/Navbar";
-import InboxBoard from "../components/inbox/InboxBoard";
+import InboxBoard from "../components/dashboard/inbox/InboxBoard";
 // import SearchTickets from "../components/SearchTickets";
 
 export default function InboxPage() {

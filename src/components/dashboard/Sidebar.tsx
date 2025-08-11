@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from '../../assets/logo_horizontal_blanc.svg';
 import { signOut } from "../../utils/auth";
-import AppVersion from "./AppVersion";
+import AppVersion from "../ui/AppVersion";
 import { useAuth } from "../../context/AuthContext";
 
 const menu = [

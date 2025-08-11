@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react'
-import type { Ticket } from '../../types/Ticket';
-import { getFilteredTickets, getUnacceptedTicketsPaginated, acceptTickets } from '../../services/ticketService';
-import { getPublicImageUrl, getTicketImagePaths } from '../../services/storageService';
-import { showToastError, showToastSuccess } from '../../notifications';
-import { formatDateInTimezone } from '../../utils/formatDate';
+import type { Ticket } from '../../../types/Ticket';
+import { getFilteredTickets, getUnacceptedTicketsPaginated, acceptTickets } from '../../../services/ticketService';
+import { getPublicImageUrl, getTicketImagePaths } from '../../../services/storageService';
+import { showToastError, showToastSuccess } from '../../../notifications';
+import { formatDateInTimezone } from '../../../utils/formatDate';
 interface Props {
     searchTerm: string;
     selectedLocation: string;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getSession } from "../utils/auth";
-import Sidebar from "../components/ui/Sidebar";
+import Sidebar from "../components/dashboard/Sidebar";
 import Navbar from "../components/navigation/Navbar";
 
 export default function UserDashboard() {

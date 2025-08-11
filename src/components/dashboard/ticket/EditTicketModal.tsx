@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import type { Ticket } from "../../types/Ticket";
-import { LOCATIONS } from "../../constants/locations";
-import { STATUSES, RESPONSABLES_SECCIONES } from "../../constants/const_ticket";
-import { getTicketImagePaths, getPublicImageUrl } from "../../services/storageService";
-import { MAX_COMMENTS_LENGTH } from '../../utils/validators'
+import type { Ticket } from "../../../types/Ticket";
+import { LOCATIONS } from "../../../constants/locations";
+import { STATUSES, RESPONSABLES_SECCIONES } from "../../../constants/const_ticket";
+import { getTicketImagePaths, getPublicImageUrl } from "../../../services/storageService";
+import { MAX_COMMENTS_LENGTH } from '../../../utils/validators'
 
 interface EditTicketModalProps {
   isOpen: boolean;

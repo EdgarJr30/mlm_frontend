@@ -1,14 +1,14 @@
 import { useState } from "react"
-import { Locations } from "../../types/Ticket";
-import { Input } from "../ui/input"
-import { Textarea } from "../ui/textarea"
-import { Label } from "../ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { Button } from "../ui/button"
-import { Progress } from "../ui/progress"
-import { Checkbox } from "../ui/checkbox"
-import { createTicket, updateTicket } from "../../services/ticketService";
-import { uploadImageToBucket } from '../../services/storageService';
+import { Locations } from "../../../types/Ticket";
+import { Input } from "../../ui/input"
+import { Textarea } from "../../ui/textarea"
+import { Label } from "../../ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select"
+import { Button } from "../../ui/button"
+import { Progress } from "../../ui/progress"
+import { Checkbox } from "../../ui/checkbox"
+import { createTicket, updateTicket } from "../../../services/ticketService";
+import { uploadImageToBucket } from "../../../services/storageService";
 import imageCompression from 'browser-image-compression';
 import {
   validateTitle,
@@ -23,9 +23,9 @@ import {
   MAX_REQUESTER_LENGTH,
   MAX_EMAIL_LENGTH,
   MAX_PHONE_LENGTH
-} from "../../utils/validators"
-import { showSuccessAlert } from "../../utils/showAlert"
-import { getNowInTimezoneForStorage, getTodayISODate } from "../../utils/formatDate";
+} from "../../../utils/validators"
+import { showSuccessAlert } from "../../../utils/showAlert"
+import { getNowInTimezoneForStorage, getTodayISODate } from "../../../utils/formatDate";
 // import AppVersion from "../AppVersion";
 // import { sendTicketEmail, async } from '../../services/emailService';
 // import type { TicketEmailData } from "../../services/emailService";

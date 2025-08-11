@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Sidebar from "../components/ui/Sidebar";
-import KanbanBoard from "../components/kanban/KanbanBoard";
+import Sidebar from "../components/dashboard/Sidebar";
+import KanbanBoard from "../components/dashboard/kanban/KanbanBoard";
 import Navbar from "../components/navigation/Navbar";
 // import SearchTickets from "../components/SearchTickets";
 

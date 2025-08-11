@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { getFilteredTickets } from "../../services/ticketService";
+import { getFilteredTickets } from "../../../services/ticketService";
 import EditTicketModal from "../ticket/EditTicketModal";
-import { updateTicket } from "../../services/ticketService";
-import type { Ticket } from "../../types/Ticket";
+import { updateTicket } from "../../../services/ticketService";
+import type { Ticket } from "../../../types/Ticket";
 import KanbanColumn from "./KanbanColumn";
-import Modal from "../ui/Modal";
-import { showToastSuccess, showToastError } from "../../notifications/toast";
+import Modal from "../../ui/Modal";
+import { showToastSuccess, showToastError } from "../../../notifications/toast";
 
 const STATUSES: Ticket["status"][] = [
     "Pendiente",

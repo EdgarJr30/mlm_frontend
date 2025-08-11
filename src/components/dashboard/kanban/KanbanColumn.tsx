@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Ticket } from "../../types/Ticket";
-import { getTicketsByStatusPaginated } from "../../services/ticketService";
-import { getPublicImageUrl, getTicketImagePaths } from '../../services/storageService';
+import type { Ticket } from "../../../types/Ticket";
+import { getTicketsByStatusPaginated } from "../../../services/ticketService";
+import { getPublicImageUrl, getTicketImagePaths } from "../../../services/storageService";
 interface Props {
     tickets?: Ticket[];
     isSearching: boolean;
