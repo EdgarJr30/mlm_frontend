@@ -47,7 +47,7 @@ export default function LoginPage() {
       const user = data.session?.user;
       if (user) {
         const role = await resolveUserRoleFromDB({ id: user.id });
-        navigate(role === "user" ? "/mi-usuario" : "/kanban", { replace: true });
+        navigate(role === "user" ? "/mi-perfil" : "/kanban", { replace: true });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,7 +70,7 @@ export default function LoginPage() {
 
     if (data.session?.user) {
       const role = await resolveUserRoleFromDB({ id: data.session.user.id });
-      navigate(role === "user" ? "/mi-usuario" : "/kanban", { replace: true });
+      navigate(role === "user" ? "/mi-perfil" : "/kanban", { replace: true });
     }
   } catch (err: unknown) {
     setError(err instanceof Error ? err.message : "Error inesperado al iniciar sesión");

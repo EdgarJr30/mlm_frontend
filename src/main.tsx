@@ -55,6 +55,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               </RequireRole>
             </ProtectedRoute>
           } />
+           <Route path="/mi-perfil" element={
+            <ProtectedRoute>
+              <RequireRole allow={["user", "admin", "super_admin"]}>
+                <UserDashboard />
+              </RequireRole>
+            </ProtectedRoute>
+          } />
           <Route path="/kanban" element={
             <ProtectedRoute>
               <RequireRole allow={["admin", "super_admin"]}>
@@ -79,7 +86,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/" element={<ProtectedRoute><AutoHome /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/403" element={<ForbiddenPage />} />
-          <Route path="/mi-usuario" element={<UserDashboard />} />
         </Routes>
         {/* </TicketNotificationProvider> */}
       </BrowserRouter>

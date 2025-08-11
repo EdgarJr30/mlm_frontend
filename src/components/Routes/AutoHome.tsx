@@ -13,7 +13,7 @@ export default function AutoHome() {
       navigate("/login", { replace: true });
       return;
     }
-    navigate(role === "user" ? "/mi-usuario" : "/kanban", { replace: true });
+    navigate(role === "user" ? "/mi-perfil" : "/kanban", { replace: true });
   }, [loading, isAuthenticated, role, navigate]);
 
   return null; // puedes poner un spinner si te gusta
