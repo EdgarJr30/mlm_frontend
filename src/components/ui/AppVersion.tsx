@@ -7,7 +7,7 @@ interface AppVersionProps {
 }
 
 const AppVersion: React.FC<AppVersionProps> = ({
-  version = import.meta.env.VITE_APP_VERSION ?? "0.1.4",
+  version = import.meta.env.VITE_APP_VERSION ?? "0.1.5",
   env = import.meta.env.VITE_APP_ENV ?? "PROD",
   className = "",
 }) => {
