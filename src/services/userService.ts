@@ -12,39 +12,43 @@ export type UserProfile = {
 };
 
 export async function getCurrentUserRole(): Promise<RoleName | null> {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) {
-    console.error("getSession error:", sessionError.message);
-    return null;
-  }
-  const userId = sessionData.session?.user?.id;
+  const { data: { session }, error: sErr } = await supabase.auth.getSession();
+  if (sErr) { console.error("getSession error:", sErr.message); return null; }
+
+  const userId = session?.user?.id;
   if (!userId) return null;
 
-  // 1) Obtener rol_id de la tabla users
-  const { data: userRow, error: userErr } = await supabase
+  // 1) Intento con embed explícito por nombre del FK
+  //    Cambia users_rol_id_fkey si tu FK se llama distinto
+  type EmbedData = { rol_id: string | null; roles?: { name: string } | null };
+  const { data: embedData, error: embedErr } = await supabase
     .from("users")
-    .select("rol_id")
+    .select("rol_id, roles:roles!users_rol_id_fkey(name)")
     .eq("id", userId)
-    .single();
+    .maybeSingle<EmbedData>();
 
-  if (userErr || !userRow) {
-    console.warn("No se pudo obtener rol_id del usuario:", userErr?.message);
-    return null;
+  if (embedErr) {
+    console.warn("embed error:", embedErr.message);
   }
 
-  // 2) Obtener nombre del rol
-  const { data: roleRow, error: roleErr } = await supabase
-    .from("roles")
-    .select("name")
-    .eq("id", userRow.rol_id)
-    .single();
+  let roleName = embedData?.roles?.name as RoleName | undefined;
 
-  if (roleErr || !roleRow) {
-    console.warn("No se pudo obtener el nombre del rol:", roleErr?.message);
-    return null;
+  // 2) Fallback: si no vino el embed, resolver por rol_id en una segunda query
+  if (!roleName && embedData?.rol_id != null) {
+    const { data: roleRow, error: roleErr } = await supabase
+      .from("roles")
+      .select("name")
+      .eq("id", embedData.rol_id)
+      .maybeSingle();
+
+    if (roleErr) {
+      console.warn("roles lookup error:", roleErr.message);
+      return null;
+    }
+    roleName = roleRow?.name as RoleName | undefined;
   }
 
-  return roleRow.name as RoleName;
+  return roleName ?? null;
 }
 
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
@@ -56,11 +60,11 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     .from("users")
     .select("id, name, last_name, email, phone, location")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching user profile:", error.message);
     return null;
   }
-  return data as UserProfile;
+  return (data ?? null) as UserProfile | null;
 }

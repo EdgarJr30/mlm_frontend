@@ -91,6 +91,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setMsg(null);
+        console.log("➕ [UsersBoard] Crear usuario con:", { name, lastName, email, rolId });
 
         if (!name || !lastName || !email || !password || !rolId) {
             setMsg({ type: "err", text: "Completa todos los campos." });
@@ -99,18 +100,39 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
 
         setSubmitting(true);
         try {
-            // 1) Crear en Auth (sin confirmación si está desactivada en settings)
+            // 0) Guardar sesión actual (admin)
+            const { data: adminSessionRes, error: adminSessionErr } = await supabase.auth.getSession();
+            if (adminSessionErr) throw adminSessionErr;
+            const prevSession = adminSessionRes.session;
+            console.log("🛡️ [UsersBoard] Admin session previa:", !!prevSession, prevSession?.user?.id);
+
+            // 1) Crear en Auth (esto cambia la sesión si no hay confirmación por email)
             const { data: signUpRes, error: signUpErr } = await supabase.auth.signUp({
                 email,
                 password,
                 options: { data: { name } },
             });
+            console.log("📨 [UsersBoard] signUp ->", { signUpRes, signUpErr });
             if (signUpErr) throw signUpErr;
 
             const newId = signUpRes.user?.id;
+            console.log("🆔 [UsersBoard] Nuevo auth.user.id:", newId);
             if (!newId) throw new Error("No se obtuvo el ID del usuario creado en Auth.");
 
-            // 2) Crear espejo en public.users (tu función valida admin/super_admin)
+            // 2) Restaurar sesión del admin ANTES del RPC
+            if (prevSession) {
+                console.log("♻️ [UsersBoard] Restaurando sesión admin para correr RPC como admin...");
+                const { data: setRes, error: setErr } = await supabase.auth.setSession({
+                    access_token: prevSession.access_token,
+                    refresh_token: prevSession.refresh_token,
+                });
+                console.log("🔁 [UsersBoard] setSession resultado:", { setRes, setErr });
+                if (setErr) throw setErr;
+            } else {
+                console.warn("⚠️ [UsersBoard] No había sesión previa del admin; el RPC fallará con check de admin.");
+            }
+
+            // 3) Ejecutar RPC ya como admin
             const { error: rpcErr } = await supabase.rpc("create_user_in_public", {
                 p_id: newId,
                 p_email: email,
@@ -118,16 +140,14 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                 p_last_name: lastName,
                 p_rol_id: Number(rolId),
             });
-            if (rpcErr) {
-                // Si falla el RPC, el usuario queda en Auth sin fila en public.users.
-                // Puedes limpiar manualmente en Auth desde el dashboard si es necesario.
-                throw rpcErr;
-            }
+            console.log("🧩 [UsersBoard] RPC create_user_in_public error?:", rpcErr);
+            if (rpcErr) throw rpcErr;
 
             setMsg({ type: "ok", text: "Usuario creado correctamente." });
             await loadData();
             setTimeout(closeModal, 700);
         } catch (err: unknown) {
+            console.error("❌ [UsersBoard] handleCreateUser error:", err);
             const errorMsg =
                 typeof err === "object" && err !== null && "message" in err && typeof (err as { message?: unknown }).message === "string"
                     ? (err as { message: string }).message
@@ -137,6 +157,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
             setSubmitting(false);
         }
     };
+
 
     return (
         <div className="px-4 sm:px-6 lg:px-8">
@@ -174,7 +195,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                         <th className="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-0">
                                             Name
                                         </th>
-                                         <th className="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-0">
+                                        <th className="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-0">
                                             Last Name
                                         </th>
                                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -199,7 +220,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                                 <td className="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-0">
                                                     {u.name ?? "—"}
                                                 </td>
-                                                 <td className="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-0">
+                                                <td className="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-0">
                                                     {u.last_name ?? "—"}
                                                 </td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{u.email}</td>
