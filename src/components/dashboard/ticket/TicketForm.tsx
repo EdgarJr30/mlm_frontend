@@ -241,12 +241,22 @@ export default function TicketForm() {
       //   console.error("Error enviando correo:", emailError);
       // }
 
-      await showSuccessAlert(
+      const alertResponse = await showSuccessAlert(
         `Ticket [##${ticketId}##] creado.`,
         `Tu ticket "${ticketTitle}" ha sido registrado con éxito.`
       );
 
-      window.location.reload();
+      if (alertResponse.isConfirmed) {
+        // Usuario eligió "Crear otro ticket"
+        setForm(initialForm);
+        setSelectedFiles([]);
+        setImagePreview([]);
+        setStep(1);
+      } else if (alertResponse.isDismissed) {
+        // Usuario eligió "Cerrar" (o cerró el modal)
+        navigate("/mi-perfil");
+      }
+
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Error al crear el ticket:", error.message);
