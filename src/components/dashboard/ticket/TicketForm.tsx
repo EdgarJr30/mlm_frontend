@@ -28,6 +28,7 @@ import {
 } from "../../../utils/validators"
 import { showSuccessAlert } from "../../../utils/showAlert"
 import { getNowInTimezoneForStorage, getTodayISODate } from "../../../utils/formatDate";
+import { useNavigate } from "react-router-dom";
 // import { sendTicketEmail, async } from '../../services/emailService';
 // import type { TicketEmailData } from "../../services/emailService";
 interface TicketFormData {
@@ -72,6 +73,8 @@ export default function TicketForm() {
   const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
 
   const progress = (step / 4) * 100
+
+  const navigate = useNavigate();
 
   const handleChange = (
     name: keyof TicketFormData,
@@ -601,7 +604,8 @@ export default function TicketForm() {
         <div className="w-full flex justify-center">
           <div className="w-full max-w-5xl px-18 pb-8">
             <div className="flex justify-between pt-6 border-t border-gray-100">
-              {step > 1 && (
+              {/* Botón "Anterior" si no es el primer paso */}
+              {step > 1 ? (
                 <Button
                   variant="outline"
                   type="button"
@@ -611,8 +615,19 @@ export default function TicketForm() {
                 >
                   ← Anterior
                 </Button>
-              )}<div className="px-6 py-2" />
-              {/* Solo muestra el botón "Anterior" si no es el primer paso */}
+              ) : (
+                // Botón "Mis Tickets" cuando es paso 1
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="px-6 py-2"
+                  onClick={() => navigate("/mi-perfil")}
+                >
+                  Mis Tickets
+                </Button>
+              )}
+              <div className="px-6 py-2" />
+              {/* Botón Siguiente */}
               <Button
                 type="button"
                 className="px-6 py-2"
