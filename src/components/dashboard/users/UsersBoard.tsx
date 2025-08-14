@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import { LOCATIONS } from "../../../constants/locations";
 
 interface Role {
     id: number;
@@ -10,6 +11,7 @@ interface DbUser {
     email: string;
     name: string | null;
     last_name: string | null;
+    location: string | null;
     rol_id: number | null;
     created_at: string;
 }
@@ -29,6 +31,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
     const [name, setName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
+    const [location, setLocation] = useState("");
     const [password, setPassword] = useState("");
     const [rolId, setRolId] = useState<number | "">("");
     const [submitting, setSubmitting] = useState(false);
@@ -78,6 +81,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
         setName("");
         setLastName("");
         setEmail("");
+        setLocation("");
         setPassword("");
         setRolId("");
         setMsg(null);
@@ -91,9 +95,9 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setMsg(null);
-        console.log("➕ [UsersBoard] Crear usuario con:", { name, lastName, email, rolId });
+        console.log("➕ [UsersBoard] Crear usuario con:", { name, lastName, email, location, rolId });
 
-        if (!name || !lastName || !email || !password || !rolId) {
+        if (!name || !lastName || !email || !password || !rolId || !location) {
             setMsg({ type: "err", text: "Completa todos los campos." });
             return;
         }
@@ -138,6 +142,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                 p_email: email,
                 p_name: name,
                 p_last_name: lastName,
+                p_location: location,
                 p_rol_id: Number(rolId),
             });
             console.log("🧩 [UsersBoard] RPC create_user_in_public error?:", rpcErr);
@@ -157,7 +162,6 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
             setSubmitting(false);
         }
     };
-
 
     return (
         <div className="px-4 sm:px-6 lg:px-8">
@@ -202,6 +206,9 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                             Email
                                         </th>
                                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                            Location
+                                        </th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                             Role
                                         </th>
                                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -224,6 +231,9 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                                     {u.last_name ?? "—"}
                                                 </td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{u.email}</td>
+                                                <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">
+                                                    {u.location ?? "—"}
+                                                </td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{roleName}</td>
                                                 <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">
                                                     {new Date(u.created_at).toLocaleString("es-DO")}
@@ -262,6 +272,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                             </p>
 
                             <form onSubmit={handleCreateUser} className="mt-4 space-y-4">
+                                {/* Nombre */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Nombre</label>
                                     <input
@@ -272,6 +283,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                     />
                                 </div>
 
+                                {/* Apellido */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Apellido</label>
                                     <input
@@ -282,6 +294,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                     />
                                 </div>
 
+                                {/* Email */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Email</label>
                                     <input
@@ -293,6 +306,25 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                     />
                                 </div>
 
+                                {/* Ubicación */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Ubicación</label>
+                                    <select
+                                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        value={location}
+                                        onChange={(e) => setLocation(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Selecciona una ubicación…</option>
+                                        {LOCATIONS.map((loc) => (
+                                            <option key={loc} value={loc}>
+                                                {loc}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Contraseña */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Password</label>
                                     <input
@@ -305,6 +337,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                     />
                                 </div>
 
+                                {/* Rol */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Rol</label>
                                     <select
@@ -326,6 +359,7 @@ export default function UsersBoard({ searchTerm, selectedLocation }: Props) {
                                     </p>
                                 )}
 
+                                {/* Botones */}
                                 <div className="mt-6 flex items-center justify-end gap-3">
                                     <button
                                         type="button"
