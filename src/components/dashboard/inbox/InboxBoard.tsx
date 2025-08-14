@@ -129,22 +129,13 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
         <div className="px-0 sm:px-0 lg:px-0 h-full flex flex-col">
             <div className="sm:flex sm:items-center">
                 <div className="sm:flex-auto">
-                    {/* <h1 className="text-base font-semibold text-gray-900">Tickets</h1> */}
                     <p className="mt-2 text-sm text-gray-700">
-                        Tickets pendientes de aceptación. Puede seleccionar varios tickets para aceptarlos de una vez.
+                        Tickets pendientes de aprobación — seleccione uno o varios para aceptar
                     </p>
                     <span className="text-sm text-gray-500">
                         Página {page + 1} de {Math.ceil(totalCount / PAGE_SIZE) || 1}
                     </span>
                 </div>
-                {/* <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                    <button
-                        type="button"
-                        className="block rounded-md bg-indigo-600 px-3 py-1.5 text-center text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    >
-                        Add user
-                    </button>
-                </div> */}
             </div>
             <div className="flex-auto flex flex-col">
                 <div className="overflow-x-auto flex-1">
