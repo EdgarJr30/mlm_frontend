@@ -1,21 +1,22 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import CreateTicketPage from './pages/CreateTicketPage'
-import LoginPage from './pages/LoginPage'
-import KanbanPage from './pages/KanbanPage'
-import InboxPage from './pages/InboxPage';
-import ProtectedRoute from './components/Routes/ProtectedRoute'
+// import CreateTicketPage from './pages/CreateTicketPage'
+// import LoginPage from './pages/LoginPage'
+// import KanbanPage from './pages/KanbanPage'
+// import InboxPage from './pages/InboxPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import UsersPage from './pages/UsersPage';
+// import UsersPage from './pages/UsersPage';
 
+import { APP_ROUTES, PUBLIC_ROUTES } from "./components/Routes/appRoutes";
 import RequireRole from './components/Routes/RequireRole'
+import ProtectedRoute from './components/Routes/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 
-import ForbiddenPage from './pages/ForbiddenPage';
-import UserDashboard from './pages/UserDashboardPage';
-import AutoHome from './components/Routes/AutoHome';
+// import ForbiddenPage from './pages/ForbiddenPage';
+// import UserDashboard from './pages/UserDashboardPage';
+// import AutoHome from './components/Routes/AutoHome';
 // import { TicketNotificationProvider } from "./context/TicketNotificationContext";
 
 if (process.env.NODE_ENV !== 'development') {
@@ -46,46 +47,28 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         />
         {/* <TicketNotificationProvider> */}
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          {/* Públicas / especiales */}
+          {PUBLIC_ROUTES.map(r => (
+            <Route key={r.path} path={r.path} element={r.element} />
+          ))}
 
-          <Route path="/crear-ticket" element={
-            <ProtectedRoute>
-              <RequireRole allow={["user", "admin", "super_admin"]}>
-                <CreateTicketPage />
-              </RequireRole>
-            </ProtectedRoute>
-          } />
-           <Route path="/mi-perfil" element={
-            <ProtectedRoute>
-              <RequireRole allow={["user", "admin", "super_admin"]}>
-                <UserDashboard />
-              </RequireRole>
-            </ProtectedRoute>
-          } />
-          <Route path="/kanban" element={
-            <ProtectedRoute>
-              <RequireRole allow={["admin", "super_admin"]}>
-                <KanbanPage />
-              </RequireRole>
-            </ProtectedRoute>
-          } />
-          <Route path="/inbox" element={
-            <ProtectedRoute>
-              <RequireRole allow={["admin", "super_admin"]}>
-                <InboxPage />
-              </RequireRole>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin_usuarios" element={
-            <ProtectedRoute>
-              <RequireRole allow={["admin", "super_admin"]}>
-                <UsersPage />
-              </RequireRole>
-            </ProtectedRoute>
-          } />
-          <Route path="/" element={<ProtectedRoute><AutoHome /></ProtectedRoute>} />
+          {/* Protegidas dinamicamente */}
+          {APP_ROUTES.map(r => (
+            <Route
+              key={r.path}
+              path={r.path}
+              element={
+                <ProtectedRoute>
+                  <RequireRole allow={r.allow}>
+                    {r.element}
+                  </RequireRole>
+                </ProtectedRoute>
+              }
+            />
+          ))}
+
+          {/* comodín */}
           <Route path="*" element={<Navigate to="/" replace />} />
-          <Route path="/403" element={<ForbiddenPage />} />
         </Routes>
         {/* </TicketNotificationProvider> */}
       </BrowserRouter>

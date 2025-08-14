@@ -4,61 +4,62 @@ import Logo from '../../assets/logo_horizontal_blanc.svg';
 import { signOut } from "../../utils/auth";
 import AppVersion from "../ui/AppVersion";
 import { useAuth } from "../../context/AuthContext";
+import { APP_ROUTES } from "../Routes/appRoutes";
 
-const menu = [
-  {
-    name: "Dashboard",
-    path: "/kanban",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-      </svg>
+// const menu = [
+//   {
+//     name: "Dashboard",
+//     path: "/kanban",
+//     icon: (
+//       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
+//         <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+//       </svg>
 
-    ),
-  },
-  {
-    name: "Bandeja de Entrada",
-    path: "/inbox",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
-      </svg>
-    ),
-  },
-  {
-    name: "Usuarios",
-    path: "/admin_usuarios",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-      </svg>
+//     ),
+//   },
+//   {
+//     name: "Bandeja de Entrada",
+//     path: "/inbox",
+//     icon: (
+//       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
+//         <path strokeLinecap="round" strokeLinejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
+//       </svg>
+//     ),
+//   },
+//   {
+//     name: "Usuarios",
+//     path: "/admin_usuarios",
+//     icon: (
+//       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
+//         <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+//       </svg>
 
-    ),
-  },
-  {
-    name: "Mi Perfil",
-    path: "/mi-perfil",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-      </svg>
+//     ),
+//   },
+//   {
+//     name: "Mi Perfil",
+//     path: "/mi-perfil",
+//     icon: (
+//       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5 mr-2">
+//         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+//       </svg>
 
-    ),
-  },
-  {
-    name: "Crear Ticket",
-    path: "/crear-ticket",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-        viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"
-        className="w-5 h-5 mr-2">
-        <path strokeLinecap="round" strokeLinejoin="round"
-          d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-      </svg>
-    ),
-  },
-  // { name: "Reportes", path: "#" },
-];
+//     ),
+//   },
+//   {
+//     name: "Crear Ticket",
+//     path: "/crear-ticket",
+//     icon: (
+//       <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+//         viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"
+//         className="w-5 h-5 mr-2">
+//         <path strokeLinecap="round" strokeLinejoin="round"
+//           d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+//       </svg>
+//     ),
+//   },
+//   // { name: "Reportes", path: "#" },
+// ];
 
 export default function Sidebar() {
   const { role, loading } = useAuth();
@@ -86,9 +87,11 @@ export default function Sidebar() {
     );
   }
 
-  const visibleMenu = role === "user"
-    ? menu.filter((m) => ["Crear Ticket", "Mi Perfil"].includes(m.name))
-    : menu;
+  const visibleMenu = APP_ROUTES.filter(r =>
+    r.showInSidebar &&
+    role != null &&
+    r.allow.includes(role)
+  );
 
   // Handler para el logout
   const handleLogout = async () => {
