@@ -93,8 +93,7 @@ export function validateRequester(requester: string): string | null {
   if (trimmed.length > MAX_REQUESTER_LENGTH)
     return `El nombre no puede superar los ${MAX_REQUESTER_LENGTH} caracteres.`;
 
-  // Solo letras y espacios
-  const validCharsRegex = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/;
+  const validCharsRegex = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s]+$/;
   if (!validCharsRegex.test(trimmed))
     return "El nombre solo debe contener letras y espacios. No se permiten símbolos ni números.";
 
