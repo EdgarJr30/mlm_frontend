@@ -102,18 +102,6 @@ export function validateRequester(requester: string): string | null {
   if (words.length < 2)
     return "Escribe el nombre completo (nombre y apellido).";
 
-  for (const word of words) {
-    if (word.length < 2)
-      return "Cada palabra del nombre debe tener al menos 2 letras.";
-
-    if (!/[aeiouáéíóúü]/i.test(word))
-      return "Cada palabra del nombre debe contener al menos una vocal.";
-
-    const uniqueChars = new Set(word.toLowerCase());
-    if (uniqueChars.size < 2)
-      return "Cada palabra del nombre debe tener más de una letra distinta.";
-  }
-
   // No se permite repetir la misma palabra exacta
   const normalizedWords = words.map(w => w.toLowerCase());
   const uniqueWords = new Set(normalizedWords);
