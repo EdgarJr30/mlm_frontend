@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { getSession } from "../../utils/auth";
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { getSession } from '../../utils/auth';
+import Spinner from '../ui/Spinner';
 
 interface Props {
   children: React.ReactNode;
@@ -22,11 +23,17 @@ export default function ProtectedRoute({ children }: Props) {
         if (active) setChecking(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (checking) {
-    return null; // o un spinner
+    return (
+      <div className="h-screen w-screen grid place-items-center">
+        <Spinner />
+      </div>
+    );
   }
 
   return ok ? (
