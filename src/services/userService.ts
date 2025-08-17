@@ -18,8 +18,6 @@ export async function getCurrentUserRole(): Promise<RoleName | null> {
   const userId = session?.user?.id;
   if (!userId) return null;
 
-  // 1) Intento con embed explícito por nombre del FK
-  //    Cambia users_rol_id_fkey si tu FK se llama distinto
   type EmbedData = { rol_id: string | null; roles?: { name: string } | null };
   const { data: embedData, error: embedErr } = await supabase
     .from("users")
@@ -33,7 +31,6 @@ export async function getCurrentUserRole(): Promise<RoleName | null> {
 
   let roleName = embedData?.roles?.name as RoleName | undefined;
 
-  // 2) Fallback: si no vino el embed, resolver por rol_id en una segunda query
   if (!roleName && embedData?.rol_id != null) {
     const { data: roleRow, error: roleErr } = await supabase
       .from("roles")
