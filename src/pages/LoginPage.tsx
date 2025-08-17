@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/logo_horizontal.svg';
 import Collage from '../assets/COLLAGE_MLM.webp';
-import AppVersion from "../components/ui/AppVersion";
-import { getSession, signInWithPassword } from "../utils/auth";
-import { supabase } from "../lib/supabaseClient";
+import AppVersion from '../components/ui/AppVersion';
+import { getSession, signInWithPassword } from '../utils/auth';
+import { supabase } from '../lib/supabaseClient';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   // const location = useLocation() as ReturnType<typeof useLocation> & {
   //   state?: { from?: { pathname?: string } }
@@ -18,20 +18,17 @@ export default function LoginPage() {
 
   type SessionUser = { id: string };
 
-  async function resolveUserRoleFromDB(sessionUser: SessionUser): Promise<string | null> {
+  async function resolveUserRoleFromDB(
+    sessionUser: SessionUser
+  ): Promise<string | null> {
     const userId = sessionUser?.id;
     if (!userId) return null;
 
-    // Opción 1 (tienes relación FK configurada y el nombre de la relación es "roles"):
-    // users: id (uuid), rol_id (bigint) → roles(id) y roles(name)
     const { data, error } = await supabase
-      .from("users")
-      .select("rol_id, roles(name)")
-      .eq("id", userId)
+      .from('users')
+      .select('rol_id, roles(name)')
+      .eq('id', userId)
       .single();
-
-    // Si tu relación no se llama "roles", usa el alias explícito del FKey:
-    // .select("rol_id, roles:users_rol_id_fkey(name)")
 
     if (error) return null;
     type UserWithRole = { rol_id: number; roles: { name: string } };
@@ -47,42 +44,48 @@ export default function LoginPage() {
       const user = data.session?.user;
       if (user) {
         const role = await resolveUserRoleFromDB({ id: user.id });
-        navigate(role === "user" ? "/mi-perfil" : "/kanban", { replace: true });
+        navigate(role === 'user' ? '/mi-perfil' : '/kanban', { replace: true });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setSubmitting(true);
-  setError("");
-
-  try {
-    const { data, error } = await signInWithPassword(email.trim(), password);
-    if (error) {
-      const msg = error.message?.toLowerCase() || "";
-      setError(msg.includes("invalid login credentials")
-        ? "Correo o contraseña incorrectos."
-        : (error.message || "No se pudo iniciar sesión."));
-      return;
-    }
-
-    if (data.session?.user) {
-      const role = await resolveUserRoleFromDB({ id: data.session.user.id });
-      navigate(role === "user" ? "/mi-perfil" : "/kanban", { replace: true });
-    }
-  } catch (err: unknown) {
-    setError(err instanceof Error ? err.message : "Error inesperado al iniciar sesión");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
-  const handleForgotPassword = (e: React.MouseEvent) => {
     e.preventDefault();
-    setError("Recuperación de contraseña no implementada.");
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const { data, error } = await signInWithPassword(email.trim(), password);
+      if (error) {
+        const msg = error.message?.toLowerCase() || '';
+        setError(
+          msg.includes('invalid login credentials')
+            ? 'Correo o contraseña incorrectos.'
+            : error.message || 'No se pudo iniciar sesión.'
+        );
+        return;
+      }
+
+      if (data.session?.user) {
+        const role = await resolveUserRoleFromDB({ id: data.session.user.id });
+        navigate(role === 'user' ? '/mi-perfil' : '/kanban', { replace: true });
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Error inesperado al iniciar sesión'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // const handleForgotPassword = (e: React.MouseEvent) => {
+  //   e.preventDefault();
+  //   setError('Recuperación de contraseña no implementada.');
+  // };
 
   return (
     <div className="flex h-[100dvh]">
@@ -90,13 +93,20 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
             <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
-            <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">Manteniendo la Misión</h2>
+            <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">
+              Manteniendo la Misión
+            </h2>
           </div>
 
           <div className="mt-6 sm:mt-10">
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">Correo electrónico</label>
+                <label
+                  htmlFor="email"
+                  className="block text-sm/6 font-medium text-gray-900"
+                >
+                  Correo electrónico
+                </label>
                 <div className="mt-2">
                   <input
                     id="email"
@@ -113,7 +123,12 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm/6 font-medium text-gray-900">Contraseña</label>
+                <label
+                  htmlFor="password"
+                  className="block text-sm/6 font-medium text-gray-900"
+                >
+                  Contraseña
+                </label>
                 <div className="mt-2">
                   <input
                     id="password"
@@ -129,13 +144,13 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              {/* <div className="flex items-center justify-between">
                 <div className="text-sm/6">
                   <a href="#" onClick={handleForgotPassword} className="font-semibold text-indigo-600 hover:text-indigo-500">
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>
-              </div>
+              </div> */}
 
               <div>
                 <button
@@ -143,7 +158,7 @@ export default function LoginPage() {
                   disabled={submitting}
                   className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-60"
                 >
-                  {submitting ? "Iniciando..." : "Iniciar Sesión"}
+                  {submitting ? 'Iniciando...' : 'Iniciar Sesión'}
                 </button>
               </div>
 
@@ -151,8 +166,13 @@ export default function LoginPage() {
             </form>
 
             <p className="mt-10 text-center text-sm/6 text-gray-500">
-              Desarrollado por{" "}
-              <a href="" className="font-semibold text-indigo-600 hover:text-indigo-500">Innovación & Desarrollo CILM</a>
+              Desarrollado por{' '}
+              <a
+                href=""
+                className="font-semibold text-indigo-600 hover:text-indigo-500"
+              >
+                Innovación & Desarrollo CILM
+              </a>
             </p>
             <AppVersion className="text-center mt-4" />
           </div>
@@ -160,7 +180,13 @@ export default function LoginPage() {
       </div>
 
       <div className="relative hidden w-0 flex-1 lg:block">
-        <img alt="Collage MLM" src={Collage} aria-hidden="true" loading="lazy" className="absolute inset-0 size-full object-cover" />
+        <img
+          alt="Collage MLM"
+          src={Collage}
+          aria-hidden="true"
+          loading="lazy"
+          className="absolute inset-0 size-full object-cover"
+        />
       </div>
     </div>
   );
