@@ -65,3 +65,34 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   }
   return (data ?? null) as UserProfile | null;
 }
+
+export async function getCurrentUserId(): Promise<string | null> {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) {
+    console.error("getUser error:", error.message);
+    return null;
+  }
+  return user?.id ?? null;
+}
+
+export type UserProfilePatch = Partial<Pick<UserProfile, "name" | "last_name" | "phone" | "location">>;
+
+export async function updateCurrentUserProfile(
+  patch: UserProfilePatch
+): Promise<UserProfile | null> {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("users")
+    .update(patch)
+    .eq("id", userId)
+    .select("id, name, last_name, email, phone, location")
+    .single();
+
+  if (error) {
+    console.error("Error updating user profile:", error.message);
+    return null;
+  }
+  return data as UserProfile;
+}

@@ -4,10 +4,12 @@ import Logo from '../../assets/logo_horizontal_blanc.svg';
 import { signOut } from '../../utils/auth';
 import AppVersion from '../ui/AppVersion';
 import { useAuth } from '../../context/AuthContext';
+import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 
 export default function Sidebar() {
   const { role, loading } = useAuth();
+  const { profile } = useUser();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -52,6 +54,8 @@ export default function Sidebar() {
     }
   };
 
+  const fullName = profile ? `${profile.name} ${profile.last_name}` : '';
+
   return (
     <>
       {/* Botón hamburguesa solo en móvil */}
@@ -92,9 +96,32 @@ export default function Sidebar() {
     md:translate-x-0 md:static md:flex h-[100dvh] overflow-y-auto
   `}
       >
+        {/* Logo y título */}
         <div className="p-6 text-2xl font-bold tracking-wide text-blue-400 border-b border-gray-700 mb-4">
           <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
         </div>
+
+        {/* Saludo al usuario */}
+        <div className="px-4 py-3 border-b border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-blue-600 grid place-items-center font-semibold">
+              {profile ? profile.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm text-gray-300 truncate">Hola,</p>
+              <p className="text-sm font-medium text-white truncate">
+                {fullName}
+              </p>
+              {profile?.location && (
+                <p className="text-[11px] text-gray-400 truncate">
+                  {profile.location}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Menú lateral */}
         <nav className="flex flex-col gap-1 flex-1 px-2">
           {visibleMenu.map(
             (
