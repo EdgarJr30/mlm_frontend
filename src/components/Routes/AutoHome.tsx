@@ -1,7 +1,8 @@
 // components/Routes/AutoHome.tsx
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import Spinner from '../ui/Spinner';
 
 export default function AutoHome() {
   const { loading, isAuthenticated, role } = useAuth();
@@ -10,11 +11,15 @@ export default function AutoHome() {
   useEffect(() => {
     if (loading) return;
     if (!isAuthenticated) {
-      navigate("/login", { replace: true });
+      navigate('/login', { replace: true });
       return;
     }
-    navigate(role === "user" ? "/mi-perfil" : "/kanban", { replace: true });
+    navigate(role === 'user' ? '/mi-perfil' : '/kanban', { replace: true });
   }, [loading, isAuthenticated, role, navigate]);
 
-  return null; // puedes poner un spinner si te gusta
+  return (
+    <div className="h-screen w-screen grid place-items-center">
+      <Spinner />
+    </div>
+  );
 }
