@@ -62,7 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       // Recalcular rol (si lo llamo de DB)
-      const r = await getCurrentUserRole();
+      // const r = await getCurrentUserRole();
+      let r: RoleName | null = null;
+      for (let i = 0; i < 2 && !r; i++) {
+        r = await getCurrentUserRole();
+        if (!r) await new Promise((res) => setTimeout(res, 120)); // pequeño backoff
+      }
       setRole(r);
       setPermissions(buildPermissions(r));
     } finally {

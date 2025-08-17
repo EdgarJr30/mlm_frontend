@@ -14,6 +14,7 @@ export default function AutoHome() {
       navigate('/login', { replace: true });
       return;
     }
+    if (!role) return;
     navigate(role === 'user' ? '/mi-perfil' : '/kanban', { replace: true });
   }, [loading, isAuthenticated, role, navigate]);
 
