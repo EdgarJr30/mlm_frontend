@@ -121,10 +121,6 @@ function TicketDetailModal({
                 <dd className="text-gray-900">{ticket.location}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Activo</dt>
-                <dd className="text-gray-900">{ticket.location ?? '—'}</dd>
-              </div>
-              <div>
                 <dt className="text-gray-500">Fecha de creación</dt>
                 <dd className="text-gray-900">
                   {formatDateInTimezone(ticket.created_at)}
@@ -481,7 +477,7 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                       Ubicación
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-                      Activo
+                      Adjuntos
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Fecha
