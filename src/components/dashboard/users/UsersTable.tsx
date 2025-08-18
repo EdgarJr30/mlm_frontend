@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { supabaseNoPersist } from '../../../lib/supabaseNoPersist';
 import { LOCATIONS } from '../../../constants/locations';
+import { useAuth } from '../../../context/AuthContext';
+import { useUser } from '../../../context/UserContext';
 
 interface Role {
   id: number;
@@ -25,6 +28,9 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   const [users, setUsers] = useState<DbUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { refresh: refreshAuth } = useAuth();
+  const { refresh: refreshUser } = useUser();
 
   // modal crear
   const [open, setOpen] = useState(false);
@@ -120,6 +126,10 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     }
 
     setSubmitting(true);
+
+    // GUARD: avisa a los Contexts que ignoren onAuthStateChange
+    sessionStorage.setItem('admin:create-user:guard', '1');
+
     try {
       // 0) Guardar sesión actual (admin)
       const { data: adminSessionRes, error: adminSessionErr } =
@@ -133,11 +143,12 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       );
 
       // 1) Crear en Auth (esto cambia la sesión si no hay confirmación por email)
-      const { data: signUpRes, error: signUpErr } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name } },
-      });
+      const { data: signUpRes, error: signUpErr } =
+        await supabaseNoPersist.auth.signUp({
+          email,
+          password,
+          options: { data: { name } },
+        });
       console.log('📨 [UsersTable] signUp ->', { signUpRes, signUpErr });
       if (signUpErr) throw signUpErr;
 
@@ -147,24 +158,24 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
         throw new Error('No se obtuvo el ID del usuario creado en Auth.');
 
       // 2) Restaurar sesión del admin ANTES del RPC
-      if (prevSession) {
-        console.log(
-          '♻️ [UsersTable] Restaurando sesión admin para correr RPC como admin...'
-        );
-        const { data: setRes, error: setErr } = await supabase.auth.setSession({
-          access_token: prevSession.access_token,
-          refresh_token: prevSession.refresh_token,
-        });
-        console.log('🔁 [UsersTable] setSession resultado:', {
-          setRes,
-          setErr,
-        });
-        if (setErr) throw setErr;
-      } else {
-        console.warn(
-          '⚠️ [UsersTable] No había sesión previa del admin; el RPC fallará con check de admin.'
-        );
-      }
+      // if (prevSession) {
+      //   console.log(
+      //     '♻️ [UsersTable] Restaurando sesión admin para correr RPC como admin...'
+      //   );
+      //   const { data: setRes, error: setErr } = await supabase.auth.setSession({
+      //     access_token: prevSession.access_token,
+      //     refresh_token: prevSession.refresh_token,
+      //   });
+      //   console.log('🔁 [UsersTable] setSession resultado:', {
+      //     setRes,
+      //     setErr,
+      //   });
+      //   if (setErr) throw setErr;
+      // } else {
+      //   console.warn(
+      //     '⚠️ [UsersTable] No había sesión previa del admin; el RPC fallará con check de admin.'
+      //   );
+      // }
 
       // 3) Ejecutar RPC ya como admin
       const { error: rpcErr } = await supabase.rpc('create_user_in_public', {
@@ -177,6 +188,12 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       });
       console.log('🧩 [UsersTable] RPC create_user_in_public error?:', rpcErr);
       if (rpcErr) throw rpcErr;
+
+      // (Opcional) rehidrata contexts de forma silenciosa
+      await Promise.all([
+        refreshAuth({ silent: true }),
+        refreshUser({ silent: true }),
+      ]);
 
       setMsg({ type: 'ok', text: 'Usuario creado correctamente.' });
       await loadData();
