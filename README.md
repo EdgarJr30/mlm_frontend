@@ -113,6 +113,7 @@ npm run lint
 - `/login` - Autenticación de usuarios
 - `/crear-ticket` - Formulario para nuevas solicitudes de mantenimiento
 - `/kanban` - Tablero principal con gestión de tickets (ruta protegida)
+-  `/inbox` - 
 - `/` - Redirecciona al tablero Kanban
 
 ## 🔐 Autenticación
