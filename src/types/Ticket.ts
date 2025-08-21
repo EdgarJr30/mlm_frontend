@@ -12,6 +12,7 @@ export interface Ticket {
   requester: string;
   location: string;
   assignee?: string;
+  assignee_id?: number;
   incident_date: string;
   deadline_date?: string; // ISO date string
   image?: string; // base64
