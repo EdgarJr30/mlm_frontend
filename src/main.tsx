@@ -8,6 +8,7 @@ import RequireRole from './components/Routes/RequireRole';
 import ProtectedRoute from './components/Routes/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
+import { AssigneeProvider } from './context/AssigneeContext';
 
 // Vacía todos los logs en desarrollo
 if (process.env.NODE_ENV !== 'development') {
@@ -23,41 +24,43 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
       <UserProvider>
-        <BrowserRouter>
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="colored"
-          />
-          <Routes>
-            {/* Públicas / especiales */}
-            {PUBLIC_ROUTES.map((r) => (
-              <Route key={r.path} path={r.path} element={r.element} />
-            ))}
+        <AssigneeProvider>
+          <BrowserRouter>
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+            />
+            <Routes>
+              {/* Públicas / especiales */}
+              {PUBLIC_ROUTES.map((r) => (
+                <Route key={r.path} path={r.path} element={r.element} />
+              ))}
 
-            {/* Protegidas dinamicamente */}
-            {APP_ROUTES.map((r) => (
-              <Route
-                key={r.path}
-                path={r.path}
-                element={
-                  <ProtectedRoute>
-                    <RequireRole allow={r.allow}>{r.element}</RequireRole>
-                  </ProtectedRoute>
-                }
-              />
-            ))}
+              {/* Protegidas dinamicamente */}
+              {APP_ROUTES.map((r) => (
+                <Route
+                  key={r.path}
+                  path={r.path}
+                  element={
+                    <ProtectedRoute>
+                      <RequireRole allow={r.allow}>{r.element}</RequireRole>
+                    </ProtectedRoute>
+                  }
+                />
+              ))}
 
-            {/* comodín */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              {/* comodín */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AssigneeProvider>
       </UserProvider>
     </AuthProvider>
   </React.StrictMode>
