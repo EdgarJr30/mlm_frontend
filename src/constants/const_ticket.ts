@@ -6,6 +6,7 @@ export const STATUSES: Ticket["status"][] = [
   "Finalizadas",
 ];
 
+//TODO:Eliminar bloque de codigo ya no se utiliza.
 export const RESPONSABLES_SECCIONES: Record<string, string[]> = {
   "SIN ASIGNAR": ["<< SIN ASIGNAR >>"],
   "Internos": [
