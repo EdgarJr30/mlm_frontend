@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import { getTicketsByStatusPaginated } from '../../../services/ticketService';
+import { useAssignees } from '../../../context/AssigneeContext';
+import {
+  assigneeInitials,
+  formatAssigneeFullName,
+} from '../../../services/assigneeService';
 import {
   getPublicImageUrl,
   getTicketImagePaths,
@@ -49,6 +54,8 @@ export default function KanbanColumn({
   const columnRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+
+  const { byId: assigneeById } = useAssignees();
 
   // Skeleton loader
   const skeletonTickets = Array.from({ length: 5 });
@@ -244,186 +251,177 @@ export default function KanbanColumn({
           ))
         ) : (
           <>
-            {ticketsToRender.map((ticket) => (
+            {ticketsToRender.map((ticket) => {
+              const assignee =
+                ticket.assignee_id !== undefined
+                  ? assigneeById[ticket.assignee_id]
+                  : undefined;
+              const initials = assigneeInitials(assignee); // 'SA' si no existe
+              const displayName = assignee
+                ? formatAssigneeFullName(assignee) // "Nombre Apellido"
+                : '<< SIN ASIGNAR >>';
               // {/* ...ticket ... */}
-              <div
-                key={ticket.id}
-                onClick={() => onOpenModal(ticket)}
-                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-              >
-                {/* {ticket.image && (
-                                        <img
-                                            src={ticket.image}
-                                            alt="Adjunto"
-                                            className="w-full h-24 object-contain rounded mb-3"
-                                        />
-                                    )} */}
-                {ticket.image &&
-                  (() => {
-                    const imagePaths = getTicketImagePaths(ticket.image);
-                    if (imagePaths.length === 0) return null;
-                    return (
-                      <div className="flex gap-1 mb-3">
-                        {imagePaths.map((path, idx) => (
-                          <img
-                            key={idx}
-                            src={getPublicImageUrl(path)}
-                            alt={`Adjunto ${idx + 1}`}
-                            className="w-full h-24 object-contain rounded mb-3"
-                          />
-                        ))}
-                      </div>
-                    );
-                  })()}
-                <div className="flex items-start justify-between mb-1">
-                  <h4 className="font-semibold text-sm text-gray-900">
-                    {ticket.title.length > 100
-                      ? `${ticket.title.slice(0, 100)}...`
-                      : ticket.title}
-                  </h4>
-                  <button
-                    type="button"
-                    className="text-gray-900 hover:text-gray-600"
-                    title="Ver más detalles"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      className="size-6 cursor-pointer"
+              return (
+                <div
+                  key={ticket.id}
+                  onClick={() => onOpenModal(ticket)}
+                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
+                >
+                  {ticket.image &&
+                    (() => {
+                      const imagePaths = getTicketImagePaths(ticket.image);
+                      if (imagePaths.length === 0) return null;
+                      return (
+                        <div className="flex gap-1 mb-3">
+                          {imagePaths.map((path, idx) => (
+                            <img
+                              key={idx}
+                              src={getPublicImageUrl(path)}
+                              alt={`Adjunto ${idx + 1}`}
+                              className="w-full h-24 object-contain rounded mb-3"
+                            />
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  <div className="flex items-start justify-between mb-1">
+                    <h4 className="font-semibold text-sm text-gray-900">
+                      {ticket.title.length > 100
+                        ? `${ticket.title.slice(0, 100)}...`
+                        : ticket.title}
+                    </h4>
+                    <button
+                      type="button"
+                      className="text-gray-900 hover:text-gray-600"
+                      title="Ver más detalles"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <p className="text-xs text-gray-600 line-clamp-2 mb-2">
-                  {ticket.description || 'Sin descripción'}
-                </p>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        className="size-6 cursor-pointer"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                    {ticket.description || 'Sin descripción'}
+                  </p>
 
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  {ticket.is_urgent && (
-                    <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {ticket.is_urgent && (
+                      <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        Urgente
+                      </span>
+                    )}
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded border ${getPriorityStyles(
+                        ticket.priority
+                      )}`}
+                    >
+                      {capitalize(ticket.priority)}
+                    </span>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded border ${getStatusStyles(
+                        ticket.status
+                      )}`}
+                    >
+                      {ticket.status}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div className="flex items-center gap-1">
                       <svg
                         className="w-3 h-3"
                         fill="none"
                         stroke="currentColor"
-                        strokeWidth="2"
                         viewBox="0 0 24 24"
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          strokeWidth={2}
+                          d="M5.121 17.804A3 3 0 008 19h8a3 3 0 002.879-1.196M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
-                      Urgente
-                    </span>
-                  )}
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded border ${getPriorityStyles(
-                      ticket.priority
-                    )}`}
-                  >
-                    {capitalize(ticket.priority)}
-                  </span>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded border ${getStatusStyles(
-                      ticket.status
-                    )}`}
-                  >
-                    {ticket.status}
-                  </span>
-                </div>
+                      Solicitante: {ticket.requester}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="1.5"
+                        stroke="currentColor"
+                        className="w-3 h-3"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
+                        />
+                      </svg>
+                      Ubicación: {ticket.location || 'No especificada'}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Fecha:{' '}
+                      {ticket.incident_date
+                        ? ticket.incident_date
+                        : 'No especificada'}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <strong className="text-xs">ID:</strong> {ticket.id}
+                    </div>
+                  </div>
 
-                <div className="text-xs text-gray-500 space-y-1">
-                  <div className="flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5.121 17.804A3 3 0 008 19h8a3 3 0 002.879-1.196M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    Solicitante: {ticket.requester}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      className="w-3 h-3"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
-                      />
-                    </svg>
-                    Ubicación: {ticket.location || 'No especificada'}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z"
-                      />
-                    </svg>
-                    Fecha:{' '}
-                    {ticket.incident_date
-                      ? ticket.incident_date
-                      : 'No especificada'}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <strong className="text-xs">ID:</strong> {ticket.id}
-                  </div>
-                </div>
-
-                {ticket.assignee && (
                   <div className="flex items-center gap-2 mt-2">
                     <div className="h-6 w-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-semibold text-gray-700">
-                      {!ticket.assignee ||
-                      ticket.assignee === '<< SIN ASIGNAR >>'
-                        ? 'SA'
-                        : ticket.assignee
-                            .split(' ')
-                            .slice(0, 2)
-                            .map((n) => n[0])
-                            .join('')
-                            .toUpperCase()}
+                      {initials}
                     </div>
-                    <span className="text-xs text-gray-600">
-                      {ticket.assignee}
-                    </span>
+                    <span className="text-xs text-gray-600">{displayName}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
             {isPaginating && !isSearching && (
               <div className="flex justify-center py-3">
                 <svg
