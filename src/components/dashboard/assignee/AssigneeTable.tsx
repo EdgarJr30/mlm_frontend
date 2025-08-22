@@ -574,32 +574,28 @@ export default function AssigneesTable({ searchTerm }: Props) {
                           >
                             <div className="flex items-center gap-3">
                               <button
-                                className="text-indigo-600 hover:text-indigo-500 cursor-pointer"
-                                onClick={() => setDetail(a)}
-                                title="Ver"
-                              >
-                                👁️
-                              </button>
-                              <button
-                                className="text-emerald-600 hover:text-emerald-500 cursor-pointer"
-                                onClick={() => openEdit(a)}
+                                type="button"
                                 title="Editar"
+                                onClick={() => openEdit(a)}
+                                className="inline-flex items-center rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
                               >
-                                ✎
+                                Editar
                               </button>
                               <button
-                                className="text-gray-700 hover:text-gray-900 cursor-pointer"
-                                onClick={() => handleToggleActive(a)}
+                                type="button"
                                 title={a.is_active ? 'Desactivar' : 'Activar'}
+                                onClick={() => handleToggleActive(a)}
+                                className="inline-flex items-center rounded-md bg-gray-700 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-gray-600 active:scale-[0.99] cursor-pointer"
                               >
-                                {a.is_active ? '⏼' : '▶︎'}
+                                {a.is_active ? 'Desactivar' : 'Activar'}
                               </button>
                               <button
-                                className="text-rose-600 hover:text-rose-500 cursor-pointer"
-                                onClick={() => handleDelete(a)}
+                                type="button"
                                 title="Eliminar"
+                                className="inline-flex items-center rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-rose-500 active:scale-[0.99] cursor-pointer"
+                                onClick={() => handleDelete(a)}
                               >
-                                🗑️
+                                Eliminar
                               </button>
                             </div>
                           </td>
