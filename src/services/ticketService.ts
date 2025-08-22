@@ -64,7 +64,7 @@ export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
   return data as Ticket[];
 }
 
-export async function getTicketsByStatusPaginated(status: string, page: number, pageSize: number, location?: string) {
+export async function getTicketsByStatusPaginated(status: Ticket['status'], page: number, pageSize: number, location?: string) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
