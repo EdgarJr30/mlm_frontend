@@ -11,6 +11,15 @@ export type AssigneeInput = {
   is_active?: boolean;
 };
 
+export async function getAllAssignees(): Promise<Assignee[]> {
+  const { data, error } = await supabase
+    .from('assignees')
+    .select('id, name, last_name, section, is_active, user_id, email, phone');
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Assignee[];
+}
+
 export async function getActiveAssignees(): Promise<Assignee[]> {
   const { data, error } = await supabase
     .from('assignees')

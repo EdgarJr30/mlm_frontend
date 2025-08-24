@@ -8,7 +8,8 @@ import React, {
 } from 'react';
 import type { Assignee, AssigneeSection } from '../types/Assignee';
 import {
-  getActiveAssignees,
+  // getActiveAssignees,
+  getAllAssignees,
   groupBySection,
   makeAssigneeMap,
 } from '../services/assigneeService';
@@ -17,9 +18,10 @@ import { useAuth } from './AuthContext';
 export type AssigneeState = {
   loading: boolean;
   error: string | null;
-  list: Assignee[];
-  byId: Record<number, Assignee>;
-  bySection: Record<AssigneeSection, Assignee[]>;
+  list: Assignee[]; // todos
+  byId: Record<number, Assignee>; // todos
+  bySection: Record<AssigneeSection, Assignee[]>; // todos
+  bySectionActive: Record<AssigneeSection, Assignee[]>; // ⬅️ solo activos
   refresh: () => Promise<void>;
 };
 
@@ -43,7 +45,7 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
         setList([]);
         return;
       }
-      const data = await getActiveAssignees();
+      const data = await getAllAssignees();
       setList(data);
     } catch (e: unknown) {
       const msg =
@@ -62,17 +64,18 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
     void refresh();
   }, [isAuthenticated]);
 
-  const value = useMemo<AssigneeState>(
-    () => ({
+  const value = useMemo<AssigneeState>(() => {
+    const activeList = list.filter((a) => a.is_active);
+    return {
       loading,
       error,
       list,
-      byId: makeAssigneeMap(list),
-      bySection: groupBySection(list),
+      byId: makeAssigneeMap(list), // todos
+      bySection: groupBySection(list), // todos
+      bySectionActive: groupBySection(activeList), // solo activos
       refresh,
-    }),
-    [loading, error, list]
-  );
+    };
+  }, [loading, error, list]);
 
   return (
     <AssigneeContext.Provider value={value}>

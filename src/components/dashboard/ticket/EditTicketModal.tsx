@@ -29,7 +29,7 @@ export default function EditTicketModal({
 }: EditTicketModalProps) {
   const [edited, setEdited] = useState<Ticket>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
-  const { loading: loadingAssignees, bySection } = useAssignees();
+  const { loading: loadingAssignees, bySectionActive } = useAssignees();
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
@@ -208,7 +208,7 @@ export default function EditTicketModal({
             >
               {SECTIONS_ORDER.map((grupo) => (
                 <optgroup key={grupo} label={grupo}>
-                  {(bySection[grupo] ?? []).map(
+                  {(bySectionActive[grupo] ?? []).map(
                     (assignee: Assignee | undefined) =>
                       assignee ? (
                         <option key={assignee.id} value={assignee.id}>
