@@ -157,8 +157,10 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
         );
       } else {
         console.error('❌ Error desconocido:', error);
+        showToastError(
+          `No se pudo actualizar el ticket. Intenta de nuevo. ${error}`
+        );
       }
-      showToastError('No se pudo actualizar el ticket. Intenta de nuevo.');
     }
   };
 
