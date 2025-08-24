@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import {
-  getFilteredTickets,
-  getUnacceptedTicketsPaginated,
+  // getFilteredTickets,
+  // getUnacceptedTicketsPaginated,
   acceptTickets,
+  getTicketsByFiltersPaginated,
 } from '../../../services/ticketService';
 import {
   getPublicImageUrl,
@@ -11,6 +12,9 @@ import {
 } from '../../../services/storageService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
+import InboxFiltersBar from './InboxFiltersBar';
+import type { InboxFilterKey } from '../../../features/tickets/inboxFilters';
+import type { FilterState } from '../../../types/filters';
 
 interface Props {
   searchTerm: string;
@@ -108,7 +112,6 @@ function TicketDetailModal({
         </nav>
 
         <section className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Información General */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Información General</h4>
             <dl className="grid grid-cols-1 gap-3 text-sm">
@@ -129,7 +132,6 @@ function TicketDetailModal({
             </dl>
           </div>
 
-          {/* Estado y Prioridad */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Estado y Prioridad</h4>
             <dl className="grid grid-cols-1 gap-3 text-sm">
@@ -148,7 +150,6 @@ function TicketDetailModal({
             </dl>
           </div>
 
-          {/* Descripción */}
           <div className="md:col-span-2">
             <h4 className="text-lg font-semibold mb-2">
               Descripción del Problema
@@ -158,7 +159,6 @@ function TicketDetailModal({
             </p>
           </div>
 
-          {/* Fotos Adjuntas */}
           <div className="md:col-span-2">
             <h4 className="text-lg font-semibold mb-3">Fotos Adjuntas</h4>
             {imagePaths.length === 0 ? (
@@ -198,20 +198,49 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
+  // const [, setFilteredTickets] = useState<Ticket[]>([]);
   const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
 
-  const isSearching = searchTerm.length >= 2;
-  const ticketsToShow = isSearching ? filteredTickets : tickets;
+  /** Estado de filtros (FilterBar) */
+  const [filters, setFilters] = useState<Record<string, unknown>>({
+    q: searchTerm || undefined,
+    location: selectedLocation || undefined,
+  });
+
+  /** Sincroniza Navbar -> filtros cuando cambian las props */
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      q: searchTerm || undefined,
+      location: selectedLocation || undefined,
+    }));
+  }, [searchTerm, selectedLocation]);
+
+  // const isSearching = useMemo(
+  //   () =>
+  //     typeof filters.q === 'string' && (filters.q as string).trim().length >= 2,
+  //   [filters.q]
+  // );
+
+  /** ¿Hay filtros avanzados activos además de q? */
+  // const isAdvanced =
+  //   Boolean(filters.location) ||
+  //   Array.isArray(filters.priority) ||
+  //   Array.isArray(filters.status) ||
+  //   Boolean(filters.created_at) ||
+  //   Boolean(filters.has_image) ||
+  //   Boolean(filters.accepted);
+
+  const ticketsToShow = tickets;
 
   useLayoutEffect(() => {
-    const isIndeterminate =
+    const isInd =
       selectedTicket.length > 0 && selectedTicket.length < ticketsToShow.length;
     setChecked(
       selectedTicket.length === ticketsToShow.length && ticketsToShow.length > 0
     );
-    setIndeterminate(isIndeterminate);
-    if (checkbox.current) checkbox.current.indeterminate = isIndeterminate;
+    setIndeterminate(isInd);
+    if (checkbox.current) checkbox.current.indeterminate = isInd;
   }, [selectedTicket, ticketsToShow.length]);
 
   function toggleAll() {
@@ -261,59 +290,49 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
     }
   }
 
+  /** Carga datos aplicando filtros */
+  // Carga SIEMPRE desde el servidor
   async function reload() {
-    if (isSearching) {
-      const results = await getFilteredTickets(
-        searchTerm,
-        selectedLocation,
-        false
-      );
-      setFilteredTickets(results);
-    } else {
-      const { data, count } = await getUnacceptedTicketsPaginated(
-        page,
-        PAGE_SIZE,
-        selectedLocation
-      );
-      setTickets(data);
-      setTotalCount(count);
-    }
+    const { data, count } = await getTicketsByFiltersPaginated(
+      filters as FilterState<InboxFilterKey>,
+      page,
+      PAGE_SIZE
+    );
+    setTickets(data);
+    setSelectedTicket([]);
+    setTotalCount(count);
   }
 
-  // Búsqueda por texto + ubicación
+  // Reset selección al cambiar página o filtros
   useEffect(() => {
-    if (!isSearching) return;
-    setIsLoading(true);
-    getFilteredTickets(searchTerm, selectedLocation, false)
-      .then((results) => setFilteredTickets(results))
-      .finally(() => setIsLoading(false));
-  }, [searchTerm, isSearching, selectedLocation]);
+    setSelectedTicket([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, JSON.stringify(filters)]);
 
-  // Limpiar resultados al salir de búsqueda
+  // Reaccionar a cambios de filtros o página
   useEffect(() => {
-    if (!isSearching) setFilteredTickets([]);
-  }, [isSearching]);
-
-  // Carga paginada
-  useEffect(() => {
-    if (isSearching) return;
-    let mounted = true;
     setIsLoading(true);
-    getUnacceptedTicketsPaginated(page, PAGE_SIZE, selectedLocation).then(
-      ({ data, count }) => {
-        if (!mounted) return;
-        setTickets(data);
-        setTotalCount(count);
-        setIsLoading(false);
-      }
-    );
-    return () => {
-      mounted = false;
-    };
-  }, [page, isSearching, selectedLocation]);
+    void reload().finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, JSON.stringify(filters)]);
+
+  // Limpiar resultados al salir de modo filtrado
+  // useEffect(() => {
+  //   if (!(isSearching || isAdvanced)) setFilteredTickets([]);
+  // }, [isSearching, isAdvanced]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      {/* Filtros declarativos */}
+      <div className="mb-3">
+        <InboxFiltersBar
+          onApply={(vals) => {
+            setPage(0);
+            setFilters(vals);
+          }}
+        />
+      </div>
+
       {/* Barra superior: texto + botón masivo */}
       <div className="flex items-center gap-3">
         <p className="text-sm text-gray-700">
@@ -357,7 +376,6 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                   onClick={() => setDetailTicket(t)}
                 >
                   <div className="flex items-start gap-3">
-                    {/* checkbox */}
                     <input
                       type="checkbox"
                       className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
@@ -372,7 +390,6 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                           );
                       }}
                     />
-
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-gray-500">#{t.id}</div>
                       <div className="mt-0.5 text-base font-semibold text-gray-900 line-clamp-1">
@@ -381,24 +398,19 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                       <div className="text-sm text-gray-500 line-clamp-2">
                         {t.description}
                       </div>
-
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-gray-700">{t.requester}</span>
                         <span className="text-gray-400">•</span>
                         <span className="text-gray-700">{t.location}</span>
                       </div>
-
                       <div className="mt-3 flex items-center gap-2">
                         <PriorityChip value={t.priority ?? 'Media'} />
                         <StatusChip value={t.status ?? 'Nueva'} />
                       </div>
-
                       <div className="mt-3 text-xs text-gray-500">
                         {formatDateInTimezone(t.created_at)}
                       </div>
                     </div>
-
-                    {/* miniatura/activo */}
                     {cover ? (
                       <img
                         src={getPublicImageUrl(cover)}
@@ -412,7 +424,6 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
                     ) : null}
                   </div>
 
-                  {/* Acciones */}
                   <div className="mt-3 flex items-center justify-end gap-4">
                     <button
                       className="text-indigo-600 hover:text-indigo-500 text-sm cursor-pointer"
@@ -439,7 +450,7 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
           )}
         </div>
 
-        {/* ===== Vista md+: tabla clásica con header sticky y scroll horizontal si es necesario ===== */}
+        {/* ===== Vista md+: tabla ===== */}
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
             <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
@@ -614,28 +625,26 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
       </div>
 
       {/* Paginación */}
-      {!isSearching && (
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
-          >
-            Anterior
-          </button>
-          <button
-            onClick={() =>
-              setPage((p) =>
-                p + 1 < Math.ceil(totalCount / PAGE_SIZE) ? p + 1 : p
-              )
-            }
-            disabled={page + 1 >= Math.ceil(totalCount / PAGE_SIZE)}
-            className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+          className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+        >
+          Anterior
+        </button>
+        <button
+          onClick={() =>
+            setPage((p) =>
+              p + 1 < Math.ceil(totalCount / PAGE_SIZE) ? p + 1 : p
+            )
+          }
+          disabled={page + 1 >= Math.ceil(totalCount / PAGE_SIZE)}
+          className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+        >
+          Siguiente
+        </button>
+      </div>
 
       {/* Modal */}
       {detailTicket && (
