@@ -2,6 +2,8 @@ import { supabase } from "../lib/supabaseClient";
 import type { Ticket } from "../types/Ticket";
 
 const PAGE_SIZE = 20;
+type Status = Ticket["status"];
+export type TicketCounts = Record<Status, number>;
 
 export async function createTicket(ticket: Omit<Ticket, "id" | "status" | "created_by">) {
   const { data: { user }, error: userErr } = await supabase.auth.getUser();
@@ -51,7 +53,6 @@ export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
     throw new Error(`Error al actualizar el ticket: ${error.message}`);
   }
 }
-
 
 export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
   const { data, error } = await supabase
@@ -123,19 +124,6 @@ export async function getFilteredTickets(term: string, location?: string, isAcce
   return data as Ticket[];
 }
 
-// export async function getTotalTicketsCount() {
-//   const { count, error } = await supabase
-//     .from('tickets')
-//     .select('id', { count: 'exact', head: true });
-
-//   if (error) {
-//     console.error("Error al contar tickets:", error.message);
-//     return 0;
-//   }
-//   console.log(`Total de tickets: ${count}`);
-//   return count || 0;
-// }
-
 export async function getUnacceptedTicketsPaginated(page: number, pageSize: number, location?: string) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
@@ -168,4 +156,35 @@ export async function acceptTickets(ticketIds: string[]): Promise<void> {
     .in("id", ticketIds);
 
   if (error) throw new Error(error.message);
+}
+
+export async function getTicketCountsRPC(filters?: {
+  term?: string;
+  location?: string;
+}): Promise<TicketCounts> {
+  const { data, error } = await supabase.rpc("ticket_counts", {
+    p_location: filters?.location ?? null,
+    p_term: filters?.term ?? null,
+  });
+
+  if (error) {
+    console.error("RPC ticket_counts error:", error.message);
+  }
+
+  // inicializa en 0 y rellena con lo que devuelva la RPC
+  const out: TicketCounts = {
+    "Pendiente": 0,
+    "En Ejecución": 0,
+    "Finalizadas": 0,
+  };
+
+  (data as { status: Status; total: number }[] | null | undefined)?.forEach(
+    (row) => {
+      if (row?.status && typeof row.total === "number") {
+        out[row.status] = row.total;
+      }
+    }
+  );
+
+  return out;
 }

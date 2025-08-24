@@ -25,6 +25,7 @@ interface Props {
   lastUpdatedTicket: Ticket | null;
   selectedLocation?: string;
   isFiltering: boolean;
+  count?: number;
 }
 
 export default function KanbanColumn({
@@ -41,6 +42,7 @@ export default function KanbanColumn({
   lastUpdatedTicket,
   selectedLocation,
   isFiltering,
+  count,
 }: Props) {
   const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
   const [page, setPage] = useState(0);
@@ -117,6 +119,14 @@ export default function KanbanColumn({
       selectedLocation,
     ]
   );
+
+  // Fallback por si no recibimos count (p.ej. primer render)
+  const visibleCount =
+    typeof count === 'number'
+      ? count
+      : isFiltering
+      ? (tickets ?? []).length
+      : localTickets.length;
 
   useEffect(() => {
     pageRef.current = page;
@@ -227,6 +237,19 @@ export default function KanbanColumn({
           )}`}
         >
           {status}
+        </span>
+
+        {/* Badge */}
+        <span
+          className="
+            inline-flex items-center justify-center
+            rounded-full border border-gray-300
+            text-xs min-w-6 h-6 px-1.5
+            bg-white text-gray-700
+          "
+          title={`Total en ${status}`}
+        >
+          {visibleCount}
         </span>
       </h3>
       <div
