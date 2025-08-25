@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import { getFilteredTickets } from '../../../services/ticketService';
 import EditTicketModal from '../ticket/EditTicketModal';
 import {
   updateTicket,
   getTicketCountsRPC,
+  getTicketsByKanbanFiltersPaginated,
 } from '../../../services/ticketService';
 import type { Ticket } from '../../../types/Ticket';
+import type { FilterState } from '../../../types/filters';
+import type { KanbanFilterKey } from '../../../features/tickets/kanbanFilters';
 import KanbanColumn from './KanbanColumn';
 import Modal from '../../ui/Modal';
 import { showToastSuccess, showToastError } from '../../../notifications/toast';
@@ -16,13 +18,13 @@ const STATUSES: Ticket['status'][] = [
   'En Ejecución',
   'Finalizadas',
 ];
+const FILTERED_LIMIT = 200;
 
 interface Props {
-  searchTerm: string;
-  selectedLocation: string;
+  filters?: FilterState<KanbanFilterKey>;
 }
 
-export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
+export default function KanbanBoard({ filters }: Props) {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -38,99 +40,106 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
     Finalizadas: 0,
   });
 
-  const isSearching = searchTerm.length >= 2;
   const loadedColumns = useRef(0);
-  const isFiltering = isSearching || selectedLocation.length > 0;
 
-  // ===== Helpers de filtros/negocio =====
-  const normTerm = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm]);
+  /** ¿Hay filtros activos? */
+  const isFiltering = useMemo(() => {
+    const f = (filters ?? {}) as Record<string, unknown>;
+    return Object.keys(f).some((k) => {
+      const val = f[k];
+      if (val === undefined || val === null || val === '') return false;
+      if (Array.isArray(val) && val.length === 0) return false;
+      return true;
+    });
+  }, [filters]);
 
-  function matchesActiveFilters(t: Ticket): boolean {
-    // location
-    if (selectedLocation && t.location !== selectedLocation) return false;
+  /** Normalización segura para la RPC de conteos */
+  const countsFilters = useMemo(
+    () => ({
+      term:
+        typeof (filters as Record<string, unknown> | undefined)?.q === 'string'
+          ? ((filters as Record<string, unknown>).q as string).trim() ||
+            undefined
+          : undefined,
+      location:
+        typeof (filters as Record<string, unknown> | undefined)?.location ===
+        'string'
+          ? ((filters as Record<string, unknown>).location as string)
+          : undefined,
+    }),
+    [filters]
+  );
 
-    // búsqueda (refleja la lógica de getFilteredTickets)
-    if (normTerm.length >= 2) {
-      const isNumeric = !isNaN(Number(normTerm));
-      const title = (t.title ?? '').toLowerCase();
-      const requester = (t.requester ?? '').toLowerCase();
-      if (
-        !title.includes(normTerm) &&
-        !requester.includes(normTerm) &&
-        !(isNumeric && String(t.id) === normTerm)
-      ) {
-        return false;
+  /** Carga cuando hay filtros (una sola query y se reparte por columnas) */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setIsLoading(true);
+      if (isFiltering) {
+        const { data } = await getTicketsByKanbanFiltersPaginated(
+          (filters ?? {}) as FilterState<string>,
+          0,
+          FILTERED_LIMIT
+        );
+        if (alive) setFilteredTickets(data);
+      } else {
+        setFilteredTickets([]);
+        setReloadKey((p) => p + 1); // fuerza recarga de columnas con paginación local
       }
-    }
-    return true;
-  }
+      setIsLoading(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [isFiltering, JSON.stringify(filters)]);
 
-  // Regla: en "Pendiente" solo cuentan los aceptados
-  function countsInStatus(
-    t: Ticket,
-    status: Ticket['status'] = t.status
-  ): boolean {
-    if (t.status !== status) return false;
-    if (status === 'Pendiente' && !t.is_accepted) return false;
-    return true;
-  }
+  /** Conteos (badges) */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const c = await getTicketCountsRPC(countsFilters);
+      if (alive) setCounts(c);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [JSON.stringify(countsFilters)]);
 
-  // ===== UI optimista para badges =====
+  /** UI optimista para los badges */
   function bumpCountsLocal(oldTicket: Ticket, newTicket: Ticket) {
     setCounts((prev) => {
       const next = { ...prev };
-
-      // Restar de donde contaba antes (si aplicaba filtros)
-      const oldCounted =
-        (!isFiltering || matchesActiveFilters(oldTicket)) &&
-        countsInStatus(oldTicket, oldTicket.status);
-
-      if (oldCounted) {
+      if (STATUSES.includes(oldTicket.status)) {
         next[oldTicket.status] = Math.max(0, (next[oldTicket.status] ?? 0) - 1);
       }
-
-      // Sumar donde cuenta ahora (si aplica filtros)
-      const newCounted =
-        (!isFiltering || matchesActiveFilters(newTicket)) &&
-        countsInStatus(newTicket, newTicket.status);
-
-      if (newCounted) {
+      if (STATUSES.includes(newTicket.status)) {
         next[newTicket.status] = (next[newTicket.status] ?? 0) + 1;
       }
-
       return next;
     });
   }
 
-  // Debounce para reconciliar con la BD vía RPC
+  /** Debounce para reconciliar con la BD vía RPC */
   const refreshTimeout = useRef<number | null>(null);
   function scheduleCountsRefresh() {
     if (refreshTimeout.current) window.clearTimeout(refreshTimeout.current);
     refreshTimeout.current = window.setTimeout(async () => {
-      const filters = isFiltering
-        ? {
-            term: normTerm || undefined,
-            location: selectedLocation || undefined,
-          }
-        : undefined;
-      const c = await getTicketCountsRPC(filters);
+      const c = await getTicketCountsRPC(countsFilters);
       setCounts(c);
       refreshTimeout.current = null;
-    }, 1500);
+    }, 1200);
   }
 
-  // ===== Modal =====
+  /** Modal */
   const openModal = (ticket: Ticket) => {
     setSelectedTicket(ticket);
     setModalOpen(true);
   };
-
   const closeModal = () => {
     setSelectedTicket(null);
     setModalOpen(false);
   };
 
-  // Guardado desde modal (aplica optimismo si cambia algo que altera el conteo)
   const handleSave = async (updatedTicket: Ticket) => {
     try {
       const prev = selectedTicket || updatedTicket;
@@ -146,8 +155,8 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
         prev.location !== updatedTicket.location;
 
       if (affected) {
-        bumpCountsLocal(prev, updatedTicket); // UI inmediata
-        scheduleCountsRefresh(); // reconciliación barata
+        bumpCountsLocal(prev, updatedTicket);
+        scheduleCountsRefresh();
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -164,92 +173,41 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
     }
   };
 
-  // ===== Carga de datos / filtros =====
+  /** Sincroniza la animación del loader por columnas */
   const handleColumnLoaded = () => {
     loadedColumns.current += 1;
-    if (loadedColumns.current >= STATUSES.length) {
-      setIsLoading(false);
-    }
+    if (loadedColumns.current >= STATUSES.length) setIsLoading(false);
   };
-
   useEffect(() => {
-    if (isFiltering) {
-      setIsLoading(true);
-      getFilteredTickets(searchTerm, selectedLocation, true).then((results) => {
-        setFilteredTickets(results);
-        setIsLoading(false);
-      });
-    }
-  }, [isFiltering, searchTerm, selectedLocation]);
-
-  useEffect(() => {
-    if (!isFiltering) {
-      setFilteredTickets([]);
-      setIsLoading(true);
-      setReloadKey((prev) => prev + 1);
-    }
-  }, [isFiltering, searchTerm, selectedLocation]);
-
-  useEffect(() => {
-    setIsLoading(true);
     loadedColumns.current = 0;
+    setIsLoading(true);
   }, [reloadKey]);
 
-  // Cargar conteos iniciales / ante cambios de filtros
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const filters = isFiltering
-        ? {
-            term: normTerm || undefined,
-            location: selectedLocation || undefined,
-          }
-        : undefined;
-      const c = await getTicketCountsRPC(filters);
-      if (alive) setCounts(c);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [reloadKey, isFiltering, normTerm, selectedLocation]);
-
-  // ===== Realtime: actualiza badges por delta =====
+  /** Realtime: actualiza badges por delta */
   useEffect(() => {
     const channel = supabase
-      .channel('tickets-changes')
+      .channel('tickets-changes-kanban')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tickets' },
         (payload) => {
           const oldRow = payload.old as Ticket;
           const newRow = payload.new as Ticket;
-
-          // Solo si realmente cambió algo que afecta conteos
-          const affected =
+          if (
             oldRow.status !== newRow.status ||
             oldRow.is_accepted !== newRow.is_accepted ||
-            oldRow.location !== newRow.location;
-
-          if (!affected) return;
-
-          bumpCountsLocal(oldRow, newRow);
-          scheduleCountsRefresh();
+            oldRow.location !== newRow.location
+          ) {
+            bumpCountsLocal(oldRow, newRow);
+            scheduleCountsRefresh();
+          }
         }
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isFiltering, normTerm, selectedLocation]); // dependencias por si cambian filtros
-
-  // limpiar highlight
-  useEffect(() => {
-    if (lastUpdatedTicket) {
-      const timeout = setTimeout(() => setLastUpdatedTicket(null), 1000);
-      return () => clearTimeout(timeout);
-    }
-  }, [lastUpdatedTicket]);
+  }, [JSON.stringify(countsFilters)]);
 
   return (
     <div className="flex gap-6 h-full w-full overflow-x-auto">
@@ -257,7 +215,7 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
         <KanbanColumn
           key={status}
           status={status}
-          isSearching={isSearching}
+          isSearching={isFiltering}
           isFiltering={isFiltering}
           tickets={
             isFiltering
@@ -290,7 +248,12 @@ export default function KanbanBoard({ searchTerm, selectedLocation }: Props) {
           onFirstLoad={handleColumnLoaded}
           reloadSignal={reloadKey}
           lastUpdatedTicket={lastUpdatedTicket}
-          selectedLocation={selectedLocation}
+          selectedLocation={
+            typeof (filters as Record<string, unknown> | undefined)
+              ?.location === 'string'
+              ? ((filters as Record<string, unknown>).location as string)
+              : undefined
+          }
           count={counts[status]}
         />
       ))}

@@ -90,6 +90,7 @@ export async function getTicketsByStatusPaginated(status: Ticket['status'], page
     .from("tickets")
     .select("*")
     .eq("status", status)
+    .eq("is_accepted", true) 
     .order("id", { ascending: false })
     .range(from, to);
 
@@ -280,3 +281,74 @@ export async function getTicketsByFiltersPaginated(
   }
   return { data: (data ?? []) as Ticket[], count: count ?? 0 };
 }
+
+// 👇 NUEVO: filtra para el Kanban (sin forzar is_accepted = false)
+export async function getTicketsByKanbanFiltersPaginated<TKeys extends string>(
+  values: FilterState<TKeys>,
+  page: number,
+  pageSize: number
+): Promise<{ data: Ticket[]; count: number }> {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  let q = supabase
+    .from("tickets")
+    .select("*", { count: "exact" })
+    .eq("is_accepted", true);        // 👈 SIEMPRE aceptados en Kanban/Lista
+
+  // q (título, solicitante, id numérico)
+  const termRaw = (values as Record<string, unknown>)["q"];
+  const term = typeof termRaw === "string" ? termRaw.trim() : "";
+  if (term.length >= 2) {
+    const ors = [`title.ilike.%${term}%`, `requester.ilike.%${term}%`];
+    const n = Number(term);
+    if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
+    q = q.or(ors.join(","));
+  }
+
+  // location
+  const locationRaw = (values as Record<string, unknown>)["location"];
+  const location = typeof locationRaw === "string" ? locationRaw : undefined;
+  if (location) q = q.eq("location", location);
+
+  // assignee_id (si aplica)
+  const assigneeIdRaw = (values as Record<string, unknown>)["assignee_id"];
+  if (assigneeIdRaw !== undefined && assigneeIdRaw !== null && assigneeIdRaw !== "") {
+    q = q.eq("assignee_id", Number(assigneeIdRaw));
+  }
+
+  // created_at (rango)
+  const createdRaw = (values as Record<string, unknown>)["created_at"];
+  if (createdRaw && typeof createdRaw === "object") {
+    const { from: dFrom, to: dTo } = createdRaw as { from?: string; to?: string };
+    if (dFrom) q = q.gte("created_at", `${dFrom} 00:00:00`);
+    if (dTo)   q = q.lte("created_at", `${dTo} 23:59:59`);
+  }
+
+  // has_image
+  if ((values as Record<string, unknown>)["has_image"] === true) {
+    q = q.neq("image", "");
+  }
+
+  // priority
+  const prw = (values as Record<string, unknown>)["priority"];
+  const priorities = Array.isArray(prw) ? prw.map(String) : [];
+  if (priorities.length) q = q.in("priority", priorities);
+
+  // status
+  const stw = (values as Record<string, unknown>)["status"];
+  const statuses = Array.isArray(stw) ? stw.map(String) : [];
+  if (statuses.length) q = q.in("status", statuses);
+
+  const { data, error, count } = await q
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("❌ getTicketsByKanbanFiltersPaginated error:", error.message);
+    return { data: [], count: 0 };
+  }
+  return { data: (data ?? []) as Ticket[], count: count ?? 0 };
+}
+
+
