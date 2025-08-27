@@ -3,7 +3,7 @@ import Sidebar from '../components/dashboard/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import KanbanBoard from '../components/dashboard/kanban/KanbanBoard';
 import WorkOrdersList from '../components/dashboard/kanban/WorkOrdersList';
-import KanbanFiltersBar from '../components/dashboard/kanban/KanbanFiltersBar';
+// import KanbanFiltersBar from '../components/dashboard/kanban/KanbanFiltersBar';
 import Modal from '../components/ui/Modal';
 import EditTicketModal from '../components/dashboard/ticket/EditTicketModal';
 import { updateTicket } from '../services/ticketService';
@@ -20,7 +20,7 @@ export default function KanbanPage() {
   const [selectedLocation, setSelectedLocation] = useState('');
 
   // Filtros avanzados
-  const [filters, setFilters] = useState<Record<string, unknown>>({});
+  const [filters] = useState<Record<string, unknown>>({});
 
   // Vista actual
   const [view, setView] = useState<ViewMode>('kanban');
@@ -115,9 +115,9 @@ export default function KanbanPage() {
           </div>
         </header>
 
-        <div className="px-4 md:px-6 lg:px-8 pt-3">
+        {/* <div className="px-4 md:px-6 lg:px-8 pt-3">
           <KanbanFiltersBar onApply={(vals) => setFilters(vals)} />
-        </div>
+        </div> */}
 
         <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
           {view === 'kanban' ? (

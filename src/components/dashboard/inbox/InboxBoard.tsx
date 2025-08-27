@@ -12,7 +12,7 @@ import {
 } from '../../../services/storageService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
-import InboxFiltersBar from './InboxFiltersBar';
+// import InboxFiltersBar from './InboxFiltersBar';
 import type { InboxFilterKey } from '../../../features/tickets/inboxFilters';
 import type { FilterState } from '../../../types/filters';
 
@@ -324,14 +324,14 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Filtros declarativos */}
-      <div className="mb-3">
+      {/* <div className="mb-3">
         <InboxFiltersBar
           onApply={(vals) => {
             setPage(0);
             setFilters(vals);
           }}
         />
-      </div>
+      </div> */}
 
       {/* Barra superior: texto + botón masivo */}
       <div className="flex items-center gap-3">
