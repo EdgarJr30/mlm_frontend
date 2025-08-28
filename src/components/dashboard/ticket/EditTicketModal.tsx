@@ -220,7 +220,6 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium">Prioridad</label>
             <select
@@ -234,7 +233,6 @@ export default function EditTicketModal({
               <option value="alta">🔺 Alta</option>
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium">Estatus</label>
             <select
@@ -250,7 +248,18 @@ export default function EditTicketModal({
               ))}
             </select>
           </div>
-
+          {/* //TODO: */}
+          <div>
+            <label className="block text-sm font-medium">
+              Fecha estimada de entrega
+            </label>
+            <input
+              type="date"
+              name="deadline_date"
+              value={edited.deadline_date}
+              className="mt-1 p-2 w-full border rounded text-gray-800"
+            />
+          </div>
           {/* IMÁGENES DEL TICKET */}
           {ticket.image &&
             (() => {
@@ -270,7 +279,6 @@ export default function EditTicketModal({
                 </div>
               );
             })()}
-
           <div className="flex items-center gap-6 flex-wrap">
             {/* <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Estado</label>

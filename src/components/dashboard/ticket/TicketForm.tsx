@@ -1,16 +1,22 @@
-import { useState } from "react"
-import { useEffect } from "react";
-import { Locations } from "../../../types/Ticket";
-import { Input } from "../../ui/input"
-import { Textarea } from "../../ui/textarea"
-import { Label } from "../../ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select"
-import { Button } from "../../ui/button"
-import { Progress } from "../../ui/progress"
-import { Checkbox } from "../../ui/checkbox"
-import { createTicket, updateTicket } from "../../../services/ticketService";
-import { uploadImageToBucket } from "../../../services/storageService";
-import { getCurrentUserProfile } from "../../../services/userService";
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { Locations } from '../../../types/Ticket';
+import { Input } from '../../ui/input';
+import { Textarea } from '../../ui/textarea';
+import { Label } from '../../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/select';
+import { Button } from '../../ui/button';
+import { Progress } from '../../ui/progress';
+import { Checkbox } from '../../ui/checkbox';
+import { createTicket, updateTicket } from '../../../services/ticketService';
+import { uploadImageToBucket } from '../../../services/storageService';
+import { getCurrentUserProfile } from '../../../services/userService';
 import imageCompression from 'browser-image-compression';
 import {
   validateTitle,
@@ -24,55 +30,61 @@ import {
   MAX_DESCRIPTION_LENGTH,
   MAX_REQUESTER_LENGTH,
   MAX_EMAIL_LENGTH,
-  MAX_PHONE_LENGTH
-} from "../../../utils/validators"
-import { showSuccessAlert } from "../../../utils/showAlert"
-import { getNowInTimezoneForStorage, getTodayISODate } from "../../../utils/formatDate";
-import { useNavigate } from "react-router-dom";
+  MAX_PHONE_LENGTH,
+} from '../../../utils/validators';
+import { showSuccessAlert } from '../../../utils/showAlert';
+import {
+  getNowInTimezoneForStorage,
+  getTodayISODate,
+} from '../../../utils/formatDate';
+import { useNavigate } from 'react-router-dom';
+import { showToastError } from '../../../notifications';
 // import { sendTicketEmail, async } from '../../services/emailService';
 // import type { TicketEmailData } from "../../services/emailService";
 interface TicketFormData {
-  title: string
-  description: string
+  title: string;
+  description: string;
   is_accepted: boolean;
-  is_urgent: boolean
-  requester: string
-  priority: "baja" | "media" | "alta"
-  incident_date: string
-  deadline_date?: string // ISO date string
-  image: string // base64
-  location: string
-  email?: string
-  phone?: string
-  created_at: string // ISO date string
+  is_urgent: boolean;
+  requester: string;
+  priority: 'baja' | 'media' | 'alta';
+  incident_date: string;
+  deadline_date?: string; // ISO date string
+  image: string; // base64
+  location: string;
+  email?: string;
+  phone?: string;
+  created_at: string; // ISO date string
 }
 
 const initialForm: TicketFormData = {
-  title: "",
-  description: "",
+  title: '',
+  description: '',
   is_accepted: false,
   is_urgent: false,
-  requester: "",
-  priority: "baja", // Default priority
+  requester: '',
+  priority: 'baja', // Default priority
   incident_date: getTodayISODate(), // Default to today
   deadline_date: undefined, // Optional, can be set later
-  image: "",
-  location: "",
-  email: "",
-  phone: "",
-  created_at: getNowInTimezoneForStorage("America/Santo_Domingo"),
+  image: '',
+  location: '',
+  email: '',
+  phone: '',
+  created_at: getNowInTimezoneForStorage('America/Santo_Domingo'),
   // createdAt is set to the current date by default
-}
+};
 
 export default function TicketForm() {
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState(initialForm);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [imagePreview, setImagePreview] = useState<string[]>([])
-  const [step, setStep] = useState(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [errors, setErrors] = useState<Partial<Record<keyof TicketFormData | "image", string>>>({})
+  const [imagePreview, setImagePreview] = useState<string[]>([]);
+  const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof TicketFormData | 'image', string>>
+  >({});
 
-  const progress = (step / 4) * 100
+  const progress = (step / 4) * 100;
 
   const navigate = useNavigate();
 
@@ -80,16 +92,19 @@ export default function TicketForm() {
     name: keyof TicketFormData,
     value: string | boolean
   ) => {
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (!files) return
+    if (!files) return;
 
     // Limita el máximo de 3 imágenes por ticket
     if (files.length > 3) {
-      setErrors((prev) => ({ ...prev, image: "Máximo 3 imágenes por ticket." }));
+      setErrors((prev) => ({
+        ...prev,
+        image: 'Máximo 3 imágenes por ticket.',
+      }));
       setSelectedFiles([]);
       setImagePreview([]);
       return;
@@ -97,11 +112,11 @@ export default function TicketForm() {
 
     // Opciones de compresión (ajustar según necesidad)
     const options = {
-      maxSizeMB: 1,              // Tamaño máximo final por archivo (en MB)
-      maxWidthOrHeight: 1000,    // Resolución máxima (ajustar para menos calidad)
-      useWebWorker: true,        // Hace la compresión en un hilo separado para que la interfaz no se trabe (Buena practica siempre en true)
-      fileType: "image/webp",    // Formato de salida
-      initialQuality: 0.8,       // Calidad inicial (ajustar según necesidad)
+      maxSizeMB: 1, // Tamaño máximo final por archivo (en MB)
+      maxWidthOrHeight: 1000, // Resolución máxima (ajustar para menos calidad)
+      useWebWorker: true, // Hace la compresión en un hilo separado para que la interfaz no se trabe (Buena practica siempre en true)
+      fileType: 'image/webp', // Formato de salida
+      initialQuality: 0.8, // Calidad inicial (ajustar según necesidad)
     };
 
     // Proceso de compresión y validación
@@ -124,7 +139,8 @@ export default function TicketForm() {
         if (webpFile.size > 1 * 1024 * 1024) {
           setErrors((prev) => ({
             ...prev,
-            image: "Tras comprimir, la imagen sigue superando 1MB. Por favor usa una imagen diferente.",
+            image:
+              'Tras comprimir, la imagen sigue superando 1MB. Por favor usa una imagen diferente.',
           }));
           setSelectedFiles([]);
           setImagePreview([]);
@@ -147,51 +163,56 @@ export default function TicketForm() {
       setSelectedFiles(compressedFiles);
       setImagePreview(previews);
     } catch (err) {
-      setErrors((prev) => ({ ...prev, image: `Ocurrió un error al comprimir las imágenes. ${err}` }));
+      setErrors((prev) => ({
+        ...prev,
+        image: `Ocurrió un error al comprimir las imágenes. ${err}`,
+      }));
       setSelectedFiles([]);
       setImagePreview([]);
     }
-  }
+  };
 
   const validateStep = (): boolean => {
-    const newErrors: Partial<Record<keyof TicketFormData, string>> = {}
+    const newErrors: Partial<Record<keyof TicketFormData, string>> = {};
 
     if (step === 1) {
-      newErrors.title = validateTitle(form.title) ?? undefined
-      newErrors.description = validateDescription(form.description) ?? undefined
+      newErrors.title = validateTitle(form.title) ?? undefined;
+      newErrors.description =
+        validateDescription(form.description) ?? undefined;
     }
 
     if (step === 2) {
-      newErrors.requester = validateRequester(form.requester) ?? undefined
-      newErrors.email = validateEmail(form.email ?? "") ?? undefined
-      newErrors.location = validateLocation(form.location) ?? undefined
-      newErrors.phone = validatePhone(form.phone) ?? undefined
+      newErrors.requester = validateRequester(form.requester) ?? undefined;
+      newErrors.email = validateEmail(form.email ?? '') ?? undefined;
+      newErrors.location = validateLocation(form.location) ?? undefined;
+      newErrors.phone = validatePhone(form.phone) ?? undefined;
     }
 
     if (step === 3) {
-      newErrors.incident_date = validateIncidentDate(form.incident_date) ?? undefined
+      newErrors.incident_date =
+        validateIncidentDate(form.incident_date) ?? undefined;
       if (selectedFiles.length === 0) {
-        newErrors.image = "Debes adjuntar al menos una imagen."
+        newErrors.image = 'Debes adjuntar al menos una imagen.';
       }
     }
 
     // Filtra nulls
     const filtered = Object.fromEntries(
       Object.entries(newErrors).filter(([, v]) => v != null)
-    ) as typeof newErrors
+    ) as typeof newErrors;
 
-    setErrors(filtered)
-    return Object.keys(filtered).length === 0
-  }
+    setErrors(filtered);
+    return Object.keys(filtered).length === 0;
+  };
 
   const handleNext = () => {
     if (validateStep()) {
-      setStep(step + 1)
+      setStep(step + 1);
     }
-  }
+  };
   const handlePrevious = () => {
-    setStep(step - 1)
-  }
+    setStep(step - 1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,10 +224,10 @@ export default function TicketForm() {
       // 1. Crear ticket sin imágenes
       const ticketToSave = {
         ...form,
-        image: "[]",
-        priority: form.priority ?? "baja",
-        status: "Pendiente",
-        assignee: "Sin asignar",
+        image: '[]',
+        priority: form.priority ?? 'baja',
+        status: 'Pendiente',
+        assignee: 'Sin asignar',
       };
 
       const created = await createTicket(ticketToSave);
@@ -254,16 +275,15 @@ export default function TicketForm() {
         setStep(1);
       } else if (alertResponse.isDismissed) {
         // Usuario eligió "Cerrar" (o cerró el modal)
-        navigate("/mi-perfil");
+        navigate('/mi-perfil');
       }
-
     } catch (error: unknown) {
       if (error instanceof Error) {
-        console.error("Error al crear el ticket:", error.message);
+        console.error('Error al crear el ticket:', error.message);
       } else {
-        console.error("Error al crear el ticket:", error);
+        console.error('Error al crear el ticket:', error);
       }
-      alert("Hubo un error al crear el ticket. Inténtalo de nuevo.");
+      showToastError(`Hubo un error al crear el ticket. ${error}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -277,18 +297,22 @@ export default function TicketForm() {
       if (!isMounted || !profile) return;
 
       // Concatenación Name + LastName => requester
-      const requester = `${profile.name ?? ""} ${profile.last_name ?? ""}`.trim();
+      const requester = `${profile.name ?? ''} ${
+        profile.last_name ?? ''
+      }`.trim();
 
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
         requester,
-        email: profile.email ?? "",
-        phone: profile.phone ?? "",
-        location: profile.location ?? "",
+        email: profile.email ?? '',
+        phone: profile.phone ?? '',
+        location: profile.location ?? '',
       }));
     })();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -298,7 +322,9 @@ export default function TicketForm() {
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="mt-4">
-              <h1 className="text-2xl font-extrabold text-gray-900">Crear Ticket de Mantenimiento</h1>
+              <h1 className="text-2xl font-extrabold text-gray-900">
+                Crear Ticket de Mantenimiento
+              </h1>
               {/* <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p> */}
             </div>
             {/* <AppVersion className="text-center mt-auto" /> */}
@@ -311,10 +337,18 @@ export default function TicketForm() {
           <div className="mt-6">
             <Progress value={progress} className="mt-2" />
             <div className="flex justify-between text-sm text-gray-500 mt-2">
-              <span className={step === 1 ? "text-blue-600 font-medium" : ""}>Información Básica</span>
-              <span className={step === 2 ? "text-blue-600 font-medium" : ""}>Solicitante y Ubicación</span>
-              <span className={step === 3 ? "text-blue-600 font-medium" : ""}>Fechas y Asignación</span>
-              <span className={step === 4 ? "text-blue-600 font-medium" : ""}>Revisión y Envío</span>
+              <span className={step === 1 ? 'text-blue-600 font-medium' : ''}>
+                Información Básica
+              </span>
+              <span className={step === 2 ? 'text-blue-600 font-medium' : ''}>
+                Solicitante y Ubicación
+              </span>
+              <span className={step === 3 ? 'text-blue-600 font-medium' : ''}>
+                Fechas y Asignación
+              </span>
+              <span className={step === 4 ? 'text-blue-600 font-medium' : ''}>
+                Revisión y Envío
+              </span>
             </div>
           </div>
         </div>
@@ -325,11 +359,24 @@ export default function TicketForm() {
           <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
             {/* Título del paso */}
             <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-blue-600">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-6 text-blue-600"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"
+                />
               </svg>
 
-              <h2 className="text-lg font-semibold text-gray-900">Información Básica del Ticket</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Información Básica del Ticket
+              </h2>
             </div>
 
             {/* Contenido del paso */}
@@ -343,13 +390,18 @@ export default function TicketForm() {
                   maxLength={MAX_TITLE_LENGTH}
                   placeholder="Ej. Aire acondicionado no enfría en oficina principal"
                   value={form.title}
-                  onChange={(e) => handleChange("title", e.target.value)}
+                  onChange={(e) => handleChange('title', e.target.value)}
                 />
                 <div className="flex justify-between items-center">
-                  {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
+                  {errors.title && (
+                    <p className="text-sm text-red-500">{errors.title}</p>
+                  )}
                   <p
-                    className={`text-xs ml-auto ${form.title.length >= Math.floor(MAX_TITLE_LENGTH * 0.85) ? "text-red-500" : "text-gray-400"
-                      }`}
+                    className={`text-xs ml-auto ${
+                      form.title.length >= Math.floor(MAX_TITLE_LENGTH * 0.85)
+                        ? 'text-red-500'
+                        : 'text-gray-400'
+                    }`}
                   >
                     {form.title.length}/{MAX_TITLE_LENGTH} caracteres
                   </p>
@@ -366,16 +418,23 @@ export default function TicketForm() {
                   placeholder="Describe el problema con el mayor detalle posible..."
                   rows={4}
                   value={form.description}
-                  onChange={(e) => handleChange("description", e.target.value)}
+                  onChange={(e) => handleChange('description', e.target.value)}
                   className="min-h-[100px] max-h-[150px] resize-y"
                 />
                 <div className="flex justify-between items-center">
-                  {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
+                  {errors.description && (
+                    <p className="text-sm text-red-500">{errors.description}</p>
+                  )}
                   <p
-                    className={`text-xs ml-auto ${form.description.length >= Math.floor(MAX_DESCRIPTION_LENGTH * 0.85) ? "text-red-500" : "text-gray-400"
-                      }`}
+                    className={`text-xs ml-auto ${
+                      form.description.length >=
+                      Math.floor(MAX_DESCRIPTION_LENGTH * 0.85)
+                        ? 'text-red-500'
+                        : 'text-gray-400'
+                    }`}
                   >
-                    {form.description.length}/{MAX_DESCRIPTION_LENGTH} caracteres
+                    {form.description.length}/{MAX_DESCRIPTION_LENGTH}{' '}
+                    caracteres
                   </p>
                 </div>
               </div>
@@ -384,11 +443,27 @@ export default function TicketForm() {
                 <Checkbox
                   id="is_urgent"
                   checked={form.is_urgent}
-                  onCheckedChange={(value) => handleChange("is_urgent", value === true)}
+                  onCheckedChange={(value) =>
+                    handleChange('is_urgent', value === true)
+                  }
                 />
-                <Label htmlFor="is_urgent" className="flex items-center gap-2 text-sm cursor-pointer">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                <Label
+                  htmlFor="is_urgent"
+                  className="flex items-center gap-2 text-sm cursor-pointer"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4 text-red-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                    />
                   </svg>
                   Marcar como urgente (requiere atención inmediata)
                 </Label>
@@ -403,48 +478,72 @@ export default function TicketForm() {
           <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
             {/* Título del paso */}
             <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-blue-600">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-6 text-blue-600"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                />
               </svg>
-              <h2 className="text-lg font-semibold text-gray-900">Información del Solicitante y Ubicación</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Información del Solicitante y Ubicación
+              </h2>
             </div>
 
             {/* Contenido del paso */}
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="requester">Nombre del Solicitante <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="requester">
+                    Nombre del Solicitante{' '}
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="requester"
                     maxLength={MAX_REQUESTER_LENGTH}
                     placeholder="Ej. Tu nombre completo"
                     value={form.requester}
-                    onChange={(e) => handleChange("requester", e.target.value)}
+                    onChange={(e) => handleChange('requester', e.target.value)}
                     required
                     readOnly
                   />
-                  {errors.requester && <p className="text-sm text-red-500">{errors.requester}</p>}
+                  {errors.requester && (
+                    <p className="text-sm text-red-500">{errors.requester}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email de Contacto <span className="">(Opcional)</span></Label>
+                  <Label htmlFor="email">
+                    Email de Contacto <span className="">(Opcional)</span>
+                  </Label>
                   <Input
                     id="email"
                     type="email"
                     maxLength={MAX_EMAIL_LENGTH}
                     placeholder="tuemail@cilm.do"
                     value={form.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
+                    onChange={(e) => handleChange('email', e.target.value)}
                     required
                     readOnly
                   />
-                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="text-sm text-red-500">{errors.email}</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono de Contacto  <span className="">(Opcional)</span></Label>
+                  <Label htmlFor="phone">
+                    Teléfono de Contacto <span className="">(Opcional)</span>
+                  </Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -453,15 +552,22 @@ export default function TicketForm() {
                     title="Formato válido: +1 (809) 123-4567"
                     placeholder="Ej. +1 (809) 123-4567"
                     value={form.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
+                    onChange={(e) => handleChange('phone', e.target.value)}
                     required={false}
                   />
-                  {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p className="text-sm text-red-500">{errors.phone}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Ubicación <span className="text-red-500">*</span></Label>
-                  <Select value={form.location} onValueChange={(value) => handleChange("location", value)}>
+                  <Label htmlFor="location">
+                    Ubicación <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={form.location}
+                    onValueChange={(value) => handleChange('location', value)}
+                  >
                     <SelectTrigger className="cursor-pointer">
                       <SelectValue placeholder="Selecciona una ubicación" />
                     </SelectTrigger>
@@ -473,7 +579,9 @@ export default function TicketForm() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.location && <p className="text-sm text-red-500">{errors.location}</p>}
+                  {errors.location && (
+                    <p className="text-sm text-red-500">{errors.location}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -486,34 +594,68 @@ export default function TicketForm() {
           <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
             {/* Título del paso */}
             <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-blue-600">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="size-6 text-blue-600"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+                />
               </svg>
 
-              <h2 className="text-lg font-semibold text-gray-900">Fechas y Asignación</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Fechas y Asignación
+              </h2>
             </div>
             {/* Contenido del paso */}
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="incidentDate">Fecha del incidente <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="incidentDate">
+                    Fecha del incidente <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="incidentDate"
                     type="date"
                     className="cursor-pointer"
                     value={form.incident_date}
-                    onChange={(e) => handleChange("incident_date", e.target.value)}
+                    onChange={(e) =>
+                      handleChange('incident_date', e.target.value)
+                    }
                     max={getTodayISODate()}
-                    onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                    onFocus={(e) =>
+                      e.target.showPicker && e.target.showPicker()
+                    }
                     required
                   />
-                  {errors.incident_date && <p className="text-sm text-red-500">{errors.incident_date}</p>}
+                  {errors.incident_date && (
+                    <p className="text-sm text-red-500">
+                      {errors.incident_date}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="image">Imagen del incidente, máximo 3 imágenes <span className="text-red-500">*</span></Label>
-                <Input type="file" accept="image/*" multiple onChange={handleFileChange} className="cursor-pointer" />
-                {errors.image && <p className="text-sm text-red-500">{errors.image}</p>}
+                <Label htmlFor="image">
+                  Imagen del incidente, máximo 3 imágenes{' '}
+                  <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="cursor-pointer"
+                />
+                {errors.image && (
+                  <p className="text-sm text-red-500">{errors.image}</p>
+                )}
                 {imagePreview.length > 0 && (
                   <div className="flex gap-2 flex-wrap mt-2">
                     {imagePreview.map((img, i) => (
@@ -537,40 +679,69 @@ export default function TicketForm() {
           <div className="w-full flex justify-center mt-10">
             <div className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl px-8 py-8 space-y-8 shadow-sm">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">🔍 Revisión y Envío</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  🔍 Revisión y Envío
+                </h2>
                 <p className="text-sm text-gray-500 border border-yellow-200 bg-yellow-50 px-4 py-2 rounded">
-                  Por favor revisa toda la información antes de enviar el ticket.
+                  Por favor revisa toda la información antes de enviar el
+                  ticket.
                 </p>
               </div>
 
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-md font-semibold text-gray-700 mb-1">📝 Información del Ticket</h3>
-                  <p><strong>Título:</strong> {form.title}</p>
-                  <p><strong>Descripción:</strong> {form.description}</p>
-                  <p><strong>Urgente:</strong> {form.is_urgent ? "Sí 🚨" : "No"}</p>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">
+                    📝 Información del Ticket
+                  </h3>
+                  <p>
+                    <strong>Título:</strong> {form.title}
+                  </p>
+                  <p>
+                    <strong>Descripción:</strong> {form.description}
+                  </p>
+                  <p>
+                    <strong>Urgente:</strong> {form.is_urgent ? 'Sí 🚨' : 'No'}
+                  </p>
                 </div>
 
                 <div>
-                  <h3 className="text-md font-semibold text-gray-700 mb-1">👤 Información del Solicitante</h3>
-                  <p><strong>Nombre:</strong> {form.requester}</p>
-                  <p><strong>Email:</strong> {form.email}</p>
-                  <p><strong>Teléfono:</strong> {form.phone || "N/A"}</p>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">
+                    👤 Información del Solicitante
+                  </h3>
+                  <p>
+                    <strong>Nombre:</strong> {form.requester}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {form.email}
+                  </p>
+                  <p>
+                    <strong>Teléfono:</strong> {form.phone || 'N/A'}
+                  </p>
                 </div>
 
                 <div>
-                  <h3 className="text-md font-semibold text-gray-700 mb-1">📍 Ubicación</h3>
-                  <p><strong>Ubicación:</strong> {form.location}</p>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">
+                    📍 Ubicación
+                  </h3>
+                  <p>
+                    <strong>Ubicación:</strong> {form.location}
+                  </p>
                 </div>
 
                 <div>
-                  <h3 className="text-md font-semibold text-gray-700 mb-1">📆 Fechas</h3>
-                  <p><strong>Fecha del incidente:</strong> {form.incident_date}</p>
+                  <h3 className="text-md font-semibold text-gray-700 mb-1">
+                    📆 Fechas
+                  </h3>
+                  <p>
+                    <strong>Fecha del incidente:</strong> {form.incident_date}
+                  </p>
                 </div>
 
                 {imagePreview && (
                   <div>
-                    <h3 className="text-md font-semibold text-gray-700 mb-1">📎 Imagen Adjunta</h3>
+                    <h3 className="text-md font-semibold text-gray-700 mb-1">
+                      📎 Imagen Adjunta
+                    </h3>
                     {imagePreview.map((img, i) => (
                       <img
                         key={i}
@@ -599,9 +770,14 @@ export default function TicketForm() {
                   >
                     ← Anterior
                   </Button>
-                )}<div className="px-6 py-2" />
-                <Button type="submit" className="px-6 py-2" disabled={isSubmitting}>
-                  {isSubmitting ? "Enviando..." : "Crear Ticket"}
+                )}
+                <div className="px-6 py-2" />
+                <Button
+                  type="submit"
+                  className="px-6 py-2"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Enviando...' : 'Crear Ticket'}
                 </Button>
               </div>
             </div>
@@ -631,18 +807,14 @@ export default function TicketForm() {
                   variant="outline"
                   type="button"
                   className="px-6 py-2"
-                  onClick={() => navigate("/mi-perfil")}
+                  onClick={() => navigate('/mi-perfil')}
                 >
                   Mis Tickets
                 </Button>
               )}
               <div className="px-6 py-2" />
               {/* Botón Siguiente */}
-              <Button
-                type="button"
-                className="px-6 py-2"
-                onClick={handleNext}
-              >
+              <Button type="button" className="px-6 py-2" onClick={handleNext}>
                 Siguiente →
               </Button>
             </div>
@@ -650,5 +822,5 @@ export default function TicketForm() {
         </div>
       )}
     </div>
-  )
+  );
 }
