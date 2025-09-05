@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import { getTicketsByStatusPaginated } from '../../../services/ticketService';
-import { useAssignees } from '../../../context/AssigneeContext';
-import {
-  assigneeInitials,
-  formatAssigneeFullName,
-} from '../../../services/assigneeService';
 import {
   getPublicImageUrl,
   getTicketImagePaths,
 } from '../../../services/storageService';
+import AssigneeBadge from '../../common/AssigneeBadge';
 interface Props {
   tickets?: Ticket[];
   isSearching: boolean;
@@ -56,8 +52,6 @@ export default function KanbanColumn({
   const columnRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
-
-  const { byId: assigneeById } = useAssignees();
 
   // Skeleton loader
   const skeletonTickets = Array.from({ length: 5 });
@@ -275,14 +269,6 @@ export default function KanbanColumn({
         ) : (
           <>
             {ticketsToRender.map((ticket) => {
-              const assignee =
-                ticket.assignee_id !== undefined
-                  ? assigneeById[ticket.assignee_id]
-                  : undefined;
-              const initials = assigneeInitials(assignee); // 'SA' si no existe
-              const displayName = assignee
-                ? formatAssigneeFullName(assignee) // "Nombre Apellido"
-                : '<< SIN ASIGNAR >>';
               // {/* ...ticket ... */}
               return (
                 <div
@@ -290,11 +276,13 @@ export default function KanbanColumn({
                   onClick={() => onOpenModal(ticket)}
                   className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
                 >
+                  {/* Imágenes */}
                   {ticket.image &&
                     (() => {
                       const imagePaths = getTicketImagePaths(ticket.image);
                       if (imagePaths.length === 0) return null;
                       return (
+                        // Imágenes
                         <div className="flex gap-1 mb-3">
                           {imagePaths.map((path, idx) => (
                             <img
@@ -307,12 +295,16 @@ export default function KanbanColumn({
                         </div>
                       );
                     })()}
+
                   <div className="flex items-start justify-between mb-1">
+                    {/* Título */}
                     <h4 className="font-semibold text-sm text-gray-900">
                       {ticket.title.length > 100
                         ? `${ticket.title.slice(0, 100)}...`
                         : ticket.title}
                     </h4>
+
+                    {/* Ver más detalles (...) */}
                     <button
                       type="button"
                       className="text-gray-900 hover:text-gray-600"
@@ -334,11 +326,14 @@ export default function KanbanColumn({
                       </svg>
                     </button>
                   </div>
+
+                  {/* Descripción */}
                   <p className="text-xs text-gray-600 line-clamp-2 mb-2">
                     {ticket.description || 'Sin descripción'}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {/* Urgente? */}
                     {ticket.is_urgent && (
                       <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
                         <svg
@@ -357,6 +352,8 @@ export default function KanbanColumn({
                         Urgente
                       </span>
                     )}
+
+                    {/* Prioridad */}
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded border ${getPriorityStyles(
                         ticket.priority
@@ -364,6 +361,8 @@ export default function KanbanColumn({
                     >
                       {capitalize(ticket.priority)}
                     </span>
+
+                    {/* Estatus */}
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded border ${getStatusStyles(
                         ticket.status
@@ -374,6 +373,7 @@ export default function KanbanColumn({
                   </div>
 
                   <div className="text-xs text-gray-500 space-y-1">
+                    {/* Solicitante */}
                     <div className="flex items-center gap-1">
                       <svg
                         className="w-3 h-3"
@@ -390,6 +390,8 @@ export default function KanbanColumn({
                       </svg>
                       Solicitante: {ticket.requester}
                     </div>
+
+                    {/* Ubicación */}
                     <div className="flex items-center gap-1">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -412,6 +414,8 @@ export default function KanbanColumn({
                       </svg>
                       Ubicación: {ticket.location || 'No especificada'}
                     </div>
+
+                    {/* Fecha del incidente */}
                     <div className="flex items-center gap-1">
                       <svg
                         className="w-3 h-3"
@@ -431,20 +435,23 @@ export default function KanbanColumn({
                         ? ticket.incident_date
                         : 'No especificada'}
                     </div>
+
+                    {/* Ticket ID */}
                     <div className="flex items-center gap-1">
                       <strong className="text-xs">ID:</strong> {ticket.id}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="h-6 w-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-semibold text-gray-700">
-                      {initials}
-                    </div>
-                    <span className="text-xs text-gray-600">{displayName}</span>
-                  </div>
+                  {/* Técnico */}
+                  <AssigneeBadge
+                    assigneeId={ticket.assignee_id}
+                    size="sm"
+                    className="mt-2"
+                  />
                 </div>
               );
             })}
+
             {isPaginating && !isSearching && (
               <div className="flex justify-center py-3">
                 <svg

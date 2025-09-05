@@ -7,6 +7,7 @@ import {
   getTicketImagePaths,
 } from '../../../services/storageService';
 import { getTicketsByKanbanFiltersPaginated } from '../../../services/ticketService';
+import AssigneeBadge from '../../common/AssigneeBadge';
 
 type Props = {
   filters?: FilterState<KanbanFilterKey>;
@@ -135,7 +136,7 @@ export default function WorkOrdersList({ filters, onOpen }: Props) {
 
                   {/* Técnico */}
                   <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    {t.assignee_id || 'Sin asignar'}
+                    <AssigneeBadge assigneeId={t.assignee_id} size="xs" />
                   </td>
 
                   {/* Estado */}
