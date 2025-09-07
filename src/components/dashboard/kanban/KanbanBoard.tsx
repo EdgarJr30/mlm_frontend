@@ -143,7 +143,16 @@ export default function KanbanBoard({ filters }: Props) {
   const handleSave = async (updatedTicket: Ticket) => {
     try {
       const prev = selectedTicket || updatedTicket;
-      await updateTicket(Number(updatedTicket.id), updatedTicket);
+
+      await updateTicket(Number(updatedTicket.id), {
+        comments: updatedTicket.comments ?? undefined,
+        assignee_id: updatedTicket.assignee_id ?? undefined,
+        priority: updatedTicket.priority,
+        status: updatedTicket.status,
+        is_urgent: !!updatedTicket.is_urgent,
+        deadline_date: updatedTicket.deadline_date ?? undefined,
+      });
+
       setLastUpdatedTicket(updatedTicket);
       showToastSuccess('Ticket actualizado correctamente.');
       setModalOpen(false);
