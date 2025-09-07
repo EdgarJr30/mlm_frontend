@@ -7,6 +7,20 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 
+function roleLabel(r?: string | null) {
+  switch (r) {
+    case 'super_admin':
+    case 'superadmin':
+      return 'Superadmin';
+    case 'admin':
+      return 'Administrador';
+    case 'user':
+      return 'Usuario';
+    default:
+      return r ?? '';
+  }
+}
+
 export default function Sidebar() {
   const { role, loading } = useAuth();
   const { profile } = useUser();
@@ -14,11 +28,10 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
-  // 1) Mientras carga auth/rol, NO mostramos items (evita el flash)
+  // Mientras carga auth/rol, NO mostramos items (evita el flash)
   if (loading) {
     return (
       <>
-        {/* botón y skeleton mínimos */}
         <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
           <div className="p-6 border-b border-gray-700">
             <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
@@ -38,7 +51,6 @@ export default function Sidebar() {
     (r) => r.showInSidebar && role != null && r.allow.includes(role)
   );
 
-  // Handler para el logout
   const handleLogout = async () => {
     try {
       const { error } = await signOut();
@@ -54,7 +66,9 @@ export default function Sidebar() {
     }
   };
 
+  const initials = profile?.name?.trim()?.charAt(0).toUpperCase() ?? 'U';
   const fullName = profile ? `${profile.name} ${profile.last_name}` : '';
+  const prettyRole = roleLabel(role);
 
   return (
     <>
@@ -79,7 +93,7 @@ export default function Sidebar() {
         </svg>
       </button>
 
-      {/* Overlay oscuro cuando el sidebar está abierto */}
+      {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -87,74 +101,65 @@ export default function Sidebar() {
         onClick={() => setIsOpen(false)}
       />
 
-      {/* Sidebar móvil (drawer) y escritorio (estático) */}
+      {/* Sidebar */}
       <aside
         className={`
-    fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50 
-    transform transition-transform duration-300
-    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-    md:translate-x-0 md:static md:flex h-[100dvh] overflow-y-auto
-  `}
+          fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
+          transform transition-transform duration-300
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0 md:static md:flex h-[100dvh] overflow-y-auto
+        `}
       >
-        {/* Logo y título */}
-        <div className="p-6 text-2xl font-bold tracking-wide text-blue-400 border-b border-gray-700 mb-4">
+        {/* Logo */}
+        <div className="p-6 border-b border-gray-700">
           <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
         </div>
 
-        {/* Saludo al usuario */}
-        <div className="px-4 py-3 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-blue-600 grid place-items-center font-semibold">
-              {profile ? profile.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm text-gray-300 truncate">Hola,</p>
-              <p className="text-sm font-medium text-white truncate">
-                {fullName}
-              </p>
-              {profile?.location && (
-                <p className="text-[11px] text-gray-400 truncate">
-                  {profile.location}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Menú lateral */}
-        <nav className="flex flex-col gap-1 flex-1 px-2">
-          {visibleMenu.map(
-            (
-              item // 👈 usamos visibleMenu
-            ) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={`px-4 py-3 rounded transition font-medium flex items-center
-              ${
-                location.pathname === item.path
-                  ? 'bg-blue-600 text-white'
-                  : 'hover:bg-gray-800'
-              }`}
-              >
-                {item.icon}
-                <span>{item.name}</span>
-              </Link>
-            )
-          )}
+        {/* Menú */}
+        <nav className="flex flex-col gap-1 flex-1 px-2 py-3">
+          {visibleMenu.map((item) => (
+            <Link
+              key={item.name}
+              to={item.path}
+              onClick={() => setIsOpen(false)}
+              className={`px-4 py-3 rounded transition font-medium flex items-center gap-2
+                ${
+                  location.pathname === item.path
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-gray-800'
+                }
+              `}
+            >
+              {item.icon}
+              <span>{item.name}</span>
+            </Link>
+          ))}
         </nav>
 
-        {/* BOTÓN DE LOGOUT */}
+        {/* === USER CARD ABAJO === */}
+        <div className="px-4 pt-4 pb-3 border-t border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-blue-600 grid place-items-center font-semibold">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white truncate">
+                {fullName || 'Usuario'}
+              </p>
+              <p className="text-xs text-gray-400 truncate">{prettyRole}</p>
+            </div>
+          </div>
+          {profile?.location && (
+            <p className="mt-1 text-[11px] text-gray-400 truncate">
+              {profile.location}
+            </p>
+          )}
+        </div>
+
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="
-            w-full flex items-center gap-2 px-4 py-3 mb-2 rounded
-            text-red-500 hover:bg-gray-800 transition font-medium
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 cursor-pointer
-            focus-visible:ring-offset-2
-            focus-visible:ring-offset-gray-900
-          "
+          className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-gray-800 transition font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 cursor-pointer"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -173,10 +178,11 @@ export default function Sidebar() {
           Cerrar sesión
         </button>
 
+        {/* Footer */}
         <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800">
           © 2025 CILM
         </div>
-        <AppVersion className="text-center mt-auto" />
+        <AppVersion className="text-center mt-0 mb-2" />
       </aside>
     </>
   );
