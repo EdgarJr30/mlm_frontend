@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// src/components/Layout/Sidebar.tsx
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../../assets/logo_horizontal_blanc.svg';
 import { signOut } from '../../utils/auth';
@@ -6,49 +7,39 @@ import AppVersion from '../ui/AppVersion';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
-
-function roleLabel(r?: string | null) {
-  switch (r) {
-    case 'super_admin':
-    case 'superadmin':
-      return 'Superadmin';
-    case 'admin':
-      return 'Administrador';
-    case 'user':
-      return 'Usuario';
-    default:
-      return r ?? '';
-  }
-}
+import { usePermissions } from '../../rbac/PermissionsContext';
 
 export default function Sidebar() {
-  const { role, loading } = useAuth();
+  const { loading } = useAuth();
   const { profile } = useUser();
-  const location = useLocation();
-  const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
+  const { has, ready, roles } = usePermissions();
 
-  // Mientras carga auth/rol, NO mostramos items (evita el flash)
-  if (loading) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false); // se usa para móvil
+
+  // Mientras carga auth o permisos → skeleton (ya no depende de un hook extra)
+  if (loading || !ready) {
     return (
-      <>
-        <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
-          <div className="p-6 border-b border-gray-700">
-            <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
-          </div>
-          <div className="p-4 space-y-2">
-            <div className="h-9 rounded bg-gray-800 animate-pulse" />
-            <div className="h-9 rounded bg-gray-800 animate-pulse" />
-            <div className="h-9 rounded bg-gray-800 animate-pulse" />
-          </div>
-          <AppVersion className="text-center mt-auto" />
-        </aside>
-      </>
+      <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
+        <div className="p-6 border-b border-gray-700">
+          <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
+        </div>
+        <div className="p-4 space-y-2">
+          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+        </div>
+        <AppVersion className="text-center mt-auto" />
+      </aside>
     );
   }
 
-  const visibleMenu = APP_ROUTES.filter(
-    (r) => r.showInSidebar && role != null && r.allow.includes(role)
+  // Menú por permisos (any-of)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const visibleMenu = useMemo(
+    () => APP_ROUTES.filter((r) => r.showInSidebar && has(r.allowPerms)),
+    [has]
   );
 
   const handleLogout = async () => {
@@ -59,20 +50,19 @@ export default function Sidebar() {
         return;
       }
       navigate('/login', { replace: true });
-    } catch (err: unknown) {
-      console.error(
-        err instanceof Error ? err.message : 'Error inesperado al cerrar sesión'
-      );
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const initials = profile?.name?.trim()?.charAt(0).toUpperCase() ?? 'U';
-  const fullName = profile ? `${profile.name} ${profile.last_name}` : '';
-  const prettyRole = roleLabel(role);
+  const fullName = profile ? `${profile.name} ${profile.last_name}` : 'Usuario';
+
+  const rolesString = roles.length ? roles.join(', ') : '—';
 
   return (
     <>
-      {/* Botón hamburguesa solo en móvil */}
+      {/* Botón hamburguesa (móvil) */}
       <button
         className="md:hidden fixed top-4 left-4 z-50 bg-white text-gray-800 p-2 rounded-md shadow"
         onClick={() => setIsOpen(true)}
@@ -93,7 +83,7 @@ export default function Sidebar() {
         </svg>
       </button>
 
-      {/* Overlay */}
+      {/* Overlay (móvil) */}
       <div
         className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -119,24 +109,27 @@ export default function Sidebar() {
         <nav className="flex flex-col gap-1 flex-1 px-2 py-3">
           {visibleMenu.map((item) => (
             <Link
-              key={item.name}
+              key={item.path}
               to={item.path}
               onClick={() => setIsOpen(false)}
-              className={`px-4 py-3 rounded transition font-medium flex items-center gap-2
-                ${
-                  location.pathname === item.path
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-800'
-                }
-              `}
+              className={`px-4 py-3 rounded transition font-medium flex items-center gap-2 ${
+                location.pathname === item.path
+                  ? 'bg-blue-600 text-white'
+                  : 'hover:bg-gray-800'
+              }`}
             >
               {item.icon}
               <span>{item.name}</span>
             </Link>
           ))}
+          {visibleMenu.length === 0 && (
+            <div className="px-4 py-3 text-sm text-gray-400">
+              No tienes menús disponibles.
+            </div>
+          )}
         </nav>
 
-        {/* === USER CARD ABAJO === */}
+        {/* User card */}
         <div className="px-4 pt-4 pb-3 border-t border-gray-800">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-blue-600 grid place-items-center font-semibold">
@@ -144,9 +137,9 @@ export default function Sidebar() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                {fullName || 'Usuario'}
+                {fullName}
               </p>
-              <p className="text-xs text-gray-400 truncate">{prettyRole}</p>
+              <p className="text-xs text-gray-400 truncate">{rolesString}</p>
             </div>
           </div>
           {profile?.location && (
@@ -163,11 +156,11 @@ export default function Sidebar() {
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
+            className="w-5 h-5"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor"
-            className="w-5 h-5"
           >
             <path
               strokeLinecap="round"

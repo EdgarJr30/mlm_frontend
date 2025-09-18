@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import Sidebar from '../components/dashboard/Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import KanbanBoard from '../components/dashboard/kanban/KanbanBoard';
 import WorkOrdersList from '../components/dashboard/kanban/WorkOrdersList';

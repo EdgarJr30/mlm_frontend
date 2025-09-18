@@ -4,7 +4,6 @@ import Logo from '../assets/logo_horizontal.svg';
 import Collage from '../assets/COLLAGE_MLM.webp';
 import AppVersion from '../components/ui/AppVersion';
 import { getSession, signInWithPassword } from '../utils/auth';
-import { supabase } from '../lib/supabaseClient';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,42 +11,34 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  // const location = useLocation() as ReturnType<typeof useLocation> & {
-  //   state?: { from?: { pathname?: string } }
-  // };
-
-  type SessionUser = { id: string };
-
-  async function resolveUserRoleFromDB(
-    sessionUser: SessionUser
-  ): Promise<string | null> {
-    const userId = sessionUser?.id;
-    if (!userId) return null;
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('rol_id, roles(name)')
-      .eq('id', userId)
-      .single();
-
-    if (error) return null;
-    type UserWithRole = { rol_id: number; roles: { name: string } };
-    const userWithRole = data as unknown as UserWithRole | null;
-    const roleName = userWithRole?.roles?.name ?? null;
-
-    return roleName ? String(roleName).trim().toLowerCase() : null;
-  }
 
   useEffect(() => {
-    (async () => {
-      const { data } = await getSession();
-      const user = data.session?.user;
-      if (user) {
-        const role = await resolveUserRoleFromDB({ id: user.id });
-        navigate(role === 'user' ? '/mi-perfil' : '/kanban', { replace: true });
+    let active = true;
+
+    const run = async () => {
+      try {
+        const { data, error } = await getSession();
+        if (!active) return;
+
+        if (error) {
+          console.error('[LoginPage] getSession error:', error.message);
+          return;
+        }
+
+        const user = data.session?.user;
+        if (user) {
+          console.log('[LoginPage] already authenticated → /');
+          navigate('/', { replace: true }); // AutoHome decide por permisos
+        }
+      } catch (e) {
+        console.error('[LoginPage] getSession threw:', e);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    };
+
+    run();
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -68,8 +59,8 @@ export default function LoginPage() {
       }
 
       if (data.session?.user) {
-        const role = await resolveUserRoleFromDB({ id: data.session.user.id });
-        navigate(role === 'user' ? '/mi-perfil' : '/kanban', { replace: true });
+        console.log('[LoginPage] login ok → /');
+        navigate('/', { replace: true }); // AutoHome decide por permisos
       }
     } catch (err: unknown) {
       setError(
@@ -81,11 +72,6 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   };
-
-  // const handleForgotPassword = (e: React.MouseEvent) => {
-  //   e.preventDefault();
-  //   setError('Recuperación de contraseña no implementada.');
-  // };
 
   return (
     <div className="flex h-[100dvh]">
@@ -143,14 +129,6 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
-
-              {/* <div className="flex items-center justify-between">
-                <div className="text-sm/6">
-                  <a href="#" onClick={handleForgotPassword} className="font-semibold text-indigo-600 hover:text-indigo-500">
-                    ¿Olvidaste tu contraseña?
-                  </a>
-                </div>
-              </div> */}
 
               <div>
                 <button

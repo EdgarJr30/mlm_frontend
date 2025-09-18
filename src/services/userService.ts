@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 
-export type RoleName = "super_admin" | "admin" | "user";
+export type RoleName = string;
 
 export type UserProfile = {
   id: string;

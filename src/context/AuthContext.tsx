@@ -1,3 +1,4 @@
+// src/context/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -7,115 +8,123 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { getCurrentUserRole, type RoleName } from '../services/userService';
 
 type RefreshOptions = { silent?: boolean };
 
 type AuthState = {
   loading: boolean;
   isAuthenticated: boolean;
-  role: RoleName | null;
-  permissions: Set<string>;
   refresh: (opts?: RefreshOptions) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-const ROLE_PERMISSIONS: Record<RoleName, string[]> = {
-  super_admin: ['*'], // todos los permisos
-  admin: ['*'],
-  user: ['tickets.create'],
-};
+// Utilidad: debounce simple
+function debounce<F extends (...args: unknown[]) => void>(fn: F, ms: number) {
+  let t: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<F>) => {
+    if (t) clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [role, setRole] = useState<RoleName | null>(null);
-  const [permissions, setPermissions] = useState<Set<string>>(new Set());
 
+  // Evita bloquear la UI luego de la primera hidratación
   const hydratedRef = useRef(false);
 
-  const buildPermissions = (r: RoleName | null) => {
-    if (!r) return new Set<string>();
-    const perms = ROLE_PERMISSIONS[r] ?? [];
-    return new Set<string>(perms);
-  };
+  // Flag: ignorar eventos silenciosos (TOKEN_REFRESHED / USER_UPDATED) cuando la pestaña está oculta
+  const ignoreSilentEventsRef = useRef(document.visibilityState === 'hidden');
 
-  const refresh = async (opts: RefreshOptions = {}) => {
-    const { silent = false } = opts;
-    // Solo bloquea la UI si AÚN no hidratamos y no es refresh silencioso
+  useEffect(() => {
+    const onVis = () => {
+      ignoreSilentEventsRef.current = document.visibilityState === 'hidden';
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  const doRefresh = async ({ silent }: RefreshOptions = {}) => {
     const shouldBlock = !hydratedRef.current && !silent;
-
     if (shouldBlock) setLoading(true);
     try {
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
-      const authed = Boolean(session);
-      setIsAuthenticated(authed);
+      // 1) ¿hay sesión guardada?
+      const {
+        data: { session },
+        error: sErr,
+      } = await supabase.auth.getSession();
+      if (sErr) console.warn('[Auth] getSession error:', sErr.message);
 
-      if (!authed) {
-        setRole(null);
-        setPermissions(new Set());
+      if (!session) {
+        setIsAuthenticated(false);
         return;
       }
 
-      // Recalcular rol (si lo llamo de DB)
-      // const r = await getCurrentUserRole();
-      let r: RoleName | null = null;
-      for (let i = 0; i < 2 && !r; i++) {
-        r = await getCurrentUserRole();
-        if (!r) await new Promise((res) => setTimeout(res, 120)); // pequeño backoff
+      // 2) valida que el token sea realmente usable
+      const { data: userData, error: uErr } = await supabase.auth.getUser();
+      if (uErr || !userData?.user) {
+        console.warn('[Auth] invalid session → signing out');
+        await supabase.auth.signOut();
+        setIsAuthenticated(false);
+        return;
       }
-      setRole(r);
-      setPermissions(buildPermissions(r));
+
+      setIsAuthenticated(true);
     } finally {
       if (shouldBlock) {
         setLoading(false);
-        hydratedRef.current = true; // ← a partir de ahora, no se bloquea más la UI
+        hydratedRef.current = true;
       }
     }
   };
 
+  // Debouncea los refresh “silenciosos”
+  const debouncedSilentRefresh = useMemo(
+    () =>
+      debounce(() => {
+        void doRefresh({ silent: true });
+      }, 300),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const refresh = async (opts?: RefreshOptions) => doRefresh(opts);
+
   useEffect(() => {
-    // 1) Carga inicial (bloqueante)
-    void refresh();
+    // Hidratación inicial (bloqueante)
+    void doRefresh();
 
-    // 2) Eventos de sesión
+    // Suscripción a eventos de auth
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      switch (event) {
-        case 'SIGNED_IN':
-        case 'SIGNED_OUT':
-          void refresh();
-          break;
-        case 'USER_UPDATED':
-        case 'TOKEN_REFRESHED':
-          void refresh({ silent: true });
-          break;
-
-        // Otros eventos no afectan el menú en runtime:
-        case 'PASSWORD_RECOVERY':
-        case 'MFA_CHALLENGE_VERIFIED':
-        default:
-          break;
+      // Eventos “duros”: siempre refrescar (aunque bloquee en primera carga)
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        void doRefresh();
+        return;
       }
+
+      // Eventos “silenciosos”: ignorar si la pestaña está oculta; si no, hacer refresh SILENCIOSO con debounce
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (ignoreSilentEventsRef.current) {
+          // ignoramos mientras no haya foco
+          return;
+        }
+        debouncedSilentRefresh();
+        return;
+      }
+
+      // Otros: no hacen nada
     });
 
-    return () => {
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+    return () => sub?.subscription.unsubscribe();
+  }, [debouncedSilentRefresh]);
 
   const value = useMemo<AuthState>(
-    () => ({
-      loading,
-      isAuthenticated,
-      role,
-      permissions,
-      refresh,
-    }),
-    [loading, isAuthenticated, role, permissions]
+    () => ({ loading, isAuthenticated, refresh }),
+    [loading, isAuthenticated]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import type { RoleName } from '../../services/userService';
+// import type { RoleName } from '../../services/userService';
 import CreateTicketPage from '../../pages/CreateTicketPage';
 import LoginPage from '../../pages/LoginPage';
 import KanbanPage from '../../pages/KanbanPage';
@@ -10,12 +10,15 @@ import ForbiddenPage from '../../pages/ForbiddenPage';
 import ReportsPage from '../../pages/ReportsPage';
 import AutoHome from '../../components/Routes/AutoHome';
 import AssigneeManagementPage from '../../pages/admin/AssigneePage';
+import RoleManagementPage from '../../pages/admin/RoleManagementPage';
+import RoleEditPage from '../../pages/admin/RoleEditPage';
 
 // Tipado de la ruta
 export type AppRoute = {
   path: string;
   element: JSX.Element;
-  allow: RoleName[]; // roles permitidos
+  // allow: string[];
+  allowPerms: string[]; // ahora: permisos
   name?: string; // texto del menú
   icon?: JSX.Element; // ícono para el menú
   showInSidebar?: boolean; // si aparece en el sidebar
@@ -140,20 +143,42 @@ const IconAssignee = (
   </svg>
 );
 
+const IconPermissions = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.5"
+    stroke="currentColor"
+    className="size-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+    />
+  </svg>
+);
+
 // Rutas protegidas y de menú
 export const APP_ROUTES: AppRoute[] = [
   {
     path: '/kanban',
     element: <KanbanPage />,
-    allow: ['admin', 'super_admin'],
-    name: 'Dashboard',
+    allowPerms: ['tickets:read'],
+    name: 'Kanban',
     icon: IconDashboard,
     showInSidebar: true,
   },
   {
     path: '/inbox',
     element: <InboxPage />,
-    allow: ['admin', 'super_admin'],
+    allowPerms: ['inbox:read', 'tickets:approve'],
     name: 'Bandeja de Entrada',
     icon: IconInbox,
     showInSidebar: true,
@@ -161,7 +186,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/admin_usuarios',
     element: <UserManagementPage />,
-    allow: ['super_admin'],
+    allowPerms: ['users:read'],
     name: 'Usuarios',
     icon: IconUsers,
     showInSidebar: true,
@@ -169,7 +194,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/mi-perfil',
     element: <MyTicketsPage />,
-    allow: ['user', 'admin', 'super_admin'],
+    allowPerms: ['tickets:read'],
     name: 'Mi Perfil',
     icon: IconProfile,
     showInSidebar: true,
@@ -177,7 +202,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/admin/tecnicos',
     element: <AssigneeManagementPage />,
-    allow: ['super_admin', 'admin'],
+    allowPerms: ['assignees:read', 'assignees:update'],
     name: 'Técnicos',
     icon: IconAssignee,
     showInSidebar: true,
@@ -185,7 +210,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/crear-ticket',
     element: <CreateTicketPage />,
-    allow: ['user', 'admin', 'super_admin'],
+    allowPerms: ['tickets:create'],
     name: 'Crear Ticket',
     icon: IconCreate,
     showInSidebar: true,
@@ -193,23 +218,34 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/informes',
     element: <ReportsPage />,
-    allow: ['super_admin'],
+    allowPerms: ['reports:read'],
     name: 'Informes',
     icon: IconReports,
     showInSidebar: true,
   },
 
-  // Rutas no visibles en el sidebar
+  // Administración de permisos y roles
   {
-    path: '/',
-    element: <AutoHome />,
-    allow: ['user', 'admin', 'super_admin'],
+    path: '/admin/permisos',
+    element: <RoleManagementPage />,
+    allowPerms: ['rbac:manage_roles'],
+    name: 'Permisos y Roles',
+    icon: IconPermissions,
+    showInSidebar: true,
+  },
+  {
+    path: '/admin/roles/:id',
+    element: <RoleEditPage />,
+    allowPerms: ['rbac:manage_roles'],
     showInSidebar: false,
   },
+
+  // Home autenticado (sin permiso específico: deja pasar a cualquiera logueado)
 ];
 
 // Rutas públicas / especiales que no usan RequireRole
 export const PUBLIC_ROUTES = [
   { path: '/login', element: <LoginPage /> },
   { path: '/403', element: <ForbiddenPage /> },
+  { path: '/', element: <AutoHome /> },
 ];

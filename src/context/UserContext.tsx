@@ -1,3 +1,4 @@
+// src/context/UserContext.tsx
 import React, {
   createContext,
   useContext,
@@ -34,7 +35,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Marca de hidratación inicial
   const hydratedRef = useRef(false);
+
+  // 👇 Nuevo: ignorar refrescos silenciosos si la pestaña está oculta
+  const ignoreSilentRef = useRef(document.visibilityState === 'hidden');
+  useEffect(() => {
+    const onVis = () => {
+      ignoreSilentRef.current = document.visibilityState === 'hidden';
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   const refresh = async (opts: RefreshOptions = {}) => {
     const { silent = false } = opts;
@@ -66,17 +79,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
+    // Hidratación inicial
     void refresh();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       switch (event) {
         case 'SIGNED_IN':
         case 'SIGNED_OUT':
+          // Eventos "duros" -> refresco normal
           void refresh();
           break;
         case 'USER_UPDATED':
         case 'TOKEN_REFRESHED':
-          void refresh({ silent: true });
+          // 👇 Solo refresca de forma silenciosa si la pestaña está visible
+          if (!ignoreSilentRef.current) {
+            void refresh({ silent: true });
+          }
           break;
         default:
           break;

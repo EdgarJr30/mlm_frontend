@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Sidebar from '../components/dashboard/Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import TicketsByStatusBar from '../components/dashboard/reports/TicketsByStatusBar';
 import CountByFieldBar from '../components/dashboard/reports/CountByFieldBar';

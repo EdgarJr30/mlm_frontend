@@ -4,11 +4,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { APP_ROUTES, PUBLIC_ROUTES } from './components/Routes/appRoutes';
-import RequireRole from './components/Routes/RequireRole';
+// import RequireRole from './components/Routes/RequireRole';
+import RequirePerm from './components/Routes/RequirePerm';
 import ProtectedRoute from './components/Routes/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
 import { AssigneeProvider } from './context/AssigneeContext';
+import { PermissionsProvider } from './rbac/PermissionsContext';
 
 // Vacía todos los logs en desarrollo
 if (process.env.NODE_ENV !== 'development') {
@@ -26,39 +28,43 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <UserProvider>
         <AssigneeProvider>
           <BrowserRouter>
-            <ToastContainer
-              position="top-right"
-              autoClose={3000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="colored"
-            />
-            <Routes>
-              {/* Públicas / especiales */}
-              {PUBLIC_ROUTES.map((r) => (
-                <Route key={r.path} path={r.path} element={r.element} />
-              ))}
+            <PermissionsProvider>
+              <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="colored"
+              />
+              <Routes>
+                {/* Públicas / especiales */}
+                {PUBLIC_ROUTES.map((r) => (
+                  <Route key={r.path} path={r.path} element={r.element} />
+                ))}
 
-              {/* Protegidas dinamicamente */}
-              {APP_ROUTES.map((r) => (
-                <Route
-                  key={r.path}
-                  path={r.path}
-                  element={
-                    <ProtectedRoute>
-                      <RequireRole allow={r.allow}>{r.element}</RequireRole>
-                    </ProtectedRoute>
-                  }
-                />
-              ))}
+                {/* Protegidas dinamicamente */}
+                {APP_ROUTES.map((r) => (
+                  <Route
+                    key={r.path}
+                    path={r.path}
+                    element={
+                      <ProtectedRoute>
+                        <RequirePerm allow={r.allowPerms}>
+                          {r.element}
+                        </RequirePerm>
+                      </ProtectedRoute>
+                    }
+                  />
+                ))}
 
-              {/* comodín */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                {/* comodín */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </PermissionsProvider>
           </BrowserRouter>
         </AssigneeProvider>
       </UserProvider>

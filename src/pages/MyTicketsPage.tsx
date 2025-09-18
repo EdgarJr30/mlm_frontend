@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSession } from '../utils/auth';
-import Sidebar from '../components/dashboard/Sidebar';
+import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import { getTicketsByUserId } from '../services/ticketService';
 import {

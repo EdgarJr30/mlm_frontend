@@ -8,7 +8,6 @@ import React, {
 } from 'react';
 import type { Assignee, AssigneeSection } from '../types/Assignee';
 import {
-  // getActiveAssignees,
   getAllAssignees,
   groupBySection,
   makeAssigneeMap,
@@ -21,7 +20,7 @@ export type AssigneeState = {
   list: Assignee[]; // todos
   byId: Record<number, Assignee>; // todos
   bySection: Record<AssigneeSection, Assignee[]>; // todos
-  bySectionActive: Record<AssigneeSection, Assignee[]>; // ⬅️ solo activos
+  bySectionActive: Record<AssigneeSection, Assignee[]>; // solo activos
   refresh: () => Promise<void>;
 };
 
@@ -40,6 +39,7 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
     setError(null);
     const firstLoad = !hydratedRef.current;
     if (firstLoad) setLoading(true);
+
     try {
       if (!isAuthenticated) {
         setList([]);
@@ -51,17 +51,16 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
       const msg =
         e instanceof Error ? e.message : 'Error cargando responsables';
       setError(msg);
-      console.error(msg);
+      console.error('[AssigneeContext] refresh error:', msg);
     } finally {
-      if (!hydratedRef.current) {
-        hydratedRef.current = true;
-        setLoading(false);
-      }
+      if (!hydratedRef.current) hydratedRef.current = true;
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   const value = useMemo<AssigneeState>(() => {
@@ -70,9 +69,9 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
       loading,
       error,
       list,
-      byId: makeAssigneeMap(list), // todos
-      bySection: groupBySection(list), // todos
-      bySectionActive: groupBySection(activeList), // solo activos
+      byId: makeAssigneeMap(list),
+      bySection: groupBySection(list),
+      bySectionActive: groupBySection(activeList),
       refresh,
     };
   }, [loading, error, list]);
