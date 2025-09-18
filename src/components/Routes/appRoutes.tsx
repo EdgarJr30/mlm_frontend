@@ -1,5 +1,4 @@
 import type { JSX } from 'react';
-// import type { RoleName } from '../../services/userService';
 import { Navigate } from 'react-router-dom';
 import CreateTicketPage from '../../pages/CreateTicketPage';
 import LoginPage from '../../pages/LoginPage';
@@ -18,14 +17,13 @@ import DashboardPage from '../../pages/DashboardPage';
 export type AppRoute = {
   path: string;
   element: JSX.Element;
-  // allow: string[];
-  allowPerms: string[]; // ahora: permisos
-  name?: string; // texto del menú
-  icon?: JSX.Element; // ícono para el menú
-  showInSidebar?: boolean; // si aparece en el sidebar
+  allowPerms: string[];
+  name?: string;
+  icon?: JSX.Element;
+  showInSidebar?: boolean;
 };
 
-const IconDashboard = (
+const IconHome = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -42,7 +40,7 @@ const IconDashboard = (
   </svg>
 );
 
-const IconInbox = (
+const IconWorkOrders = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -54,7 +52,24 @@ const IconInbox = (
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3"
+      d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"
+    />
+  </svg>
+);
+
+const IconWorkRequests = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth="1.5"
+    stroke="currentColor"
+    className="w-5 h-5 mr-2"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
     />
   </svg>
 );
@@ -173,7 +188,7 @@ export const APP_ROUTES: AppRoute[] = [
     element: <DashboardPage />,
     allowPerms: ['tickets:read'],
     name: 'Inicio',
-    icon: IconDashboard,
+    icon: IconHome,
     showInSidebar: true,
   },
   {
@@ -181,7 +196,7 @@ export const APP_ROUTES: AppRoute[] = [
     element: <WorkOrdersPage />,
     allowPerms: ['tickets:read'],
     name: 'Órdenes de Trabajo',
-    icon: IconDashboard,
+    icon: IconWorkOrders,
     showInSidebar: true,
   },
   {
@@ -189,7 +204,7 @@ export const APP_ROUTES: AppRoute[] = [
     element: <WorkRequestsPage />,
     allowPerms: ['inbox:read', 'tickets:approve'],
     name: 'Solicitudes',
-    icon: IconInbox,
+    icon: IconWorkRequests,
     showInSidebar: true,
   },
   {
@@ -248,8 +263,6 @@ export const APP_ROUTES: AppRoute[] = [
     allowPerms: ['rbac:manage_roles'],
     showInSidebar: false,
   },
-
-  // Home autenticado (sin permiso específico: deja pasar a cualquiera logueado)
 ];
 
 // Rutas públicas / especiales que no usan RequireRole

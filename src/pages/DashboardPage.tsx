@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
-import KpiCard from '../components/dashboard/KpiCard';
+import KpiCard from '../components/layout/KpiCard';
 import MttrTrendBar from '../components/dashboard/charts/MttrTrendBar';
 import PreventiveVsCorrective from '../components/dashboard/charts/PreventiveVsCorrective';
 import AgeDistribution from '../components/dashboard/charts/AgeDistribution';
