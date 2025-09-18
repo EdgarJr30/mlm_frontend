@@ -1,8 +1,8 @@
-// src/features/tickets/kanbanFilters.ts
+// src/features/tickets/WorkOrdersFilters.ts
 import type { FilterSchema } from '../../types/filters';
 import { LOCATIONS } from '../../constants/locations';
 
-export type KanbanFilterKey =
+export type WorkOrdersFilterKey =
   | 'q'
   | 'status'
   | 'priority'
@@ -10,8 +10,8 @@ export type KanbanFilterKey =
   | 'created_at'
   | 'has_image';
 
-export const kanbanFilters: FilterSchema<KanbanFilterKey> = {
-  id: 'kanban',
+export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
+  id: 'work_orders',
   fields: [
     {
       key: 'q',

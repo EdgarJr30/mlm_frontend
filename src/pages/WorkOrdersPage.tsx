@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
-import KanbanBoard from '../components/dashboard/kanban/KanbanBoard';
-import WorkOrdersList from '../components/dashboard/kanban/WorkOrdersList';
-// import KanbanFiltersBar from '../components/dashboard/kanban/KanbanFiltersBar';
+import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
+import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
+// import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFiltersBar';
 import Modal from '../components/ui/Modal';
 import EditTicketModal from '../components/dashboard/ticket/EditTicketModal';
 import { updateTicket } from '../services/ticketService';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import type { FilterState } from '../types/filters';
-import type { KanbanFilterKey } from '../features/tickets/kanbanFilters';
+import type { WorkOrdersFilterKey } from '../features/tickets/WorkOrdersFilters';
 import type { Ticket } from '../types/Ticket';
 
-type ViewMode = 'kanban' | 'list';
+type ViewMode = 'WorkOrders' | 'list';
 
-export default function KanbanPage() {
+export default function WorkOrdersPage() {
   // Navbar
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
@@ -23,16 +23,16 @@ export default function KanbanPage() {
   const [filters] = useState<Record<string, unknown>>({});
 
   // Vista actual
-  const [view, setView] = useState<ViewMode>('kanban');
+  const [view, setView] = useState<ViewMode>('WorkOrders');
 
-  // Modal para LISTA (kanban ya maneja su propio modal interno)
+  // Modal para LISTA (WorkOrders ya maneja su propio modal interno)
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
 
-  const mergedFilters = useMemo<FilterState<KanbanFilterKey>>(
+  const mergedFilters = useMemo<FilterState<WorkOrdersFilterKey>>(
     () => ({
-      ...(filters as FilterState<KanbanFilterKey>),
+      ...(filters as FilterState<WorkOrdersFilterKey>),
       q: searchTerm || undefined,
       location: selectedLocation || undefined,
     }),
@@ -71,14 +71,14 @@ export default function KanbanPage() {
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setView('kanban')}
+              onClick={() => setView('WorkOrders')}
               className={`inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-sm font-medium cursor-pointer
                 ${
-                  view === 'kanban'
+                  view === 'WorkOrders'
                     ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
-              title="Vista kanban"
+              title="Vista WorkOrders"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -88,7 +88,7 @@ export default function KanbanPage() {
               >
                 <path d="M3 3h6v6H3V3zm8 0h6v6h-6V3zM3 11h6v6H3v-6zm8 6v-6h6v6h-6z" />
               </svg>
-              Kanban
+              WorkOrders
             </button>
 
             <button
@@ -116,12 +116,12 @@ export default function KanbanPage() {
         </header>
 
         {/* <div className="px-4 md:px-6 lg:px-8 pt-3">
-          <KanbanFiltersBar onApply={(vals) => setFilters(vals)} />
+          <WorkOrdersFiltersBar onApply={(vals) => setFilters(vals)} />
         </div> */}
 
         <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
-          {view === 'kanban' ? (
-            <KanbanBoard filters={mergedFilters} />
+          {view === 'WorkOrders' ? (
+            <WorkOrdersBoard filters={mergedFilters} />
           ) : (
             <WorkOrdersList
               filters={mergedFilters}
@@ -133,7 +133,7 @@ export default function KanbanPage() {
           )}
         </section>
 
-        {/* Modal (LISTA) — usa el MISMO componente que Kanban */}
+        {/* Modal (LISTA) — usa el MISMO componente que WorkOrders */}
         <Modal
           isOpen={modalOpen}
           onClose={() => {

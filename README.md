@@ -23,7 +23,7 @@ MLM es una aplicación web diseñada para optimizar la gestión de solicitudes d
 
 - **Búsqueda Global 🔎**: Busca tickets por título y solicitante directamente en la base de datos desde el Kanban.
 - **Notificaciones con Badge ❶**: Muestra el número de nuevos tickets en la campana de notificaciones.
-- **Módulo Bandeja de Entrada (Inbox)**:  
+- **Módulo Bandeja de Entrada (WorkRequests)**:  
   - Permite aceptar tickets uno a uno o por lotes de 10.
   - Integra búsqueda global y filtrado específico por ubicación.
   - Los tickets aceptados pasan automáticamente al tablero Kanban.
@@ -113,7 +113,7 @@ npm run lint
 - `/login` - Autenticación de usuarios
 - `/crear-ticket` - Formulario para nuevas solicitudes de mantenimiento
 - `/kanban` - Tablero principal con gestión de tickets (ruta protegida)
--  `/inbox` - 
+-  `/WorkRequests` - 
 - `/` - Redirecciona al tablero Kanban
 
 ## 🔐 Autenticación

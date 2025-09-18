@@ -1,13 +1,13 @@
 // import FilterBar from '../../ui/filters/FilterBar';
-// import { kanbanFilters } from '../../../features/tickets/kanbanFilters';
+// import { WorkOrders } from '../../../features/tickets/WorkOrders';
 
-export default function KanbanFiltersBar() {
+export default function WorkOrdersFiltersBar() {
   //     {
   //   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   //   onApply,
   // }: {
   //   onApply: (values: Record<string, unknown>) => void;
   // }
-  //   return <FilterBar schema={kanbanFilters} onApply={onApply} sticky />;
+  //   return <FilterBar schema={WorkOrders} onApply={onApply} sticky />;
   return null;
 }

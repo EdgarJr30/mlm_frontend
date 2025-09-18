@@ -8,7 +8,7 @@ MLM is a web-based application designed to streamline maintenance request manage
 
 ## ✨ Features
 
-- **Kanban Board Interface**: Visual workflow management
+- **WorkOrders Board Interface**: Visual workflow management
 - **Ticket Creation**: Comprehensive form for creating maintenance requests
 - **User Authentication**: Secure login system with protected routes
 - **Priority Management**: Urgent ticket flagging system

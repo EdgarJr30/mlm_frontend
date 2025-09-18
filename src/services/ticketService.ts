@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
 import type { Ticket } from "../types/Ticket";
 import type { FilterState } from "../types/filters";
-import type { InboxFilterKey } from "../features/tickets/inboxFilters";
+import type { WorkRequestsFilterKey } from "../features/tickets/workRequestsFilters";
 
 const PAGE_SIZE = 20;
 type Status = Ticket["status"];
@@ -11,7 +11,7 @@ export type TicketCounts = Record<Status, number>;
  * Normaliza el rango de fechas a límites del día (00:00:00 / 23:59:59).
  */
 function normalizeDateRange(
-  v: FilterState<InboxFilterKey>['created_at']
+  v: FilterState<WorkRequestsFilterKey>['created_at']
 ): { from?: string; to?: string } | undefined {
   if (!v || typeof v !== 'object') return undefined;
   const from = (v as { from?: string }).from;
@@ -209,10 +209,10 @@ export async function getTicketCountsRPC(filters?: {
 
 /**
  * Filtra directamente en Supabase (server-side) con paginación y count.
- * SIN serverFiltering.ts y SIN inboxServerSchema.ts
+ * SIN serverFiltering.ts y SIN WorkRequestsServerSchema.ts
  */
 export async function getTicketsByFiltersPaginated(
-  values: FilterState<InboxFilterKey>,
+  values: FilterState<WorkRequestsFilterKey>,
   page: number,
   pageSize: number
 ): Promise<{ data: Ticket[]; count: number }> {
@@ -282,8 +282,8 @@ export async function getTicketsByFiltersPaginated(
   return { data: (data ?? []) as Ticket[], count: count ?? 0 };
 }
 
-// 👇 NUEVO: filtra para el Kanban (sin forzar is_accepted = false)
-export async function getTicketsByKanbanFiltersPaginated<TKeys extends string>(
+// 👇 NUEVO: filtra para el WorkOrders (sin forzar is_accepted = false)
+export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends string>(
   values: FilterState<TKeys>,
   page: number,
   pageSize: number
@@ -294,7 +294,7 @@ export async function getTicketsByKanbanFiltersPaginated<TKeys extends string>(
   let q = supabase
     .from("tickets")
     .select("*", { count: "exact" })
-    .eq("is_accepted", true);        // 👈 SIEMPRE aceptados en Kanban/Lista
+    .eq("is_accepted", true);        // 👈 SIEMPRE aceptados en WorkOrders
 
   // q (título, solicitante, id numérico)
   const termRaw = (values as Record<string, unknown>)["q"];
@@ -345,7 +345,7 @@ export async function getTicketsByKanbanFiltersPaginated<TKeys extends string>(
     .range(from, to);
 
   if (error) {
-    console.error("❌ getTicketsByKanbanFiltersPaginated error:", error.message);
+    console.error("❌ getTicketsByWorkOrdersFiltersPaginated error:", error.message);
     return { data: [], count: 0 };
   }
   return { data: (data ?? []) as Ticket[], count: count ?? 0 };

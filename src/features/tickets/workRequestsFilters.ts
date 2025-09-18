@@ -1,6 +1,6 @@
 import type { FilterSchema } from '../../types/filters';
 
-export type InboxFilterKey =
+export type WorkRequestsFilterKey =
   | 'q'
   | 'location'
   | 'priority'
@@ -9,8 +9,8 @@ export type InboxFilterKey =
   | 'accepted'
   | 'created_at';
 
-export const inboxFilters: FilterSchema<InboxFilterKey> = {
-  id: 'inbox',
+export const workRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
+  id: 'workRequestsFilters',
   columnMap: {
       q: 'title',
       location: '',

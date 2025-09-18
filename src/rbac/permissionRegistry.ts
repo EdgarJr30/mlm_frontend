@@ -5,7 +5,7 @@ export type PermissionAction =
   | 'manage_roles' | 'manage_permissions';
 
 export type PermissionDef = {
-  resource: string;   // p.ej. 'tickets', 'inbox', 'reports', 'users', 'assignees', 'rbac'
+  resource: string;   // p.ej. 'tickets', 'WorkRequests', 'reports', 'users', 'assignees', 'rbac'
   action: PermissionAction;
   label: string;
   description?: string;
@@ -20,7 +20,7 @@ export const PERMISSIONS: PermissionDef[] = [
   p('rbac', 'manage_permissions', 'Sincronizar permisos'),
   p('rbac', 'manage_roles', 'Gestionar roles'),
 
-  // Tickets / Kanban
+  // Tickets / WorkOrders
   p('tickets', 'create', 'Crear tickets'),
   p('tickets', 'read', 'Ver tickets'),
   p('tickets', 'update', 'Editar tickets'),
@@ -28,8 +28,8 @@ export const PERMISSIONS: PermissionDef[] = [
   p('tickets', 'work', 'Trabajar tickets'),
   p('tickets', 'approve', 'Aprobar / Rechazar solicitudes'),
 
-  // Inbox (bandeja)
-  p('inbox', 'read', 'Ver bandeja de solicitudes'),
+  // WorkRequests (Solicitudes)
+  p('workRequests', 'read', 'Ver bandeja de solicitudes'),
 
   // Reportes
   p('reports', 'read', 'Ver reportes'),

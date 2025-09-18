@@ -4,12 +4,12 @@ import EditTicketModal from '../ticket/EditTicketModal';
 import {
   updateTicket,
   getTicketCountsRPC,
-  getTicketsByKanbanFiltersPaginated,
+  getTicketsByWorkOrdersFiltersPaginated,
 } from '../../../services/ticketService';
 import type { Ticket } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
-import type { KanbanFilterKey } from '../../../features/tickets/kanbanFilters';
-import KanbanColumn from './KanbanColumn';
+import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
+import WorkOrdersColumn from './WorkOrdersColumn';
 import Modal from '../../ui/Modal';
 import { showToastSuccess, showToastError } from '../../../notifications/toast';
 
@@ -21,10 +21,10 @@ const STATUSES: Ticket['status'][] = [
 const FILTERED_LIMIT = 200;
 
 interface Props {
-  filters?: FilterState<KanbanFilterKey>;
+  filters?: FilterState<WorkOrdersFilterKey>;
 }
 
-export default function KanbanBoard({ filters }: Props) {
+export default function WorkOrdersBoard({ filters }: Props) {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function KanbanBoard({ filters }: Props) {
     (async () => {
       setIsLoading(true);
       if (isFiltering) {
-        const { data } = await getTicketsByKanbanFiltersPaginated(
+        const { data } = await getTicketsByWorkOrdersFiltersPaginated(
           (filters ?? {}) as FilterState<string>,
           0,
           FILTERED_LIMIT
@@ -195,7 +195,7 @@ export default function KanbanBoard({ filters }: Props) {
   /** Realtime: actualiza badges por delta */
   useEffect(() => {
     const channel = supabase
-      .channel('tickets-changes-kanban')
+      .channel('tickets-changes-WorkOrdersBoard')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'tickets' },
@@ -221,7 +221,7 @@ export default function KanbanBoard({ filters }: Props) {
   return (
     <div className="flex gap-6 h-full w-full overflow-x-auto">
       {STATUSES.map((status) => (
-        <KanbanColumn
+        <WorkOrdersColumn
           key={status}
           status={status}
           isSearching={isFiltering}

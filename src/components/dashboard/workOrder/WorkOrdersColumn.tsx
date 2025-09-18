@@ -24,7 +24,7 @@ interface Props {
   count?: number;
 }
 
-export default function KanbanColumn({
+export default function WorkOrdersColumn({
   tickets,
   isSearching,
   status,

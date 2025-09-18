@@ -12,8 +12,8 @@ import {
 } from '../../../services/storageService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
-// import InboxFiltersBar from './InboxFiltersBar';
-import type { InboxFilterKey } from '../../../features/tickets/inboxFilters';
+// import WorkRequestsFiltersBar from './WorkRequestsFiltersBar';
+import type { WorkRequestsFilterKey } from '../../../features/tickets/workRequestsFilters';
 import type { FilterState } from '../../../types/filters';
 
 interface Props {
@@ -189,7 +189,10 @@ function TicketDetailModal({
   );
 }
 
-export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
+export default function WorkRequestsBoard({
+  searchTerm,
+  selectedLocation,
+}: Props) {
   const checkbox = useRef<HTMLInputElement>(null);
   const [checked, setChecked] = useState(false);
   const [indeterminate, setIndeterminate] = useState(false);
@@ -294,7 +297,7 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
   // Carga SIEMPRE desde el servidor
   async function reload() {
     const { data, count } = await getTicketsByFiltersPaginated(
-      filters as FilterState<InboxFilterKey>,
+      filters as FilterState<WorkRequestsFilterKey>,
       page,
       PAGE_SIZE
     );
@@ -325,7 +328,7 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
     <div className="flex flex-col flex-1 min-h-0">
       {/* Filtros declarativos */}
       {/* <div className="mb-3">
-        <InboxFiltersBar
+        <WorkRequestsFiltersBar
           onApply={(vals) => {
             setPage(0);
             setFilters(vals);
@@ -336,7 +339,7 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
       {/* Barra superior: texto + botón masivo */}
       <div className="flex items-center gap-3">
         <p className="text-sm text-gray-700">
-          Tickets pendientes de aprobación — Página {page + 1} de{' '}
+          Solicitudes pendientes de aprobación — Página {page + 1} de{' '}
           {Math.ceil(totalCount / PAGE_SIZE) || 1}
         </p>
         <div className="ml-auto">
@@ -346,7 +349,7 @@ export default function InboxBoard({ searchTerm, selectedLocation }: Props) {
             disabled={selectedTicket.length === 0 || isLoading}
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer"
           >
-            Aceptar tickets
+            Aceptar Solicitudes
           </button>
         </div>
       </div>

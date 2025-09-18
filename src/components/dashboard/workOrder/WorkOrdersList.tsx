@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
-import type { KanbanFilterKey } from '../../../features/tickets/kanbanFilters';
+import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
 import {
   getPublicImageUrl,
   getTicketImagePaths,
 } from '../../../services/storageService';
-import { getTicketsByKanbanFiltersPaginated } from '../../../services/ticketService';
+import { getTicketsByWorkOrdersFiltersPaginated } from '../../../services/ticketService';
 import AssigneeBadge from '../../common/AssigneeBadge';
 
 type Props = {
-  filters?: FilterState<KanbanFilterKey>;
+  filters?: FilterState<WorkOrdersFilterKey>;
   onOpen?: (t: Ticket) => void;
 };
 
@@ -38,7 +38,7 @@ export default function WorkOrdersList({ filters, onOpen }: Props) {
 
   async function reload(p = 0) {
     setLoading(true);
-    const { data, count: total } = await getTicketsByKanbanFiltersPaginated(
+    const { data, count: total } = await getTicketsByWorkOrdersFiltersPaginated(
       (filters ?? {}) as FilterState<string>,
       p,
       PAGE_SIZE
@@ -162,7 +162,7 @@ export default function WorkOrdersList({ filters, onOpen }: Props) {
                     </span>
                   </td>
 
-                  {/* Fecha (igual que kanban: usa incident_date) */}
+                  {/* Fecha (igual que WorkOrders: usa incident_date) */}
                   <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                     {t.incident_date ?? '—'}
                   </td>

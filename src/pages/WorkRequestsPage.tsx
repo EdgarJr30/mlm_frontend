@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
-import InboxBoard from '../components/dashboard/inbox/InboxBoard';
-// import SearchTickets from "../components/SearchTickets";
+import WorkRequestsBoard from '../components/dashboard/workRequest/WorkRequestsBoard';
 
-export default function InboxPage() {
+export default function WorkRequestsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
 
@@ -22,11 +21,11 @@ export default function InboxPage() {
         </div>
 
         <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6">
-          <h2 className="text-3xl font-bold">Bandeja de entrada</h2>
+          <h2 className="text-3xl font-bold">Solicitudes</h2>
         </header>
 
         <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
-          <InboxBoard
+          <WorkRequestsBoard
             searchTerm={searchTerm}
             selectedLocation={selectedLocation}
           />

@@ -1,17 +1,18 @@
 import type { JSX } from 'react';
 // import type { RoleName } from '../../services/userService';
+import { Navigate } from 'react-router-dom';
 import CreateTicketPage from '../../pages/CreateTicketPage';
 import LoginPage from '../../pages/LoginPage';
-import KanbanPage from '../../pages/KanbanPage';
-import InboxPage from '../../pages/InboxPage';
+import WorkOrdersPage from '../../pages/WorkOrdersPage';
+import WorkRequestsPage from '../../pages/WorkRequestsPage';
 import UserManagementPage from '../../pages/UserManagementPage';
 import MyTicketsPage from '../../pages/MyTicketsPage';
 import ForbiddenPage from '../../pages/ForbiddenPage';
 import ReportsPage from '../../pages/ReportsPage';
-import AutoHome from '../../components/Routes/AutoHome';
 import AssigneeManagementPage from '../../pages/admin/AssigneePage';
 import RoleManagementPage from '../../pages/admin/RoleManagementPage';
 import RoleEditPage from '../../pages/admin/RoleEditPage';
+import DashboardPage from '../../pages/DashboardPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -168,18 +169,26 @@ const IconPermissions = (
 // Rutas protegidas y de menú
 export const APP_ROUTES: AppRoute[] = [
   {
-    path: '/kanban',
-    element: <KanbanPage />,
+    path: '/inicio',
+    element: <DashboardPage />,
     allowPerms: ['tickets:read'],
-    name: 'Kanban',
+    name: 'Inicio',
     icon: IconDashboard,
     showInSidebar: true,
   },
   {
-    path: '/inbox',
-    element: <InboxPage />,
+    path: '/ordenes_trabajo',
+    element: <WorkOrdersPage />,
+    allowPerms: ['tickets:read'],
+    name: 'Órdenes de Trabajo',
+    icon: IconDashboard,
+    showInSidebar: true,
+  },
+  {
+    path: '/solicitudes',
+    element: <WorkRequestsPage />,
     allowPerms: ['inbox:read', 'tickets:approve'],
-    name: 'Bandeja de Entrada',
+    name: 'Solicitudes',
     icon: IconInbox,
     showInSidebar: true,
   },
@@ -247,5 +256,5 @@ export const APP_ROUTES: AppRoute[] = [
 export const PUBLIC_ROUTES = [
   { path: '/login', element: <LoginPage /> },
   { path: '/403', element: <ForbiddenPage /> },
-  { path: '/', element: <AutoHome /> },
+  { path: '/', element: <Navigate to="/inicio" replace /> },
 ];

@@ -28,7 +28,7 @@ export default function LoginPage() {
         const user = data.session?.user;
         if (user) {
           console.log('[LoginPage] already authenticated → /');
-          navigate('/', { replace: true }); // AutoHome decide por permisos
+          navigate('/inicio', { replace: true });
         }
       } catch (e) {
         console.error('[LoginPage] getSession threw:', e);
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
       if (data.session?.user) {
         console.log('[LoginPage] login ok → /');
-        navigate('/', { replace: true }); // AutoHome decide por permisos
+        navigate('/inicio', { replace: true });
       }
     } catch (err: unknown) {
       setError(
