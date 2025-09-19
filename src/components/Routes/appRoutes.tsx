@@ -186,7 +186,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inicio',
     element: <DashboardPage />,
-    allowPerms: ['tickets:read'],
+    allowPerms: ['reports:read'],
     name: 'Inicio',
     icon: IconHome,
     showInSidebar: true,
@@ -194,7 +194,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/ordenes_trabajo',
     element: <WorkOrdersPage />,
-    allowPerms: ['tickets:read'],
+    allowPerms: ['work_orders:read'],
     name: 'Órdenes de Trabajo',
     icon: IconWorkOrders,
     showInSidebar: true,
@@ -202,7 +202,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/solicitudes',
     element: <WorkRequestsPage />,
-    allowPerms: ['inbox:read', 'tickets:approve'],
+    allowPerms: ['work_requests:read', 'work_requests:approve'],
     name: 'Solicitudes',
     icon: IconWorkRequests,
     showInSidebar: true,
@@ -218,7 +218,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/mi-perfil',
     element: <MyTicketsPage />,
-    allowPerms: ['tickets:read'],
+    allowPerms: ['work_orders:read_own', 'work_orders:read'],
     name: 'Mi Perfil',
     icon: IconProfile,
     showInSidebar: true,
@@ -234,7 +234,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/crear-ticket',
     element: <CreateTicketPage />,
-    allowPerms: ['tickets:create'],
+    allowPerms: ['work_orders:create'],
     name: 'Crear Ticket',
     icon: IconCreate,
     showInSidebar: true,
