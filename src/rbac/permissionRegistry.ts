@@ -17,6 +17,7 @@ const p = (resource: string, action: PermissionAction, label: string, descriptio
 
 //Helpers tipados para recursos y códigos de permiso
 export const RESOURCES = {
+  home: 'home',
   work_orders: 'work_orders',
   work_requests: 'work_requests',
   reports: 'reports',
@@ -33,6 +34,9 @@ export const PERMISSIONS: PermissionDef[] = [
   // RBAC / Admin
   p(RESOURCES.rbac, 'manage_permissions', 'Sincronizar permisos'),
   p(RESOURCES.rbac, 'manage_roles', 'Gestionar roles'),
+
+  // Home / Inicio
+  p(RESOURCES.home, 'read', 'Ver inicio'),
 
   // Tickets / WorkOrders
   p(RESOURCES.work_orders, 'read', 'Ver OT'),

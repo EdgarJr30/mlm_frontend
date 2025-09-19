@@ -186,7 +186,7 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inicio',
     element: <DashboardPage />,
-    allowPerms: ['reports:read'],
+    allowPerms: ['home:read'],
     name: 'Inicio',
     icon: IconHome,
     showInSidebar: true,
