@@ -4,6 +4,7 @@ import Logo from '../assets/logo_horizontal.svg';
 import Collage from '../assets/COLLAGE_MLM.webp';
 import AppVersion from '../components/ui/AppVersion';
 import { getSession, signInWithPassword } from '../utils/auth';
+import { usePermissions } from '../rbac/PermissionsContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { refresh } = usePermissions();
 
   useEffect(() => {
     let active = true;
@@ -27,7 +29,10 @@ export default function LoginPage() {
 
         const user = data.session?.user;
         if (user) {
-          console.log('[LoginPage] already authenticated → /');
+          console.log(
+            '[LoginPage] already authenticated, refreshing permissions…'
+          );
+          await refresh({ silent: false });
           navigate('/inicio', { replace: true });
         }
       } catch (e) {
@@ -59,7 +64,9 @@ export default function LoginPage() {
       }
 
       if (data.session?.user) {
-        console.log('[LoginPage] login ok → /');
+        console.log('[LoginPage] login ok, refreshing permissions…');
+        // Fuerza refresh de permisos (bloqueante) para evitar 403 por permisos aún no cargados
+        await refresh({ silent: false });
         navigate('/inicio', { replace: true });
       }
     } catch (err: unknown) {

@@ -237,8 +237,9 @@ export function PermissionsProvider({
 
   // carga inicial
   useEffect(() => {
-    if (codes.length || roles.length) setReady(true);
-    void _refresh({ silent: !!(codes.length || roles.length) });
+    const hasLocal = codes.length > 0 || roles.length > 0;
+    setReady(false);
+    void _refresh({ silent: hasLocal }).finally(() => setReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
