@@ -10,6 +10,7 @@ import {
   bulkSetAssigneeActive,
   formatAssigneeFullName,
 } from '../../../services/assigneeService';
+import { useCan } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
 
 interface Props {
@@ -108,6 +109,10 @@ export default function AssigneesTable({ searchTerm }: Props) {
 
   const isSearching = searchTerm.trim().length >= 2;
 
+  const canFull = useCan('assignees:full_access');
+  const canCancel = useCan('assignees:cancel');
+  const canDelete = useCan('assignees:delete');
+
   useLayoutEffect(() => {
     const isIndeterminate =
       selectedRows.length > 0 && selectedRows.length < assignees.length;
@@ -161,6 +166,10 @@ export default function AssigneesTable({ searchTerm }: Props) {
 
   // --- acciones fila ---
   async function handleToggleActive(a: Assignee) {
+    if (!canFull) {
+      showToastError('No tienes permiso para activar/desactivar técnicos.');
+      return;
+    }
     setIsLoading(true);
     try {
       await setAssigneeActive(a.id, !a.is_active);
@@ -176,6 +185,10 @@ export default function AssigneesTable({ searchTerm }: Props) {
   }
 
   async function handleDelete(a: Assignee) {
+    if (!canDelete) {
+      showToastError('No tienes permiso para eliminar técnicos.');
+      return;
+    }
     const ok = confirm(
       `¿Eliminar al responsable "${formatAssigneeFullName(
         a
@@ -197,6 +210,10 @@ export default function AssigneesTable({ searchTerm }: Props) {
   }
 
   async function handleBulkDeactivate() {
+    if (!canFull) {
+      showToastError('No tienes permiso para activar/desactivar técnicos.');
+      return;
+    }
     if (selectedRows.length === 0) return;
     const ids = selectedRows.map((r) => r.id);
     setIsLoading(true);
@@ -215,11 +232,19 @@ export default function AssigneesTable({ searchTerm }: Props) {
   }
 
   function openCreate() {
+    if (!canFull) {
+      showToastError('No tienes permiso para crear/editar técnicos.');
+      return;
+    }
     setForm(EMPTY_FORM);
     setOpenForm(true);
   }
 
   function openEdit(a: Assignee) {
+    if (!canFull) {
+      showToastError('No tienes permiso para crear/editar técnicos.');
+      return;
+    }
     setForm({
       id: a.id,
       name: a.name,
@@ -235,6 +260,10 @@ export default function AssigneesTable({ searchTerm }: Props) {
 
   async function submitForm(e: React.FormEvent) {
     e.preventDefault();
+    if (!canFull) {
+      showToastError('No tienes permiso para crear/editar técnicos.');
+      return;
+    }
     if (!form.name.trim() || !form.last_name.trim()) {
       showToastError('Nombre y Apellido son obligatorios.');
       return;
@@ -315,7 +344,13 @@ export default function AssigneesTable({ searchTerm }: Props) {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 cursor-pointer"
+            disabled={!canFull}
+            title={
+              !canFull
+                ? 'No tienes permiso para crear/editar técnicos'
+                : undefined
+            }
+            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             Nuevo responsable
           </button>
@@ -323,8 +358,13 @@ export default function AssigneesTable({ searchTerm }: Props) {
           <button
             type="button"
             onClick={handleBulkDeactivate}
-            disabled={selectedRows.length === 0 || isLoading}
-            className="inline-flex items-center rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-40 cursor-pointer"
+            disabled={selectedRows.length === 0 || isLoading || !canCancel}
+            title={
+              !canCancel
+                ? 'No tienes permiso para activar/desactivar técnicos'
+                : undefined
+            }
+            className="inline-flex items-center rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             Desactivar selección
           </button>
@@ -416,7 +456,11 @@ export default function AssigneesTable({ searchTerm }: Props) {
                       Ver
                     </button>
                     <button
-                      className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer"
+                      className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!canFull}
+                      title={
+                        !canFull ? 'No tienes permiso para editar' : undefined
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
                         openEdit(a);
@@ -425,7 +469,13 @@ export default function AssigneesTable({ searchTerm }: Props) {
                       Editar
                     </button>
                     <button
-                      className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer"
+                      className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!canCancel}
+                      title={
+                        !canCancel
+                          ? 'No tienes permiso para activar/desactivar'
+                          : undefined
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
                         handleToggleActive(a);
@@ -434,7 +484,13 @@ export default function AssigneesTable({ searchTerm }: Props) {
                       {a.is_active ? 'Desactivar' : 'Activar'}
                     </button>
                     <button
-                      className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer"
+                      className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!canDelete}
+                      title={
+                        !canDelete
+                          ? 'No tienes permiso para eliminar'
+                          : undefined
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(a);
@@ -460,7 +516,13 @@ export default function AssigneesTable({ searchTerm }: Props) {
                       <input
                         ref={checkbox}
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                        disabled={!canFull}
+                        title={
+                          !canFull
+                            ? 'No tienes permiso para seleccionar para desactivar'
+                            : undefined
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         checked={checked}
                         onChange={(e) => {
                           e.stopPropagation();
@@ -574,26 +636,47 @@ export default function AssigneesTable({ searchTerm }: Props) {
                           >
                             <div className="flex items-center gap-3">
                               <button
-                                type="button"
-                                title="Editar"
-                                onClick={() => openEdit(a)}
-                                className="inline-flex items-center rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
+                                className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={!canFull}
+                                title={
+                                  !canFull
+                                    ? 'No tienes permiso para editar'
+                                    : undefined
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(a);
+                                }}
                               >
                                 Editar
                               </button>
                               <button
-                                type="button"
-                                title={a.is_active ? 'Desactivar' : 'Activar'}
-                                onClick={() => handleToggleActive(a)}
-                                className="inline-flex items-center rounded-md bg-gray-700 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-gray-600 active:scale-[0.99] cursor-pointer"
+                                className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={!canCancel}
+                                title={
+                                  !canCancel
+                                    ? 'No tienes permiso para activar/desactivar'
+                                    : undefined
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleActive(a);
+                                }}
                               >
                                 {a.is_active ? 'Desactivar' : 'Activar'}
                               </button>
                               <button
-                                type="button"
-                                title="Eliminar"
-                                className="inline-flex items-center rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-rose-500 active:scale-[0.99] cursor-pointer"
-                                onClick={() => handleDelete(a)}
+                                className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={!canDelete}
+                                title={
+                                  !canDelete
+                                    ? 'No tienes permiso para eliminar'
+                                    : undefined
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(a);
+                                }}
                               >
                                 Eliminar
                               </button>
@@ -693,8 +776,11 @@ export default function AssigneesTable({ searchTerm }: Props) {
                   Cerrar
                 </button>
                 <button
-                  className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                  className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={!canFull}
+                  title={!canFull ? 'No tienes permiso para editar' : undefined}
                   onClick={() => {
+                    if (!canFull) return;
                     openEdit(detail);
                     setDetail(null);
                   }}
@@ -859,7 +945,12 @@ export default function AssigneesTable({ searchTerm }: Props) {
                   <button
                     type="submit"
                     className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-                    disabled={submitting}
+                    disabled={submitting || !canFull}
+                    title={
+                      !canFull
+                        ? 'No tienes permiso para crear/editar técnicos'
+                        : undefined
+                    }
                   >
                     {submitting
                       ? isEditing

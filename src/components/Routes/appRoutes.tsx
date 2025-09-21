@@ -194,7 +194,13 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/ordenes_trabajo',
     element: <WorkOrdersPage />,
-    allowPerms: ['work_orders:read'],
+    allowPerms: [
+      'work_orders:read',
+      'work_orders:read_own',
+      'work_orders:full_access',
+      'work_orders:cancel',
+      'work_orders:delete',
+    ],
     name: 'Órdenes de Trabajo',
     icon: IconWorkOrders,
     showInSidebar: true,
@@ -226,7 +232,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/admin/tecnicos',
     element: <AssigneeManagementPage />,
-    allowPerms: ['assignees:read', 'assignees:update'],
+    allowPerms: [
+      'assignees:read',
+      'assignees:full_access',
+      'assignees:cancel',
+      'assignees:delete',
+    ],
     name: 'Técnicos',
     icon: IconAssignee,
     showInSidebar: true,

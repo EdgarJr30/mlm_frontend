@@ -60,9 +60,9 @@ export const PERMISSIONS: PermissionDef[] = [
   p(RESOURCES.users, 'create', 'Crear usuarios'),
   p(RESOURCES.users, 'update', 'Editar usuarios'),
 
-  // Técnicos
-  p(RESOURCES.assignees, 'read', 'Ver técnicos'),
-  p(RESOURCES.assignees, 'create', 'Crear técnicos'),
-  p(RESOURCES.assignees, 'update', 'Gestionar técnicos'),
-  p(RESOURCES.assignees, 'delete', 'Eliminar técnicos'),
+  // Técnicos (ASSIGNEES)
+  p(RESOURCES.assignees, 'read',        'Ver técnicos'),
+  p(RESOURCES.assignees, 'full_access', 'Acceso total técnicos (crear/modificar)'),
+  p(RESOURCES.assignees, 'cancel',      'Activar/Desactivar técnicos'),
+  p(RESOURCES.assignees, 'delete',      'Eliminar técnicos'),
 ];
