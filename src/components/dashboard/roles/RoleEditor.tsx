@@ -163,9 +163,8 @@ export default function RoleEditor() {
             type="button"
             onClick={() => navigate(-1)}
             className="px-4 py-2 rounded-xl border transition cursor-pointer
-                       hover:bg-blue-50 hover:border-blue-200 text-blue-700
-                       focus:outline-none focus-visible:ring-2"
-            style={{ focusVisible: { outline: 'none' } }}
+             hover:bg-blue-50 hover:border-blue-200 text-blue-700
+             focus:outline-none focus-visible:ring-2 focus-visible:ring-[#93B5FF]"
           >
             Cancelar
           </button>
@@ -174,10 +173,8 @@ export default function RoleEditor() {
               onClick={save}
               disabled={saving}
               className="px-5 py-2.5 rounded-xl text-white transition cursor-pointer shadow-sm
-                         focus:outline-none focus-visible:ring-2"
-              style={{
-                backgroundColor: BLUE.base,
-              }}
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-[#93B5FF]"
+              style={{ backgroundColor: BLUE.base }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.backgroundColor = BLUE.hover)
               }
@@ -208,8 +205,8 @@ export default function RoleEditor() {
             type="text"
             placeholder="Filtrar por nombre o code…"
             className="w-full pl-10 pr-3 py-2.5 rounded-xl border bg-background transition
-                       focus:outline-none focus-visible:ring-2"
-            style={{ boxShadow: `0 0 0 0 rgba(0,0,0,0)`, outline: 'none' }}
+             focus:outline-none focus-visible:ring-2 focus-visible:ring-[#93B5FF]"
+            style={{ boxShadow: '0 0 0 0 rgba(0,0,0,0)', outline: 'none' }}
             onChange={(e) => setFilter(e.target.value)}
             value={filter}
           />
