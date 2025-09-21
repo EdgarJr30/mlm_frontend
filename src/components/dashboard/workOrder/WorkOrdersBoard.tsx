@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import EditTicketModal from '../ticket/EditTicketModal';
+import EditTicketModal from './EditWorkOrdersModal';
 import {
   updateTicket,
   getTicketCountsRPC,

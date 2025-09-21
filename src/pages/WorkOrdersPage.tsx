@@ -5,7 +5,7 @@ import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
 import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
 // import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFiltersBar';
 import Modal from '../components/ui/Modal';
-import EditTicketModal from '../components/dashboard/ticket/EditTicketModal';
+import EditTicketModal from '../components/dashboard/workOrder/EditWorkOrdersModal';
 import { updateTicket } from '../services/ticketService';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import type { FilterState } from '../types/filters';

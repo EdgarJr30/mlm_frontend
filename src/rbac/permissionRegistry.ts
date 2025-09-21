@@ -1,7 +1,6 @@
 export type PermissionAction =
-  | 'create' | 'read' | 'read_own' | 'update' | 'delete'
-  | 'work' | 'import' | 'export'
-  | 'approve' | 'assign' | 'disable'
+  | 'create' | 'read' | 'read_own' | 'update' | 'delete' | 'work' | 'import' | 'export'
+  | 'approve' | 'assign' | 'disable' | 'full_access' | 'cancel'
   | 'manage_roles' | 'manage_permissions';
 
 export type PermissionDef = {
@@ -39,13 +38,11 @@ export const PERMISSIONS: PermissionDef[] = [
   p(RESOURCES.home, 'read', 'Ver inicio'),
 
   // Tickets / WorkOrders
-  p(RESOURCES.work_orders, 'read', 'Ver OT'),
-  p(RESOURCES.work_orders, 'read_own', 'Ver mis OT'),
-  p(RESOURCES.work_orders, 'create', 'Crear OT'),
-  p(RESOURCES.work_orders, 'update', 'Editar OT'),
-  p(RESOURCES.work_orders, 'delete', 'Eliminar OT'),
-  p(RESOURCES.work_orders, 'work', 'Trabajar OT'),
-  p(RESOURCES.work_orders, 'approve', 'Aprobar / Rechazar OT'),
+  p(RESOURCES.work_orders, 'read',        'Ver OT'),
+  p(RESOURCES.work_orders, 'read_own',    'Ver mis OT'),
+  p(RESOURCES.work_orders, 'full_access', 'Acceso total OT (crear/modificar)'),
+  p(RESOURCES.work_orders, 'cancel',      'Cancelar OT'),
+  p(RESOURCES.work_orders, 'delete',      'Eliminar OT'),
 
   // WorkRequests (Solicitudes)
   p(RESOURCES.work_requests, 'read', 'Ver solicitudes'),

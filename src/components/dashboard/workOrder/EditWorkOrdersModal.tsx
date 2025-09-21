@@ -11,7 +11,10 @@ import { MAX_COMMENTS_LENGTH } from '../../../utils/validators';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import type { Assignee } from '../../../types/Assignee';
 
-interface EditTicketModalProps {
+// 👇 NUEVO: permisos
+import { useCan } from '../../../rbac/PermissionsContext';
+
+interface EditWorkOrdersModalProps {
   isOpen: boolean;
   onClose: () => void;
   ticket: Ticket;
@@ -20,19 +23,30 @@ interface EditTicketModalProps {
   setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function EditTicketModal({
+export default function EditWorkOrdersModal({
   onClose,
   ticket,
   onSave,
   // showFullImage,
   setShowFullImage,
-}: EditTicketModalProps) {
+}: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<Ticket>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
+
+  // 👇 NUEVO: flags de permisos
+  const canFullAccess = useCan('work_orders:full_access');
+  // Si necesitas mostrar/ocultar botones de negocio en este modal (no están en tu UI actual):
+  // const canCancel  = useCan('work_orders:cancel');
+  // const canDelete  = useCan('work_orders:delete');
+
+  // bloquea edición si no hay full_access
+  const isReadOnly = !canFullAccess;
+  const addDisabledCls = (base = '') =>
+    base + (isReadOnly ? ' opacity-50 cursor-not-allowed bg-gray-100' : '');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,13 +68,7 @@ export default function EditTicketModal({
       | React.ChangeEvent<HTMLTextAreaElement>
       | React.ChangeEvent<HTMLSelectElement>
   ) => {
-    // const { name, type, value } = e.target;
-    // let newValue: string | boolean = value;
-    // if (type === 'checkbox') {
-    //   newValue = (e.target as HTMLInputElement).checked;
-    // }
-    // setEdited({ ...edited, [name]: newValue });
-
+    if (isReadOnly) return; // 👈 doble blindaje en UI
     const { name, type, value } = e.target;
     if (type === 'checkbox') {
       setEdited({ ...edited, [name]: (e.target as HTMLInputElement).checked });
@@ -71,7 +79,6 @@ export default function EditTicketModal({
       return;
     }
     if (name === 'deadline_date') {
-      // El input date entrega 'YYYY-MM-DD' o '' si se borra
       setEdited({
         ...edited,
         deadline_date: value?.trim() ? value : undefined,
@@ -83,6 +90,7 @@ export default function EditTicketModal({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canFullAccess) return; // 👈 evita submit sin permiso
     onSave(edited);
     onClose();
   };
@@ -151,12 +159,15 @@ export default function EditTicketModal({
               onChange={handleChange}
               placeholder="Agrega un comentario..."
               rows={3}
-              className="mt-1 p-2 w-full border rounded min-h-[100px] max-h-[150px] resize-y"
+              disabled={isReadOnly}
+              className={addDisabledCls(
+                'mt-1 p-2 w-full border rounded min-h-[100px] max-h-[150px] resize-y'
+              )}
             />
           </div>
         </div>
 
-        {/* Columna 2: Solicitante, Email, Telêfono, Ubicación */}
+        {/* Columna 2: Solicitante, Email, Teléfono, Ubicación */}
         <div className="flex flex-col gap-4">
           {/* Solicitante */}
           <div>
@@ -191,7 +202,7 @@ export default function EditTicketModal({
             />
           </div>
 
-          {/* Ubicación */}
+          {/* Ubicación (ya estaba deshabilitado; lo dejamos así) */}
           <div>
             <label className="block text-sm font-medium">Ubicación</label>
             <select
@@ -221,8 +232,10 @@ export default function EditTicketModal({
               name="assignee_id"
               value={edited.assignee_id || ''}
               onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded cursor-pointer"
-              disabled={loadingAssignees}
+              className={addDisabledCls(
+                'mt-1 p-2 w-full border rounded cursor-pointer'
+              )}
+              disabled={loadingAssignees || isReadOnly}
             >
               {SECTIONS_ORDER.map((grupo) => (
                 <optgroup key={grupo} label={grupo}>
@@ -246,7 +259,10 @@ export default function EditTicketModal({
               name="priority"
               value={edited.priority}
               onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded cursor-pointer"
+              className={addDisabledCls(
+                'mt-1 p-2 w-full border rounded cursor-pointer'
+              )}
+              disabled={isReadOnly}
             >
               <option value="baja">🔻 Baja</option>
               <option value="media">🔸 Media</option>
@@ -261,7 +277,10 @@ export default function EditTicketModal({
               name="status"
               value={edited.status}
               onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded cursor-pointer"
+              className={addDisabledCls(
+                'mt-1 p-2 w-full border rounded cursor-pointer'
+              )}
+              disabled={isReadOnly}
             >
               {STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -282,7 +301,10 @@ export default function EditTicketModal({
               value={edited.deadline_date ?? ''}
               onChange={handleChange}
               min={new Date().toISOString().slice(0, 10)}
-              className="mt-1 p-2 w-full border rounded text-gray-800"
+              disabled={isReadOnly}
+              className={addDisabledCls(
+                'mt-1 p-2 w-full border rounded text-gray-800'
+              )}
             />
           </div>
 
@@ -314,7 +336,11 @@ export default function EditTicketModal({
                 name="is_urgent"
                 checked={edited.is_urgent || false}
                 onChange={handleChange}
-                className="h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer"
+                disabled={isReadOnly}
+                className={
+                  'h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer' +
+                  (isReadOnly ? ' opacity-50 cursor-not-allowed' : '')
+                }
               />
               <label className="text-sm font-medium text-red-700">
                 🚨 Urgente
@@ -339,6 +365,7 @@ export default function EditTicketModal({
                   onClick={() => setFullImageIdx(null)}
                   className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
                   aria-label="Cerrar"
+                  type="button"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -400,9 +427,16 @@ export default function EditTicketModal({
         >
           Cancelar
         </button>
+
+        {/* Guardar: deshabilitado si no tiene full_access */}
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
+          disabled={!canFullAccess}
+          title={!canFullAccess ? 'No tienes permiso para editar' : undefined}
+          className={
+            'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer' +
+            (!canFullAccess ? ' opacity-50 cursor-not-allowed' : '')
+          }
         >
           Guardar Cambios
         </button>
