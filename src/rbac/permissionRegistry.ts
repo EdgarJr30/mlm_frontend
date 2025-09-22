@@ -40,6 +40,7 @@ export const PERMISSIONS: PermissionDef[] = [
   // Tickets / WorkOrders
   p(RESOURCES.work_orders, 'read',        'Ver OT'),
   p(RESOURCES.work_orders, 'read_own',    'Ver mis OT'),
+  p(RESOURCES.work_orders, 'create',      'Crear OT'), 
   p(RESOURCES.work_orders, 'full_access', 'Acceso total OT (crear/modificar)'),
   p(RESOURCES.work_orders, 'cancel',      'Cancelar OT'),
   p(RESOURCES.work_orders, 'delete',      'Eliminar OT'),
