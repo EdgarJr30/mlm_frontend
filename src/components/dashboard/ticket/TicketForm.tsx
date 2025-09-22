@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Locations } from '../../../types/Ticket';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
@@ -39,8 +38,8 @@ import {
 } from '../../../utils/formatDate';
 import { useNavigate } from 'react-router-dom';
 import { showToastError } from '../../../notifications';
-// import { sendTicketEmail, async } from '../../services/emailService';
-// import type { TicketEmailData } from "../../services/emailService";
+
+// ==== Tipos ====
 interface TicketFormData {
   title: string;
   description: string;
@@ -50,32 +49,45 @@ interface TicketFormData {
   priority: 'baja' | 'media' | 'alta';
   incident_date: string;
   deadline_date?: string; // ISO date string
-  image: string; // base64
+  image: string; // base64 o JSON con paths
   location: string;
   email?: string;
   phone?: string;
   created_at: string; // ISO date string
 }
 
-const initialForm: TicketFormData = {
-  title: '',
-  description: '',
-  is_accepted: false,
-  is_urgent: false,
-  requester: '',
-  priority: 'baja', // Default priority
-  incident_date: getTodayISODate(), // Default to today
-  deadline_date: undefined, // Optional, can be set later
-  image: '',
-  location: '',
-  email: '',
-  phone: '',
-  created_at: getNowInTimezoneForStorage('America/Santo_Domingo'),
-  // createdAt is set to the current date by default
+type UserProfile = {
+  name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+};
+
+// ==== Helper para construir el formulario inicial con datos del perfil ====
+const makeInitialForm = (profile?: UserProfile | null): TicketFormData => {
+  const requester = `${profile?.name ?? ''} ${profile?.last_name ?? ''}`.trim();
+  return {
+    title: '',
+    description: '',
+    is_accepted: false,
+    is_urgent: false,
+    requester: requester || '',
+    priority: 'baja', // Default priority
+    incident_date: getTodayISODate(), // Default to today
+    deadline_date: undefined, // Optional
+    image: '',
+    location: profile?.location ?? '',
+    email: profile?.email ?? '',
+    phone: profile?.phone ?? '',
+    created_at: getNowInTimezoneForStorage('America/Santo_Domingo'),
+  };
 };
 
 export default function TicketForm() {
-  const [form, setForm] = useState(initialForm);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // Lazy init: arranca sin perfil y luego se rehidrata al cargarlo
+  const [form, setForm] = useState<TicketFormData>(() => makeInitialForm(null));
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
   const [step, setStep] = useState(1);
@@ -85,7 +97,6 @@ export default function TicketForm() {
   >({});
 
   const progress = (step / 4) * 100;
-
   const navigate = useNavigate();
 
   const handleChange = (
@@ -97,7 +108,7 @@ export default function TicketForm() {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (!files) return;
+    if (files.length === 0) return;
 
     // Limita el máximo de 3 imágenes por ticket
     if (files.length > 3) {
@@ -110,32 +121,29 @@ export default function TicketForm() {
       return;
     }
 
-    // Opciones de compresión (ajustar según necesidad)
+    // Opciones de compresión
     const options = {
-      maxSizeMB: 1, // Tamaño máximo final por archivo (en MB)
-      maxWidthOrHeight: 1000, // Resolución máxima (ajustar para menos calidad)
-      useWebWorker: true, // Hace la compresión en un hilo separado para que la interfaz no se trabe (Buena practica siempre en true)
-      fileType: 'image/webp', // Formato de salida
-      initialQuality: 0.8, // Calidad inicial (ajustar según necesidad)
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1000,
+      useWebWorker: true,
+      fileType: 'image/webp',
+      initialQuality: 0.8,
     };
 
-    // Proceso de compresión y validación
     try {
       const compressedFiles: File[] = [];
       const previews: string[] = [];
 
       for (const file of files) {
-        // Comprime el archivo
         const compressed = await imageCompression(file, options);
 
         // Renombra a .webp
         const webpFile = new File(
           [compressed],
-          file.name.replace(/\.\w+$/, '.webp'), // Cambia la extensión al nombre original
+          file.name.replace(/\.\w+$/, '.webp'),
           { type: 'image/webp' }
         );
 
-        // Si aún así supera 1MB (muy raro, pero posible con imágenes complejas), muéstralo
         if (webpFile.size > 1 * 1024 * 1024) {
           setErrors((prev) => ({
             ...prev,
@@ -149,7 +157,7 @@ export default function TicketForm() {
 
         compressedFiles.push(webpFile);
 
-        // Genera la previsualización
+        // Previsualización
         const reader = new FileReader();
         const previewPromise = new Promise<string>((resolve) => {
           reader.onload = (event) => resolve(event.target?.result as string);
@@ -158,7 +166,6 @@ export default function TicketForm() {
         previews.push(await previewPromise);
       }
 
-      // Limpiar errores y actualizar estados
       setErrors((prev) => ({ ...prev, image: undefined }));
       setSelectedFiles(compressedFiles);
       setImagePreview(previews);
@@ -234,7 +241,7 @@ export default function TicketForm() {
       const ticketId = created.id;
       const ticketTitle = created.title;
 
-      // 2. Sube cada imagen al bucket
+      // 2. Subir imágenes al bucket
       const imagePaths: string[] = [];
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
@@ -242,25 +249,8 @@ export default function TicketForm() {
         imagePaths.push(path);
       }
 
-      // 3. Actualiza el ticket con los paths de las imágenes (como array o string jsonificado)
-      // Si tu base de datos tiene el campo image como string, guarda como JSON.stringify(imagePaths)
-      // Si puedes, mejor usa array de texto
+      // 3. Actualizar ticket con los paths
       await updateTicket(ticketId, { image: JSON.stringify(imagePaths) });
-
-      // TODO: Manejar el envio de creación de ticket cuando termine el backend
-      // try {
-      //   const emailData: TicketEmailData = {
-      //     title: form.title,
-      //     description: form.description,
-      //     requester: form.requester,
-      //     email: form.email ?? "",
-      //     location: form.location,
-      //     incident_date: form.incident_date,
-      //   };
-      //   await sendTicketEmail(emailData);
-      // } catch (emailError) {
-      //   console.error("Error enviando correo:", emailError);
-      // }
 
       const alertResponse = await showSuccessAlert(
         `Ticket [##${ticketId}##] creado.`,
@@ -268,13 +258,13 @@ export default function TicketForm() {
       );
 
       if (alertResponse.isConfirmed) {
-        // Usuario eligió "Crear otro ticket"
-        setForm(initialForm);
+        // Usuario eligió "Crear otro ticket": reset usando el perfil cacheado
+        setForm(makeInitialForm(profile));
         setSelectedFiles([]);
         setImagePreview([]);
+        setErrors({});
         setStep(1);
       } else if (alertResponse.isDismissed) {
-        // Usuario eligió "Cerrar" (o cerró el modal)
         navigate('/mi-perfil');
       }
     } catch (error: unknown) {
@@ -289,29 +279,17 @@ export default function TicketForm() {
     }
   };
 
+  // Carga del perfil + rehidratación del form al montar
   useEffect(() => {
-    let isMounted = true;
-
+    let active = true;
     (async () => {
-      const profile = await getCurrentUserProfile();
-      if (!isMounted || !profile) return;
-
-      // Concatenación Name + LastName => requester
-      const requester = `${profile.name ?? ''} ${
-        profile.last_name ?? ''
-      }`.trim();
-
-      setForm((prev) => ({
-        ...prev,
-        requester,
-        email: profile.email ?? '',
-        phone: profile.phone ?? '',
-        location: profile.location ?? '',
-      }));
+      const p = await getCurrentUserProfile();
+      if (!active) return;
+      setProfile(p ?? null);
+      setForm(makeInitialForm(p ?? null));
     })();
-
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
@@ -325,9 +303,7 @@ export default function TicketForm() {
               <h1 className="text-2xl font-extrabold text-gray-900">
                 Crear Ticket de Mantenimiento
               </h1>
-              {/* <p className="text-base text-gray-500 mt-1">Completa la información para crear un nuevo ticket</p> */}
             </div>
-            {/* <AppVersion className="text-center mt-auto" /> */}
             <span className="w-[100px] min-w-[100px] max-w-[100px] text-center py-1 px-2 rounded-full border text-sm font-medium bg-white shadow whitespace-nowrap">
               Paso {step} de 4
             </span>
@@ -751,7 +727,6 @@ export default function TicketForm() {
                       />
                     ))}
                   </div>
-                  // <img src={imagePreview} alt="Preview" className="mt-2 max-h-32 object-contain rounded border" />
                 )}
               </div>
             </div>
