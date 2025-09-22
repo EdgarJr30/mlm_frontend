@@ -443,6 +443,148 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
       {/* Lista / Tabla */}
       <div className="mt-3 flex-1 min-h-0">
+        {/* ===== Vista Móvil: tarjetas ===== */}
+        <div className="md:hidden space-y-3 overflow-y-auto">
+          {isLoading ? (
+            <div className="py-8 text-center text-gray-400">Cargando…</div>
+          ) : rows.length === 0 ? (
+            <div className="py-8 text-center text-gray-400">Sin usuarios.</div>
+          ) : (
+            rows.map((u) => {
+              const selected = selectedRows.includes(u);
+              const roleName =
+                roles.find((r) => r.id === u.rol_id)?.name ?? '—';
+              return (
+                <div
+                  key={u.id}
+                  className={cx(
+                    'rounded-xl border bg-white p-4 shadow-sm cursor-pointer',
+                    selected && 'ring-1 ring-indigo-300'
+                  )}
+                  onClick={() => setDetail(u)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* checkbox */}
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                      checked={selected}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        if (!canCancel) return;
+                        if (e.target.checked)
+                          setSelectedRows((prev) => [...prev, u]);
+                        else
+                          setSelectedRows((prev) =>
+                            prev.filter((x) => x !== u)
+                          );
+                      }}
+                      disabled={!canCancel}
+                      title={
+                        !canCancel
+                          ? 'No tienes permiso para seleccionar'
+                          : undefined
+                      }
+                    />
+
+                    <div className="flex-1 min-w-0">
+                      {/* Nombre + Apellido */}
+                      <div className="text-base font-semibold text-gray-900 line-clamp-1">
+                        {u.name || u.last_name
+                          ? `${u.name ?? ''} ${u.last_name ?? ''}`.trim()
+                          : '—'}
+                      </div>
+
+                      {/* Email */}
+                      <div className="mt-0.5 text-sm text-gray-600 line-clamp-1">
+                        {u.email}
+                      </div>
+
+                      {/* Rol + Estado */}
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                        <span className="text-slate-600">
+                          <span className="text-slate-400">Rol:</span>{' '}
+                          {roleName}
+                        </span>
+                        <ActiveChip active={u.is_active} />
+                      </div>
+
+                      {/* Ubicación y creado */}
+                      <div className="mt-3 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                        <span>
+                          <span className="text-gray-400">Ubicación:</span>{' '}
+                          {u.location || '—'}
+                        </span>
+                        <span>
+                          <span className="text-gray-400">Creado:</span>{' '}
+                          {new Date(u.created_at).toLocaleString('es-DO')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="mt-3 flex items-center justify-end gap-4">
+                    <button
+                      className="text-indigo-600 hover:text-indigo-500 text-sm cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetail(u);
+                      }}
+                    >
+                      Ver
+                    </button>
+                    <button
+                      className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!canFull}
+                      title={
+                        !canFull ? 'No tienes permiso para editar' : undefined
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(u);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!canCancel}
+                      title={
+                        !canCancel
+                          ? 'No tienes permiso para activar/desactivar'
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleActive(u);
+                      }}
+                    >
+                      {u.is_active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button
+                      className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!canDelete}
+                      title={
+                        !canDelete
+                          ? 'No tienes permiso para eliminar'
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(u);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* ===== Vista md+: tabla sticky ===== */}
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
             <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
@@ -545,6 +687,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                                     prev.filter((x) => x !== u)
                                   );
                               }}
+                              disabled={!canCancel}
                             />
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">
