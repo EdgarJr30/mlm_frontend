@@ -9,6 +9,7 @@ export type UserProfile = {
   email: string | null;
   phone: string | null;
   location: string;
+  is_active?: boolean;
 };
 
 export async function getCurrentUserRole(): Promise<RoleName | null> {
@@ -55,7 +56,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from("users")
-    .select("id, name, last_name, email, phone, location")
+    .select("id, name, last_name, email, phone, location, is_active")
     .eq("id", userId)
     .maybeSingle();
 

@@ -1,333 +1,733 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
-import { supabaseNoPersist } from '../../../lib/supabaseNoPersist';
-import { LOCATIONS } from '../../../constants/locations';
+// components/admin/users/UsersTable.tsx
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useUser } from '../../../context/UserContext';
+import { LOCATIONS } from '../../../constants/locations';
+import { useCan } from '../../../rbac/PermissionsContext';
+import { supabaseNoPersist } from '../../../lib/supabaseNoPersist';
+import {
+  getUsersPaginated,
+  updateUser,
+  setUserActive,
+  bulkSetUserActive,
+  deleteUser,
+  type DbUser,
+} from '../../../services/userAdminService';
+import { showToastError, showToastSuccess } from '../../../notifications';
 
 interface Role {
   id: number;
   name: string;
 }
-interface DbUser {
-  id: string;
-  email: string;
-  name: string | null;
-  last_name: string | null;
-  location: string | null;
-  rol_id: number | null;
-  created_at: string;
-}
+
 interface Props {
   searchTerm: string;
-  selectedLocation: string;
+  selectedLocation: string; // ya lo traes de tu Navbar global
 }
 
+const PAGE_SIZE = 8;
+
+function cx(...classes: Array<string | false | undefined>) {
+  return classes.filter(Boolean).join(' ');
+}
+
+function ActiveChip({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cx(
+        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
+        active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+      )}
+    >
+      {active ? 'Activo' : 'Inactivo'}
+    </span>
+  );
+}
+
+type FormState = {
+  id?: string;
+  name: string;
+  last_name: string;
+  email: string;
+  location: string;
+  rol_id: number | '';
+  is_active: boolean;
+};
+
+const EMPTY_FORM: FormState = {
+  name: '',
+  last_name: '',
+  email: '',
+  location: '',
+  rol_id: '',
+  is_active: true,
+};
+
 export default function UsersTable({ searchTerm, selectedLocation }: Props) {
-  // listado real de usuarios (public.users)
-  const [users, setUsers] = useState<DbUser[]>([]);
+  const checkbox = useRef<HTMLInputElement>(null);
+
+  const [includeInactive, setIncludeInactive] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [rows, setRows] = useState<DbUser[]>([]);
+  const [selectedRows, setSelectedRows] = useState<DbUser[]>([]);
+  const [checked, setChecked] = useState(false);
+  const [indeterminate, setIndeterminate] = useState(false);
+
+  const [page, setPage] = useState(0);
+  const [count, setCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [detail, setDetail] = useState<DbUser | null>(null);
+
+  // Crear usuario (modal)
+  const [openCreate, setOpenCreate] = useState(false);
+  const [nameC, setNameC] = useState('');
+  const [lastNameC, setLastNameC] = useState('');
+  const [emailC, setEmailC] = useState('');
+  const [locationC, setLocationC] = useState('');
+  const [passwordC, setPasswordC] = useState('');
+  const [rolIdC, setRolIdC] = useState<number | ''>('');
+  const [submittingCreate, setSubmittingCreate] = useState(false);
+  const [msgCreate, setMsgCreate] = useState<{
+    type: 'ok' | 'err';
+    text: string;
+  } | null>(null);
+
+  // Editar usuario (modal)
+  const [openForm, setOpenForm] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const isEditing = useMemo(() => typeof form.id === 'string', [form.id]);
+
+  const isSearching = searchTerm.trim().length >= 2;
 
   const { refresh: refreshAuth } = useAuth();
   const { refresh: refreshUser } = useUser();
 
-  // modal crear
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [location, setLocation] = useState('');
-  const [password, setPassword] = useState('');
-  const [rolId, setRolId] = useState<number | ''>('');
-  const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(
-    null
-  );
+  // Permisos estilo Assignees
+  const canRead = useCan('users:read');
+  const canFull = useCan('users:full_access'); // crear/modificar ficha
+  const canCancel = useCan('users:cancel'); // activar/desactivar
+  const canDelete = useCan('users:delete'); // eliminar
+  const canManageRoles = useCan('rbac:manage_roles'); // ⬅️ NUEVO
 
-  // (Tu búsqueda por texto + ubicación no afecta este listado de usuarios,
-  // así que lo dejamos intacto por si luego filtras aquí también)
-  const isSearching = searchTerm.length >= 2;
+  useLayoutEffect(() => {
+    const isIndet =
+      selectedRows.length > 0 && selectedRows.length < rows.length;
+    setChecked(selectedRows.length === rows.length && rows.length > 0);
+    setIndeterminate(isIndet);
+    if (checkbox.current) checkbox.current.indeterminate = isIndet;
+  }, [selectedRows, rows.length]);
 
-  // Cargar usuarios y roles
-  const loadData = async () => {
-    setLoading(true);
+  function toggleAll() {
+    setSelectedRows(checked || indeterminate ? [] : rows);
+    setChecked(!checked && !indeterminate);
+    setIndeterminate(false);
+  }
+
+  async function reload(resetPage?: boolean) {
+    if (!canRead && !canFull) return;
+    setIsLoading(true);
     try {
-      const [
-        { data: usersData, error: usersErr },
-        { data: rolesData, error: rolesErr },
-      ] = await Promise.all([
-        supabase
-          .from('users')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        supabase.from('roles').select('id,name').order('name'),
-      ]);
-
-      if (usersErr) throw usersErr;
-      if (rolesErr) throw rolesErr;
-
-      setUsers(usersData ?? []);
-      setRoles((rolesData ?? []) as Role[]);
-    } catch (e: unknown) {
-      const err = e as { message?: string };
-      setMsg({ type: 'err', text: err.message ?? 'Error cargando datos' });
+      const p = resetPage ? 0 : page;
+      const { data, count } = await getUsersPaginated({
+        page: p,
+        pageSize: PAGE_SIZE,
+        search: isSearching ? searchTerm : undefined,
+        location: selectedLocation,
+        includeInactive,
+      });
+      setRows(data);
+      setCount(count);
+      if (resetPage) setPage(0);
+    } catch (e) {
+      showToastError(
+        e instanceof Error ? e.message : 'Error cargando usuarios'
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }
 
+  // Cargar roles y tabla
   useEffect(() => {
-    loadData();
+    let active = true;
+    (async () => {
+      const { data, error } = await (
+        await import('../../../lib/supabaseClient')
+      ).supabase
+        .from('roles')
+        .select('id,name')
+        .order('name');
+      if (!active) return;
+      if (error) {
+        showToastError(error.message);
+      } else {
+        setRoles((data ?? []) as Role[]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Mantengo tu efecto, por si luego quieres usar search/filters aquí
   useEffect(() => {
-    if (isSearching) {
-      // Aquí podrías implementar filtro local o un query al backend si necesitas
-      // Por ahora solo dejo el log original
-      console.log(
-        '🟢 Ejecutando búsqueda desde UsersTable:',
-        searchTerm,
-        selectedLocation
-      );
+    void reload(true); /* filtros */
+  }, [includeInactive, selectedLocation, isSearching, searchTerm]);
+  useEffect(() => {
+    if (isSearching) return;
+    void reload(false); /* paginación */
+  }, [page]);
+
+  // --- Acciones ----
+  function openEdit(u: DbUser) {
+    if (!canFull) {
+      showToastError('No tienes permiso para editar usuarios.');
+      return;
     }
-  }, [isSearching, searchTerm, selectedLocation]);
-
-  const resetForm = () => {
-    setName('');
-    setLastName('');
-    setEmail('');
-    setLocation('');
-    setPassword('');
-    setRolId('');
-    setMsg(null);
-  };
-
-  const closeModal = () => {
-    setOpen(false);
-    resetForm();
-  };
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMsg(null);
-    console.log('➕ [UsersTable] Crear usuario con:', {
-      name,
-      lastName,
-      email,
-      location,
-      rolId,
+    setForm({
+      id: u.id,
+      name: u.name ?? '',
+      last_name: u.last_name ?? '',
+      email: u.email ?? '',
+      location: u.location ?? '',
+      rol_id: u.rol_id ?? '',
+      is_active: u.is_active,
     });
+    setOpenForm(true);
+  }
 
-    if (!name || !lastName || !email || !password || !rolId || !location) {
-      setMsg({ type: 'err', text: 'Completa todos los campos.' });
+  async function submitForm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canFull) {
+      showToastError('No tienes permiso para editar usuarios.');
+      return;
+    }
+    if (
+      !form.id ||
+      !form.email.trim() ||
+      !form.name.trim() ||
+      !form.last_name.trim() ||
+      !form.location
+    ) {
+      showToastError('Completa nombre, apellido, email y ubicación.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const patch: Partial<DbUser> = {
+        name: form.name,
+        last_name: form.last_name,
+        email: form.email,
+        location: form.location,
+      };
+      if (canManageRoles) {
+        patch.rol_id = typeof form.rol_id === 'number' ? form.rol_id : null; // ⬅️ solo si puede
+      }
+      await updateUser(form.id, patch as DbUser);
+      showToastSuccess('Usuario actualizado.');
+      setOpenForm(false);
+      await reload();
+    } catch (e) {
+      showToastError(
+        e instanceof Error ? e.message : 'Error guardando usuario'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleToggleActive(u: DbUser) {
+    if (!canCancel) {
+      showToastError('No tienes permiso para activar/desactivar usuarios.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await setUserActive(u.id, !u.is_active);
+      showToastSuccess(
+        !u.is_active ? 'Usuario activado.' : 'Usuario desactivado.'
+      );
+      await reload();
+    } catch (e) {
+      showToastError(e instanceof Error ? e.message : 'Error cambiando estado');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleBulkDeactivate() {
+    if (!canCancel) {
+      showToastError('No tienes permiso para activar/desactivar usuarios.');
+      return;
+    }
+    if (!selectedRows.length) return;
+    setIsLoading(true);
+    try {
+      await bulkSetUserActive(
+        selectedRows.map((r) => r.id),
+        false
+      );
+      showToastSuccess(`Se desactivaron ${selectedRows.length} usuarios.`);
+      setSelectedRows([]);
+      await reload();
+    } catch (e) {
+      showToastError(
+        e instanceof Error ? e.message : 'Error en desactivación masiva'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleDelete(u: DbUser) {
+    if (!canDelete) {
+      showToastError('No tienes permiso para eliminar usuarios.');
+      return;
+    }
+    const ok = confirm(
+      `¿Eliminar al usuario "${u.email}"? Esta acción no se puede deshacer.`
+    );
+    if (!ok) return;
+    setIsLoading(true);
+    try {
+      await deleteUser(u.id);
+      showToastSuccess('Usuario eliminado.');
+      await reload();
+    } catch (e) {
+      showToastError(
+        e instanceof Error ? e.message : 'Error eliminando usuario'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Crear (con tu flujo signUp + RPC)
+  const resetCreate = () => {
+    setNameC('');
+    setLastNameC('');
+    setEmailC('');
+    setLocationC('');
+    setPasswordC('');
+    setRolIdC('');
+    setMsgCreate(null);
+  };
+  const closeCreate = () => {
+    setOpenCreate(false);
+    resetCreate();
+  };
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    setMsgCreate(null);
+
+    if (!nameC || !lastNameC || !emailC || !passwordC || !locationC) {
+      setMsgCreate({ type: 'err', text: 'Completa todos los campos.' });
+      return;
+    }
+    if (canManageRoles && !rolIdC) {
+      setMsgCreate({ type: 'err', text: 'Selecciona un rol.' });
       return;
     }
 
-    setSubmitting(true);
-
-    // GUARD: avisa a los Contexts que ignoren onAuthStateChange
+    setSubmittingCreate(true);
     sessionStorage.setItem('admin:create-user:guard', '1');
-
     try {
-      // 0) Guardar sesión actual (admin)
-      const { data: adminSessionRes, error: adminSessionErr } =
-        await supabase.auth.getSession();
-      if (adminSessionErr) throw adminSessionErr;
-      const prevSession = adminSessionRes.session;
-      console.log(
-        '🛡️ [UsersTable] Admin session previa:',
-        !!prevSession,
-        prevSession?.user?.id
-      );
-
-      // 1) Crear en Auth (esto cambia la sesión si no hay confirmación por email)
       const { data: signUpRes, error: signUpErr } =
         await supabaseNoPersist.auth.signUp({
-          email,
-          password,
-          options: { data: { name } },
+          email: emailC,
+          password: passwordC,
+          options: { data: { name: nameC } },
         });
-      console.log('📨 [UsersTable] signUp ->', { signUpRes, signUpErr });
       if (signUpErr) throw signUpErr;
 
       const newId = signUpRes.user?.id;
-      console.log('🆔 [UsersTable] Nuevo auth.user.id:', newId);
       if (!newId)
         throw new Error('No se obtuvo el ID del usuario creado en Auth.');
 
-      // 2) Restaurar sesión del admin ANTES del RPC
-      // if (prevSession) {
-      //   console.log(
-      //     '♻️ [UsersTable] Restaurando sesión admin para correr RPC como admin...'
-      //   );
-      //   const { data: setRes, error: setErr } = await supabase.auth.setSession({
-      //     access_token: prevSession.access_token,
-      //     refresh_token: prevSession.refresh_token,
-      //   });
-      //   console.log('🔁 [UsersTable] setSession resultado:', {
-      //     setRes,
-      //     setErr,
-      //   });
-      //   if (setErr) throw setErr;
-      // } else {
-      //   console.warn(
-      //     '⚠️ [UsersTable] No había sesión previa del admin; el RPC fallará con check de admin.'
-      //   );
-      // }
-
-      // 3) Ejecutar RPC ya como admin
-      const { error: rpcErr } = await supabase.rpc('create_user_in_public', {
+      const { error: rpcErr } = await (
+        await import('../../../lib/supabaseClient')
+      ).supabase.rpc('create_user_in_public', {
         p_id: newId,
-        p_email: email,
-        p_name: name,
-        p_last_name: lastName,
-        p_location: location,
-        p_rol_id: Number(rolId),
+        p_email: emailC,
+        p_name: nameC,
+        p_last_name: lastNameC,
+        p_location: locationC,
+        p_rol_id: canManageRoles ? Number(rolIdC) : null,
       });
-      console.log('🧩 [UsersTable] RPC create_user_in_public error?:', rpcErr);
       if (rpcErr) throw rpcErr;
 
-      // (Opcional) rehidrata contexts de forma silenciosa
       await Promise.all([
         refreshAuth({ silent: true }),
         refreshUser({ silent: true }),
       ]);
-
-      setMsg({ type: 'ok', text: 'Usuario creado correctamente.' });
-      await loadData();
-      setTimeout(closeModal, 700);
-    } catch (err: unknown) {
-      console.error('❌ [UsersTable] handleCreateUser error:', err);
-      const errorMsg =
-        typeof err === 'object' &&
-        err !== null &&
-        'message' in err &&
-        typeof (err as { message?: unknown }).message === 'string'
-          ? (err as { message: string }).message
-          : 'Error creando usuario';
-      setMsg({ type: 'err', text: errorMsg });
+      setMsgCreate({ type: 'ok', text: 'Usuario creado correctamente.' });
+      await reload(true);
+      setTimeout(closeCreate, 700);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error creando usuario';
+      setMsgCreate({ type: 'err', text: msg });
     } finally {
-      setSubmitting(false);
+      setSubmittingCreate(false);
     }
-  };
+  }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-base font-semibold text-gray-900">Users</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            A list of all the users in your account including their name, email
-            and role.
-          </p>
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Toolbar superior */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Filtro ubicación (si lo usas desde Navbar, aquí solo espejo) */}
+        <div className="text-sm text-gray-700">
+          <span className="mr-2">Ubicación:</span>
+          <strong>{selectedLocation || 'TODAS'}</strong>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+
+        <div className="ml-auto flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+              checked={includeInactive}
+              onChange={(e) => setIncludeInactive(e.target.checked)}
+            />
+            Mostrar inactivos
+          </label>
+
           <button
             type="button"
-            onClick={() => setOpen(true)}
-            className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            onClick={() => setOpenCreate(true)}
+            disabled={!canFull || !canManageRoles} // ⬅️ CAMBIO
+            title={
+              !canFull
+                ? 'No tienes permiso para crear/editar usuarios'
+                : !canManageRoles
+                ? 'No tienes permiso para asignar rol (rbac:manage_roles)'
+                : undefined
+            }
+            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
-            Add user
+            Nuevo usuario
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBulkDeactivate}
+            disabled={selectedRows.length === 0 || isLoading || !canCancel}
+            title={
+              !canCancel
+                ? 'No tienes permiso para activar/desactivar'
+                : undefined
+            }
+            className="inline-flex items-center rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+          >
+            Desactivar selección
           </button>
         </div>
       </div>
 
-      {/* Tabla usuarios */}
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            {loading ? (
-              <div className="text-sm text-gray-500 p-4">
-                Cargando usuarios…
-              </div>
-            ) : users.length === 0 ? (
-              <div className="text-sm text-gray-500 p-4">No hay usuarios.</div>
-            ) : (
-              <table className="relative min-w-full divide-y divide-gray-300">
-                <thead>
+      {/* Meta de paginación */}
+      <div className="mt-2 text-sm text-gray-700">
+        {isSearching ? (
+          <span>
+            Resultados filtrados por “{searchTerm}” — {count} encontrado(s)
+          </span>
+        ) : (
+          <span>
+            Página {page + 1} de {Math.max(1, Math.ceil(count / PAGE_SIZE))} —{' '}
+            {count} total
+          </span>
+        )}
+      </div>
+
+      {/* Lista / Tabla */}
+      <div className="mt-3 flex-1 min-h-0">
+        <div className="hidden md:block h-full min-h-0 overflow-auto">
+          <div className="inline-block min-w-full align-middle">
+            <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-0">
-                      Name
+                    <th className="px-6 w-12">
+                      <input
+                        ref={checkbox}
+                        type="checkbox"
+                        disabled={!canCancel}
+                        title={
+                          !canCancel
+                            ? 'No tienes permiso para seleccionar'
+                            : undefined
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        checked={checked}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleAll();
+                        }}
+                      />
                     </th>
-                    <th className="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-0">
-                      Last Name
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Nombre
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Apellido
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Email
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Location
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Ubicación
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Role
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Rol
                     </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Created
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Estado
                     </th>
-                    <th className="py-3.5 pr-4 pl-3 sm:pr-0">
-                      <span className="sr-only">Actions</span>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Creado
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Acciones
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {users.map((u) => {
-                    const roleName =
-                      roles.find((r) => r.id === u.rol_id)?.name ?? '—';
-                    return (
-                      <tr key={u.id}>
-                        <td className="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-0">
-                          {u.name ?? '—'}
-                        </td>
-                        <td className="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-0">
-                          {u.last_name ?? '—'}
-                        </td>
-                        <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">
-                          {u.email}
-                        </td>
-                        <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">
-                          {u.location ?? '—'}
-                        </td>
-                        <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">
-                          {roleName}
-                        </td>
-                        <td className="px-3 py-4 text-sm whitespace-nowrap text-gray-500">
-                          {new Date(u.created_at).toLocaleString('es-DO')}
-                        </td>
-                        <td className="py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-0">
-                          {/* Aquí luego agregas Edit / Delete si quieres */}
-                          <span className="text-gray-400">—</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="py-8 text-center text-gray-400"
+                      >
+                        Cargando…
+                      </td>
+                    </tr>
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="py-8 text-center text-gray-400"
+                      >
+                        Sin usuarios.
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((u) => {
+                      const selected = selectedRows.includes(u);
+                      const roleName =
+                        roles.find((r) => r.id === u.rol_id)?.name ?? '—';
+                      return (
+                        <tr
+                          key={u.id}
+                          className={cx(
+                            'hover:bg-gray-50 transition cursor-pointer',
+                            selected && 'bg-indigo-50'
+                          )}
+                          onClick={() => setDetail(u)}
+                        >
+                          <td
+                            className="relative px-6 w-12"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {selected && (
+                              <div className="absolute inset-y-0 left-0 w-0.5 bg-indigo-600" />
+                            )}
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                              checked={selected}
+                              onChange={(e) => {
+                                if (e.target.checked)
+                                  setSelectedRows((prev) => [...prev, u]);
+                                else
+                                  setSelectedRows((prev) =>
+                                    prev.filter((x) => x !== u)
+                                  );
+                              }}
+                            />
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">
+                            {u.name ?? '—'}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">
+                            {u.last_name ?? '—'}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {u.email}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {u.location ?? '—'}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {roleName}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <ActiveChip active={u.is_active} />
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
+                            {new Date(u.created_at).toLocaleString('es-DO')}
+                          </td>
+                          <td
+                            className="px-4 py-4 whitespace-nowrap"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center gap-3">
+                              <button
+                                className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={!canFull}
+                                title={
+                                  !canFull
+                                    ? 'No tienes permiso para editar'
+                                    : undefined
+                                }
+                                onClick={() => openEdit(u)}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={!canCancel}
+                                title={
+                                  !canCancel
+                                    ? 'No tienes permiso para activar/desactivar'
+                                    : undefined
+                                }
+                                onClick={() => handleToggleActive(u)}
+                              >
+                                {u.is_active ? 'Desactivar' : 'Activar'}
+                              </button>
+                              <button
+                                className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                disabled={!canDelete}
+                                title={
+                                  !canDelete
+                                    ? 'No tienes permiso para eliminar'
+                                    : undefined
+                                }
+                                onClick={() => handleDelete(u)}
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
-            )}
-            {msg && (
-              <p
-                className={`mt-3 text-sm ${
-                  msg.type === 'ok' ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {msg.text}
-              </p>
-            )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modal crear usuario */}
-      {open && (
+      {/* Paginación */}
+      {!isSearching && (
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+          >
+            Anterior
+          </button>
+          <button
+            onClick={() =>
+              setPage((p) => (p + 1 < Math.ceil(count / PAGE_SIZE) ? p + 1 : p))
+            }
+            disabled={page + 1 >= Math.ceil(count / PAGE_SIZE)}
+            className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+
+      {/* Modal Detalle simple */}
+      {detail && (
+        <div className="fixed inset-0 z-50" onClick={() => setDetail(null)}>
+          <div className="fixed inset-0 bg-black/30" />
+          <div
+            className="fixed inset-0 flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Detalle del usuario</h2>
+                <button
+                  onClick={() => setDetail(null)}
+                  className="text-gray-500"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-500">Nombre</div>
+                  <div className="text-gray-900 font-medium">
+                    {detail.name ?? '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Apellido</div>
+                  <div className="text-gray-900">{detail.last_name ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Email</div>
+                  <div className="text-gray-900">{detail.email}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Ubicación</div>
+                  <div className="text-gray-900">{detail.location ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Estado</div>
+                  <div className="text-gray-900">
+                    <ActiveChip active={detail.is_active} />
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Creado</div>
+                  <div className="text-gray-900">
+                    {new Date(detail.created_at).toLocaleString('es-DO')}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  className="rounded-md border px-3 py-2 text-sm"
+                  onClick={() => setDetail(null)}
+                >
+                  Cerrar
+                </button>
+                <button
+                  className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={!canFull}
+                  title={!canFull ? 'No tienes permiso para editar' : undefined}
+                  onClick={() => {
+                    if (!canFull) return;
+                    openEdit(detail);
+                    setDetail(null);
+                  }}
+                >
+                  Editar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Crear usuario */}
+      {openCreate && (
         <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/30" onClick={closeModal} />
+          <div className="fixed inset-0 bg-black/30" onClick={closeCreate} />
           <div className="fixed inset-0 flex items-center justify-center p-4">
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Crear usuario</h2>
-                <button onClick={closeModal} className="text-gray-500">
+                <button onClick={closeCreate} className="text-gray-500">
                   ✕
                 </button>
               </div>
@@ -336,33 +736,28 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
               </p>
 
               <form onSubmit={handleCreateUser} className="mt-4 space-y-4">
-                {/* Nombre */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Nombre
                   </label>
                   <input
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={nameC}
+                    onChange={(e) => setNameC(e.target.value)}
                     required
                   />
                 </div>
-
-                {/* Apellido */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Apellido
                   </label>
                   <input
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    value={lastNameC}
+                    onChange={(e) => setLastNameC(e.target.value)}
                     required
                   />
                 </div>
-
-                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Email
@@ -370,21 +765,19 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   <input
                     type="email"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={emailC}
+                    onChange={(e) => setEmailC(e.target.value)}
                     required
                   />
                 </div>
-
-                {/* Ubicación */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Ubicación
                   </label>
                   <select
                     className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    value={locationC}
+                    onChange={(e) => setLocationC(e.target.value)}
                     required
                   >
                     <option value="">Selecciona una ubicación…</option>
@@ -395,32 +788,34 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     ))}
                   </select>
                 </div>
-
-                {/* Contraseña */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Password
                   </label>
                   <input
                     type="password"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
                     minLength={8}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={passwordC}
+                    onChange={(e) => setPasswordC(e.target.value)}
+                    required
                   />
                 </div>
-
-                {/* Rol */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Rol
                   </label>
                   <select
                     className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={rolId}
-                    onChange={(e) => setRolId(Number(e.target.value))}
-                    required
+                    value={rolIdC}
+                    onChange={(e) => setRolIdC(Number(e.target.value))}
+                    required={canManageRoles}
+                    disabled={!canManageRoles}
+                    title={
+                      !canManageRoles
+                        ? 'No tienes permiso para asignar rol'
+                        : undefined
+                    }
                   >
                     <option value="">Selecciona un rol…</option>
                     {roles.map((r) => (
@@ -431,21 +826,164 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   </select>
                 </div>
 
-                {msg && (
+                {msgCreate && (
                   <p
                     className={`text-sm ${
-                      msg.type === 'ok' ? 'text-green-600' : 'text-red-600'
+                      msgCreate.type === 'ok'
+                        ? 'text-green-600'
+                        : 'text-red-600'
                     }`}
                   >
-                    {msg.text}
+                    {msgCreate.text}
                   </p>
                 )}
 
-                {/* Botones */}
                 <div className="mt-6 flex items-center justify-end gap-3">
                   <button
                     type="button"
-                    onClick={closeModal}
+                    onClick={closeCreate}
+                    className="rounded-md border px-3 py-2 text-sm"
+                    disabled={submittingCreate}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+                    disabled={submittingCreate}
+                  >
+                    {submittingCreate ? 'Creando…' : 'Crear usuario'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar usuario */}
+      {openForm && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="fixed inset-0 bg-black/30"
+            onClick={() => setOpenForm(false)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">
+                  {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
+                </h2>
+                <button
+                  onClick={() => setOpenForm(false)}
+                  className="text-gray-500"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={submitForm} className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Nombre
+                  </label>
+                  <input
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Apellido
+                  </label>
+                  <input
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={form.last_name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, last_name: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, email: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Ubicación
+                  </label>
+                  <select
+                    className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={form.location}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, location: e.target.value }))
+                    }
+                    required
+                  >
+                    <option value="">Selecciona una ubicación…</option>
+                    {LOCATIONS.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Rol
+                  </label>
+                  <select
+                    className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    value={form.rol_id}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, rol_id: Number(e.target.value) }))
+                    }
+                    disabled={!canManageRoles}
+                    title={
+                      !canManageRoles
+                        ? 'No tienes permiso para cambiar el rol'
+                        : undefined
+                    }
+                  >
+                    <option value="">Sin rol…</option>
+                    {roles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Estado (solo visible para info; cambiar se hace con el botón dedicado por permiso users:cancel) */}
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 select-none">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-600 cursor-not-allowed"
+                    checked={form.is_active}
+                    readOnly
+                  />
+                  Activo (usa el botón Activar/Desactivar)
+                </label>
+
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setOpenForm(false)}
                     className="rounded-md border px-3 py-2 text-sm"
                     disabled={submitting}
                   >
@@ -454,9 +992,20 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   <button
                     type="submit"
                     className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-                    disabled={submitting}
+                    disabled={submitting || !canFull}
+                    title={
+                      !canFull
+                        ? 'No tienes permiso para crear/editar usuarios'
+                        : undefined
+                    }
                   >
-                    {submitting ? 'Creando…' : 'Crear usuario'}
+                    {submitting
+                      ? isEditing
+                        ? 'Guardando…'
+                        : 'Creando…'
+                      : isEditing
+                      ? 'Guardar cambios'
+                      : 'Crear'}
                   </button>
                 </div>
               </form>

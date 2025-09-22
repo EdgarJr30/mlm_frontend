@@ -55,9 +55,12 @@ export const PERMISSIONS: PermissionDef[] = [
   p(RESOURCES.reports, 'read', 'Ver reportes'),
 
   // Usuarios
-  p(RESOURCES.users, 'read', 'Ver usuarios'),
-  p(RESOURCES.users, 'create', 'Crear usuarios'),
-  p(RESOURCES.users, 'update', 'Editar usuarios'),
+  p(RESOURCES.users, 'read',        'Ver usuarios'),
+  p(RESOURCES.users, 'create',      'Crear usuarios'),
+  p(RESOURCES.users, 'update',      'Editar usuarios'),
+  p(RESOURCES.users, 'full_access', 'Acceso total usuarios (crear/modificar)'),
+  p(RESOURCES.users, 'cancel',      'Activar/Desactivar usuarios'),
+  p(RESOURCES.users, 'delete',      'Eliminar usuarios'),
 
   // Técnicos (ASSIGNEES)
   p(RESOURCES.assignees, 'read',        'Ver técnicos'),

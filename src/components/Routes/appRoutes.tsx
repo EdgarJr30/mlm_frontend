@@ -220,7 +220,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/admin_usuarios',
     element: <UserManagementPage />,
-    allowPerms: ['users:read'],
+    allowPerms: [
+      'users:read',
+      'users:full_access',
+      'users:cancel',
+      'users:delete',
+    ],
     name: 'Usuarios',
     icon: IconUsers,
     showInSidebar: true,
