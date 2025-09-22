@@ -208,7 +208,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/solicitudes',
     element: <WorkRequestsPage />,
-    allowPerms: ['work_requests:read', 'work_requests:approve'],
+    allowPerms: [
+      'work_requests:read',
+      'work_requests:full_access',
+      'work_requests:cancel',
+      'work_requests:delete',
+    ],
     name: 'Solicitudes',
     icon: IconWorkRequests,
     showInSidebar: true,

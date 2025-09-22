@@ -46,11 +46,9 @@ export const PERMISSIONS: PermissionDef[] = [
 
   // WorkRequests (Solicitudes)
   p(RESOURCES.work_requests, 'read', 'Ver solicitudes'),
-  p(RESOURCES.work_requests, 'create', 'Crear solicitudes'),
-  p(RESOURCES.work_requests, 'update', 'Editar solicitudes'),
-  p(RESOURCES.work_requests, 'delete', 'Eliminar solicitudes'),
-  p(RESOURCES.work_requests, 'work', 'Trabajar solicitudes'),
-  p(RESOURCES.work_requests, 'approve', 'Aprobar / Rechazar solicitudes'),
+  p(RESOURCES.work_requests, 'full_access', 'Acceso total solicitudes (aprobar/editar)'),
+  p(RESOURCES.work_requests, 'cancel',      'Cancelar solicitudes'),
+  p(RESOURCES.work_requests, 'delete',      'Eliminar solicitudes'),
 
   // Reportes
   p(RESOURCES.reports, 'read', 'Ver reportes'),

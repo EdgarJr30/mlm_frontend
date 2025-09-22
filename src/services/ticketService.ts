@@ -7,6 +7,10 @@ const PAGE_SIZE = 20;
 type Status = Ticket["status"];
 export type TicketCounts = Record<Status, number>;
 
+/** ===== Tipos nuevos para aceptación con responsable ===== */
+export type AcceptTicketItem = { id: number; assignee_id: number };
+export type AcceptTicketsInput = string[] | AcceptTicketItem[];
+
 /**
  * Normaliza el rango de fechas a límites del día (00:00:00 / 23:59:59).
  */
@@ -22,7 +26,9 @@ function normalizeDateRange(
   };
 }
 
-export async function createTicket(ticket: Omit<Ticket, "id" | "status" | "created_by">) {
+export async function createTicket(
+  ticket: Omit<Ticket, "id" | "status" | "created_by">
+) {
   const { data: { user }, error: userErr } = await supabase.auth.getUser();
   if (userErr) throw userErr;
   if (!user) throw new Error("No hay sesión activa.");
@@ -32,7 +38,8 @@ export async function createTicket(ticket: Omit<Ticket, "id" | "status" | "creat
     .insert([{
       ...ticket,
       status: "Pendiente",
-      assignee: "Sin asignar",
+      assignee: "Sin asignar", // legado (texto visible)
+      assignee_id: null,       // 👈 NUEVO: FK (se llena al asignar responsable)
       created_by: user.id,
     }])
     .select("id, title")
@@ -82,7 +89,12 @@ export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
   return data as Ticket[];
 }
 
-export async function getTicketsByStatusPaginated(status: Ticket['status'], page: number, pageSize: number, location?: string) {
+export async function getTicketsByStatusPaginated(
+  status: Ticket['status'],
+  page: number,
+  pageSize: number,
+  location?: string
+) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
@@ -90,7 +102,7 @@ export async function getTicketsByStatusPaginated(status: Ticket['status'], page
     .from("tickets")
     .select("*")
     .eq("status", status)
-    .eq("is_accepted", true) 
+    .eq("is_accepted", true)
     .order("id", { ascending: false })
     .range(from, to);
 
@@ -110,13 +122,16 @@ export async function getTicketsByStatusPaginated(status: Ticket['status'], page
   return data as Ticket[];
 }
 
-export async function getFilteredTickets(term: string, location?: string, isAccepted?: boolean): Promise<Ticket[]> {
+export async function getFilteredTickets(
+  term: string,
+  location?: string,
+  isAccepted?: boolean
+): Promise<Ticket[]> {
   let query = supabase
     .from("tickets")
     .select("*")
     .order("id", { ascending: false });
 
-  // Aquí decides a quién buscas
   if (typeof isAccepted === "boolean") {
     query = query.eq("is_accepted", isAccepted);
   }
@@ -142,7 +157,11 @@ export async function getFilteredTickets(term: string, location?: string, isAcce
   return data as Ticket[];
 }
 
-export async function getUnacceptedTicketsPaginated(page: number, pageSize: number, location?: string) {
+export async function getUnacceptedTicketsPaginated(
+  page: number,
+  pageSize: number,
+  location?: string
+) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
@@ -167,15 +186,91 @@ export async function getUnacceptedTicketsPaginated(page: number, pageSize: numb
   return { data: data as Ticket[], count: count || 0 };
 }
 
-export async function acceptTickets(ticketIds: string[]): Promise<void> {
-  const { error } = await supabase
-    .from("tickets")
-    .update({ is_accepted: true })
-    .in("id", ticketIds);
+/**
+ * Acepta tickets.
+ * - NUEVO: si pasas [{id, assignee_id}, ...] asigna responsable y marca is_accepted=true (bulk).
+ * - LEGADO: si pasas string[] con ids, solo marcará is_accepted=true (seguirás necesitando setear assignee_id aparte).
+ */
+/**
+ * Acepta tickets.
+ * - NUEVO: si pasas [{id, assignee_id}, ...] asigna responsable y marca is_accepted=true (bulk).
+ * - LEGACY: si pasas string[] con ids, primero validamos que ya tengan assignee_id antes de aceptar.
+ */
+export async function acceptTickets(input: AcceptTicketsInput): Promise<void> {
+  // === LEGACY: ids como string[] ===
+  if (Array.isArray(input) && input.length && typeof input[0] === "string") {
+    const ticketIds = (input as string[]).map(Number);
 
-  if (error) throw new Error(error.message);
+    // Verifica que (1) existen, (2) no están aceptados y (3) tienen assignee_id
+    const { data: rows, error: selErr } = await supabase
+      .from("tickets")
+      .select("id, assignee_id, is_accepted")
+      .in("id", ticketIds);
+
+    if (selErr) throw new Error(selErr.message);
+
+    const pendientes = (rows ?? []).filter(r => !r.is_accepted);
+    const sinAsignar = pendientes.filter(r => r.assignee_id == null).map(r => `#${r.id}`);
+    if (sinAsignar.length) {
+      throw new Error(`No puedes aceptar solicitudes sin responsable. Faltan: ${sinAsignar.join(", ")}`);
+    }
+
+    const idsPend = pendientes.map(r => r.id);
+    if (idsPend.length) {
+      const { error } = await supabase
+        .from("tickets")
+        .update({ is_accepted: true })
+        .in("id", idsPend)
+        .eq("is_accepted", false);
+
+      if (error) throw new Error(error.message);
+    }
+    return;
+  }
+
+  // === NUEVO: [{ id, assignee_id }, ...] ===
+  const items = (input as AcceptTicketItem[]) ?? [];
+  if (!items.length) return;
+
+  for (const it of items) {
+    if (!it.id || !it.assignee_id) {
+      throw new Error("Cada ticket debe incluir { id, assignee_id } para aceptar.");
+    }
+  }
+
+  // UPDATE por fila (evita INSERTs accidentales del upsert)
+  const updates = items.map(({ id, assignee_id }) =>
+    supabase
+      .from("tickets")
+      .update({ assignee_id, is_accepted: true /*, status: 'Aprobada'*/ })
+      .eq("id", id)
+      .eq("is_accepted", false) // sólo solicitudes
+      .select("id")             // para saber si realmente actualizó
+  );
+
+  const results = await Promise.all(updates);
+
+  // Si hubo algún error en un UPDATE, lánzalo
+  const firstErr = results.find(r => r.error);
+  if (firstErr?.error) throw new Error(firstErr.error.message);
+
+  // Detecta casos donde no se actualizó nada (id inexistente o ya aceptado)
+  const notUpdated: number[] = [];
+  results.forEach((r, i) => {
+    const changed = Array.isArray(r.data) && r.data.length > 0;
+    if (!changed) notUpdated.push(items[i].id);
+  });
+
+  if (notUpdated.length) {
+    throw new Error(
+      `No se pudieron aceptar: ${notUpdated.join(
+        ", "
+      )} (no existen, ya estaban aceptados o no tienes permiso).`
+    );
+  }
 }
 
+/** RPC de conteos (sin cambios) */
 export async function getTicketCountsRPC(filters?: {
   term?: string;
   location?: string;
@@ -189,7 +284,6 @@ export async function getTicketCountsRPC(filters?: {
     console.error("RPC ticket_counts error:", error.message);
   }
 
-  // inicializa en 0 y rellena con lo que devuelva la RPC
   const out: TicketCounts = {
     "Pendiente": 0,
     "En Ejecución": 0,
@@ -210,6 +304,7 @@ export async function getTicketCountsRPC(filters?: {
 /**
  * Filtra directamente en Supabase (server-side) con paginación y count.
  * SIN serverFiltering.ts y SIN WorkRequestsServerSchema.ts
+ * (Para WorkRequests: forzamos is_accepted = false)
  */
 export async function getTicketsByFiltersPaginated(
   values: FilterState<WorkRequestsFilterKey>,
@@ -224,7 +319,6 @@ export async function getTicketsByFiltersPaginated(
     .select("*", { count: "exact" })
     .eq("is_accepted", false); 
 
-  // q (búsqueda libre: título, solicitante, id numérico)
   const term = typeof values.q === 'string' ? values.q.trim() : '';
   if (term.length >= 2) {
     const ors = [`title.ilike.%${term}%`, `requester.ilike.%${term}%`];
@@ -233,27 +327,21 @@ export async function getTicketsByFiltersPaginated(
     q = q.or(ors.join(','));
   }
 
-  // location
   const location = (values.location as string) || '';
   if (location) q = q.eq("location", location);
 
-  // accepted -> is_accepted
   if (typeof values.accepted === 'boolean') {
     q = q.eq("is_accepted", values.accepted);
   }
 
-  // created_at (rango normalizado a 00:00:00 / 23:59:59)
   const range = normalizeDateRange(values.created_at);
   if (range?.from) q = q.gte("created_at", range.from);
   if (range?.to)   q = q.lte("created_at", range.to);
 
-  // has_image
   if (values.has_image === true) {
-    // Si también quieres excluir NULL explícito, puedes añadir un .not('image','is',null)
     q = q.neq("image", "");
   }
 
-  // priority (mapea valores UI -> valores en DB si en DB están capitalizados)
   const priorities = Array.isArray(values.priority)
     ? (values.priority as (string | number)[]).map(String)
     : [];
@@ -263,7 +351,6 @@ export async function getTicketsByFiltersPaginated(
     q = q.in("priority", dbValues);
   }
 
-  // status (usa valores tal como vienen del UI)
   const statuses = Array.isArray(values.status)
     ? (values.status as (string | number)[]).map(String)
     : [];
@@ -282,7 +369,7 @@ export async function getTicketsByFiltersPaginated(
   return { data: (data ?? []) as Ticket[], count: count ?? 0 };
 }
 
-// 👇 NUEVO: filtra para el WorkOrders (sin forzar is_accepted = false)
+/** Filtrado para WorkOrders (aceptados) */
 export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends string>(
   values: FilterState<TKeys>,
   page: number,
@@ -294,9 +381,8 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
   let q = supabase
     .from("tickets")
     .select("*", { count: "exact" })
-    .eq("is_accepted", true);        // 👈 SIEMPRE aceptados en WorkOrders
+    .eq("is_accepted", true);
 
-  // q (título, solicitante, id numérico)
   const termRaw = (values as Record<string, unknown>)["q"];
   const term = typeof termRaw === "string" ? termRaw.trim() : "";
   if (term.length >= 2) {
@@ -306,18 +392,15 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
     q = q.or(ors.join(","));
   }
 
-  // location
   const locationRaw = (values as Record<string, unknown>)["location"];
   const location = typeof locationRaw === "string" ? locationRaw : undefined;
   if (location) q = q.eq("location", location);
 
-  // assignee_id (si aplica)
   const assigneeIdRaw = (values as Record<string, unknown>)["assignee_id"];
   if (assigneeIdRaw !== undefined && assigneeIdRaw !== null && assigneeIdRaw !== "") {
     q = q.eq("assignee_id", Number(assigneeIdRaw));
   }
 
-  // created_at (rango)
   const createdRaw = (values as Record<string, unknown>)["created_at"];
   if (createdRaw && typeof createdRaw === "object") {
     const { from: dFrom, to: dTo } = createdRaw as { from?: string; to?: string };
@@ -325,17 +408,14 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
     if (dTo)   q = q.lte("created_at", `${dTo} 23:59:59`);
   }
 
-  // has_image
   if ((values as Record<string, unknown>)["has_image"] === true) {
     q = q.neq("image", "");
   }
 
-  // priority
   const prw = (values as Record<string, unknown>)["priority"];
   const priorities = Array.isArray(prw) ? prw.map(String) : [];
   if (priorities.length) q = q.in("priority", priorities);
 
-  // status
   const stw = (values as Record<string, unknown>)["status"];
   const statuses = Array.isArray(stw) ? stw.map(String) : [];
   if (statuses.length) q = q.in("status", statuses);
@@ -350,5 +430,3 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
   }
   return { data: (data ?? []) as Ticket[], count: count ?? 0 };
 }
-
-

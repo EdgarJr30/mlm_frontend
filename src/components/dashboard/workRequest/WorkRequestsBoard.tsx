@@ -1,8 +1,6 @@
-import { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import {
-  // getFilteredTickets,
-  // getUnacceptedTicketsPaginated,
   acceptTickets,
   getTicketsByFiltersPaginated,
 } from '../../../services/ticketService';
@@ -12,9 +10,14 @@ import {
 } from '../../../services/storageService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
-// import WorkRequestsFiltersBar from './WorkRequestsFiltersBar';
 import type { WorkRequestsFilterKey } from '../../../features/tickets/workRequestsFilters';
 import type { FilterState } from '../../../types/filters';
+
+// 👇 NUEVO
+import { useCan } from '../../../rbac/PermissionsContext';
+import { useAssignees } from '../../../context/AssigneeContext';
+import type { Assignee } from '../../../types/Assignee';
+import { formatAssigneeFullName } from '../../../services/assigneeService';
 
 interface Props {
   searchTerm: string;
@@ -65,14 +68,25 @@ function StatusChip({ value }: { value: string }) {
   );
 }
 
+/** ===== Modal de Detalle con selector de responsable ===== */
 function TicketDetailModal({
   ticket,
   onClose,
+  canFullWR,
+  getAssigneeFor,
+  setAssigneeFor,
 }: {
   ticket: Ticket;
   onClose: () => void;
+  canFullWR: boolean;
+  getAssigneeFor: (id: number) => number | '';
+  setAssigneeFor: (id: number, assigneeId: number) => void;
 }) {
   const imagePaths = getTicketImagePaths(ticket.image ?? '');
+  const { loading, bySectionActive } = useAssignees();
+  const SECTIONS_ORDER: Array<
+    'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
+  > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -150,6 +164,47 @@ function TicketDetailModal({
             </dl>
           </div>
 
+          {/* 👇 NUEVO: Asignar responsable también desde el modal */}
+          <div className="md:col-span-2">
+            <h4 className="text-lg font-semibold mb-2">Asignación</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-gray-600">
+                  Responsable
+                </label>
+                <select
+                  className={
+                    'mt-1 w-full rounded border-gray-300' +
+                    (!canFullWR
+                      ? ' opacity-50 cursor-not-allowed bg-gray-100'
+                      : '')
+                  }
+                  disabled={loading || !canFullWR}
+                  value={getAssigneeFor(Number(ticket.id))}
+                  onChange={(e) =>
+                    setAssigneeFor(Number(ticket.id), Number(e.target.value))
+                  }
+                >
+                  <option value="" disabled>
+                    Selecciona…
+                  </option>
+                  {SECTIONS_ORDER.map((g) => (
+                    <optgroup key={g} label={g}>
+                      {(bySectionActive[g] ?? []).map(
+                        (a: Assignee | undefined) =>
+                          a ? (
+                            <option key={a.id} value={a.id}>
+                              {formatAssigneeFullName(a)}
+                            </option>
+                          ) : null
+                      )}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="md:col-span-2">
             <h4 className="text-lg font-semibold mb-2">
               Descripción del Problema
@@ -189,6 +244,7 @@ function TicketDetailModal({
   );
 }
 
+/** ===== Componente principal ===== */
 export default function WorkRequestsBoard({
   searchTerm,
   selectedLocation,
@@ -201,8 +257,23 @@ export default function WorkRequestsBoard({
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  // const [, setFilteredTickets] = useState<Ticket[]>([]);
   const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
+
+  // 👇 NUEVO: permisos y assignees
+  const canFullWR = useCan('work_requests:full_access');
+  const { loading: loadingAssignees, bySectionActive } = useAssignees();
+  const SECTIONS_ORDER: Array<
+    'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
+  > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
+
+  /** Mapa local de responsables por ticket (para inline + modal) */
+  const [assigneesMap, setAssigneesMap] = useState<Record<number, number | ''>>(
+    {}
+  );
+
+  const getAssigneeFor = (id: number) => assigneesMap[id] ?? '';
+  const setAssigneeFor = (id: number, assigneeId: number) =>
+    setAssigneesMap((prev) => ({ ...prev, [id]: assigneeId }));
 
   /** Estado de filtros (FilterBar) */
   const [filters, setFilters] = useState<Record<string, unknown>>({
@@ -210,7 +281,6 @@ export default function WorkRequestsBoard({
     location: selectedLocation || undefined,
   });
 
-  /** Sincroniza Navbar -> filtros cuando cambian las props */
   useEffect(() => {
     setFilters((prev) => ({
       ...prev,
@@ -219,23 +289,9 @@ export default function WorkRequestsBoard({
     }));
   }, [searchTerm, selectedLocation]);
 
-  // const isSearching = useMemo(
-  //   () =>
-  //     typeof filters.q === 'string' && (filters.q as string).trim().length >= 2,
-  //   [filters.q]
-  // );
-
-  /** ¿Hay filtros avanzados activos además de q? */
-  // const isAdvanced =
-  //   Boolean(filters.location) ||
-  //   Array.isArray(filters.priority) ||
-  //   Array.isArray(filters.status) ||
-  //   Boolean(filters.created_at) ||
-  //   Boolean(filters.has_image) ||
-  //   Boolean(filters.accepted);
-
   const ticketsToShow = tickets;
 
+  // sin cambios visuales: solo control de checkbox maestro
   useLayoutEffect(() => {
     const isInd =
       selectedTicket.length > 0 && selectedTicket.length < ticketsToShow.length;
@@ -247,21 +303,48 @@ export default function WorkRequestsBoard({
   }, [selectedTicket, ticketsToShow.length]);
 
   function toggleAll() {
+    if (!canFullWR) return;
     setSelectedTicket(checked || indeterminate ? [] : ticketsToShow);
     setChecked(!checked && !indeterminate);
     setIndeterminate(false);
   }
 
+  /** Validación local: todos los seleccionados con responsable */
+  const canMassAccept = useMemo(() => {
+    if (!canFullWR) return false;
+    if (selectedTicket.length === 0) return false;
+    return selectedTicket.every((t) => Boolean(getAssigneeFor(Number(t.id))));
+  }, [canFullWR, selectedTicket, assigneesMap]);
+
   async function handleAcceptSelected() {
+    if (!canFullWR) {
+      showToastError('No tienes permiso para aceptar solicitudes.');
+      return;
+    }
     if (selectedTicket.length === 0) return;
+
+    // Chequea responsables
+    const missing = selectedTicket
+      .filter((t) => !getAssigneeFor(Number(t.id)))
+      .map((t) => `#${t.id}`);
+    if (missing.length) {
+      showToastError(
+        `Asigna responsable antes de aceptar. Faltan: ${missing.join(', ')}`
+      );
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const ids = selectedTicket.map((t) => t.id);
-      await acceptTickets(ids);
+      const payload = selectedTicket.map((t) => ({
+        id: Number(t.id),
+        assignee_id: Number(getAssigneeFor(Number(t.id))),
+      }));
+      await acceptTickets(payload);
       showToastSuccess(
-        ids.length === 1
+        payload.length === 1
           ? 'Ticket aceptado correctamente.'
-          : `Se aceptaron ${ids.length} tickets correctamente.`
+          : `Se aceptaron ${payload.length} tickets correctamente.`
       );
       setSelectedTicket([]);
       await reload();
@@ -277,9 +360,18 @@ export default function WorkRequestsBoard({
   }
 
   async function handleAcceptOne(id: number) {
+    if (!canFullWR) {
+      showToastError('No tienes permiso para aceptar solicitudes.');
+      return;
+    }
+    const assigneeId = getAssigneeFor(id);
+    if (!assigneeId) {
+      showToastError('Selecciona un responsable antes de aceptar.');
+      return;
+    }
     setIsLoading(true);
     try {
-      await acceptTickets([String(id)]);
+      await acceptTickets([{ id, assignee_id: Number(assigneeId) }]);
       showToastSuccess('Ticket aceptado correctamente.');
       await reload();
     } catch (error) {
@@ -293,8 +385,7 @@ export default function WorkRequestsBoard({
     }
   }
 
-  /** Carga datos aplicando filtros */
-  // Carga SIEMPRE desde el servidor
+  /** Carga datos aplicando filtros (siempre servidor) */
   async function reload() {
     const { data, count } = await getTicketsByFiltersPaginated(
       filters as FilterState<WorkRequestsFilterKey>,
@@ -304,6 +395,19 @@ export default function WorkRequestsBoard({
     setTickets(data);
     setSelectedTicket([]);
     setTotalCount(count);
+
+    // Hidrata mapa de responsables con lo que venga del backend
+    const next: Record<number, number | ''> = {};
+    for (const t of data) {
+      // si el backend ya trae assignee_id, lo usamos; si no, dejamos ''
+      const idNum = Number(t.id);
+      const current = assigneesMap[idNum];
+      next[idNum] =
+        typeof current !== 'undefined'
+          ? current
+          : (t as Ticket).assignee_id ?? '';
+    }
+    setAssigneesMap(next);
   }
 
   // Reset selección al cambiar página o filtros
@@ -319,23 +423,12 @@ export default function WorkRequestsBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, JSON.stringify(filters)]);
 
-  // Limpiar resultados al salir de modo filtrado
-  // useEffect(() => {
-  //   if (!(isSearching || isAdvanced)) setFilteredTickets([]);
-  // }, [isSearching, isAdvanced]);
+  // Helpers visuales
+  const disabledCtlCls = (cond: boolean) =>
+    cond ? ' disabled:opacity-40 disabled:cursor-not-allowed' : '';
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Filtros declarativos */}
-      {/* <div className="mb-3">
-        <WorkRequestsFiltersBar
-          onApply={(vals) => {
-            setPage(0);
-            setFilters(vals);
-          }}
-        />
-      </div> */}
-
       {/* Barra superior: texto + botón masivo */}
       <div className="flex items-center gap-3">
         <p className="text-sm text-gray-700">
@@ -346,8 +439,20 @@ export default function WorkRequestsBoard({
           <button
             type="button"
             onClick={handleAcceptSelected}
-            disabled={selectedTicket.length === 0 || isLoading}
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer"
+            disabled={!canMassAccept || isLoading}
+            title={
+              !canFullWR
+                ? 'No tienes permiso para aceptar'
+                : !selectedTicket.length
+                ? 'Selecciona al menos una solicitud'
+                : !canMassAccept
+                ? 'Todos los seleccionados deben tener responsable'
+                : undefined
+            }
+            className={
+              'inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500' +
+              disabledCtlCls(!canMassAccept || isLoading)
+            }
           >
             Aceptar Solicitudes
           </button>
@@ -369,6 +474,7 @@ export default function WorkRequestsBoard({
               const imagePaths = getTicketImagePaths(t.image ?? '');
               const cover = imagePaths[0];
               const selected = selectedTicket.includes(t);
+              const assigneeValue = getAssigneeFor(Number(t.id));
 
               return (
                 <div
@@ -381,7 +487,11 @@ export default function WorkRequestsBoard({
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
-                      className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                      className={
+                        'mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600' +
+                        (canFullWR ? '' : ' opacity-40 cursor-not-allowed')
+                      }
+                      disabled={!canFullWR}
                       checked={selected}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => {
@@ -392,6 +502,11 @@ export default function WorkRequestsBoard({
                             prev.filter((x) => x !== t)
                           );
                       }}
+                      title={
+                        !canFullWR
+                          ? 'No tienes permiso para seleccionar'
+                          : undefined
+                      }
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-gray-500">#{t.id}</div>
@@ -401,6 +516,44 @@ export default function WorkRequestsBoard({
                       <div className="text-sm text-gray-500 line-clamp-2">
                         {t.description}
                       </div>
+
+                      {/* 👇 NUEVO: selector inline de responsable (móvil) */}
+                      <div className="mt-2">
+                        <label className="block text-xs text-gray-600">
+                          Responsable
+                        </label>
+                        <select
+                          className={
+                            'mt-1 w-full rounded border-gray-300 text-sm' +
+                            (!canFullWR
+                              ? ' opacity-50 cursor-not-allowed bg-gray-100'
+                              : '')
+                          }
+                          disabled={loadingAssignees || !canFullWR}
+                          value={assigneeValue}
+                          onChange={(e) =>
+                            setAssigneeFor(Number(t.id), Number(e.target.value))
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="" disabled>
+                            Selecciona…
+                          </option>
+                          {SECTIONS_ORDER.map((g) => (
+                            <optgroup key={g} label={g}>
+                              {(bySectionActive[g] ?? []).map(
+                                (a: Assignee | undefined) =>
+                                  a ? (
+                                    <option key={a.id} value={a.id}>
+                                      {formatAssigneeFullName(a)}
+                                    </option>
+                                  ) : null
+                              )}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-gray-700">{t.requester}</span>
                         <span className="text-gray-400">•</span>
@@ -438,7 +591,20 @@ export default function WorkRequestsBoard({
                       Ver
                     </button>
                     <button
-                      className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer"
+                      className={
+                        'text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer' +
+                        (!canFullWR || !assigneeValue
+                          ? ' opacity-40 cursor-not-allowed'
+                          : '')
+                      }
+                      disabled={!canFullWR || !assigneeValue}
+                      title={
+                        !canFullWR
+                          ? 'No tienes permiso para aceptar'
+                          : !assigneeValue
+                          ? 'Selecciona un responsable'
+                          : undefined
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAcceptOne(Number(t.id));
@@ -464,7 +630,16 @@ export default function WorkRequestsBoard({
                       <input
                         ref={checkbox}
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                        className={
+                          'h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer' +
+                          (!canFullWR ? ' opacity-40 cursor-not-allowed' : '')
+                        }
+                        disabled={!canFullWR}
+                        title={
+                          !canFullWR
+                            ? 'No tienes permiso para seleccionar'
+                            : undefined
+                        }
                         checked={checked}
                         onChange={(e) => {
                           e.stopPropagation();
@@ -493,6 +668,12 @@ export default function WorkRequestsBoard({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Adjuntos
                     </th>
+
+                    {/* 👇 NUEVO: columna Responsable inline */}
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                      Responsable
+                    </th>
+
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Fecha
                     </th>
@@ -505,7 +686,7 @@ export default function WorkRequestsBoard({
                   {isLoading ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="py-8 text-center text-gray-400"
                       >
                         Cargando…
@@ -514,7 +695,7 @@ export default function WorkRequestsBoard({
                   ) : ticketsToShow.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="py-8 text-center text-gray-400"
                       >
                         No hay tickets pendientes.
@@ -525,6 +706,7 @@ export default function WorkRequestsBoard({
                       const imagePaths = getTicketImagePaths(t.image ?? '');
                       const firstAsset = imagePaths[0];
                       const selected = selectedTicket.includes(t);
+                      const assigneeValue = getAssigneeFor(Number(t.id));
 
                       return (
                         <tr
@@ -544,7 +726,18 @@ export default function WorkRequestsBoard({
                             )}
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                              className={
+                                'h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer' +
+                                (!canFullWR
+                                  ? ' opacity-40 cursor-not-allowed'
+                                  : '')
+                              }
+                              disabled={!canFullWR}
+                              title={
+                                !canFullWR
+                                  ? 'No tienes permiso para seleccionar'
+                                  : undefined
+                              }
                               checked={selected}
                               onChange={(e) => {
                                 if (e.target.checked)
@@ -594,6 +787,46 @@ export default function WorkRequestsBoard({
                               <span className="text-gray-400">—</span>
                             )}
                           </td>
+
+                          {/* 👇 NUEVO: celda de Responsable inline */}
+                          <td
+                            className="px-4 py-4 text-sm text-gray-700"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <select
+                              className={
+                                'w-full rounded border-gray-300' +
+                                (!canFullWR
+                                  ? ' opacity-50 cursor-not-allowed bg-gray-100'
+                                  : '')
+                              }
+                              disabled={loadingAssignees || !canFullWR}
+                              value={assigneeValue}
+                              onChange={(e) =>
+                                setAssigneeFor(
+                                  Number(t.id),
+                                  Number(e.target.value)
+                                )
+                              }
+                            >
+                              <option value="" disabled>
+                                Selecciona…
+                              </option>
+                              {SECTIONS_ORDER.map((g) => (
+                                <optgroup key={g} label={g}>
+                                  {(bySectionActive[g] ?? []).map(
+                                    (a: Assignee | undefined) =>
+                                      a ? (
+                                        <option key={a.id} value={a.id}>
+                                          {formatAssigneeFullName(a)}
+                                        </option>
+                                      ) : null
+                                  )}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </td>
+
                           <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                             {formatDateInTimezone(t.created_at)}
                           </td>
@@ -609,7 +842,20 @@ export default function WorkRequestsBoard({
                                 👁️
                               </button>
                               <button
-                                className="text-emerald-600 hover:text-emerald-500 cursor-pointer"
+                                className={
+                                  'text-emerald-600 hover:text-emerald-500 cursor-pointer' +
+                                  (!canFullWR || !assigneeValue
+                                    ? ' opacity-40 cursor-not-allowed'
+                                    : '')
+                                }
+                                disabled={!canFullWR || !assigneeValue}
+                                title={
+                                  !canFullWR
+                                    ? 'No tienes permiso para aceptar'
+                                    : !assigneeValue
+                                    ? 'Selecciona un responsable'
+                                    : undefined
+                                }
                                 onClick={() => handleAcceptOne(Number(t.id))}
                               >
                                 ✓
@@ -649,11 +895,14 @@ export default function WorkRequestsBoard({
         </button>
       </div>
 
-      {/* Modal */}
+      {/* Modal con selector de responsable */}
       {detailTicket && (
         <TicketDetailModal
           ticket={detailTicket}
           onClose={() => setDetailTicket(null)}
+          canFullWR={canFullWR}
+          getAssigneeFor={getAssigneeFor}
+          setAssigneeFor={setAssigneeFor}
         />
       )}
     </div>
