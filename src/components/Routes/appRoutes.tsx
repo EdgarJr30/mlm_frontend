@@ -283,6 +283,13 @@ export const APP_ROUTES: AppRoute[] = [
     allowPerms: ['rbac:manage_roles'],
     showInSidebar: false,
   },
+  {
+    path: '/admin/roles/:roleId/users',
+    element: <RoleManagementPage />,
+    allowPerms: ['rbac:manage_roles'],
+    name: 'Usuarios por rol',
+    showInSidebar: false,
+  },
 ];
 
 // Rutas públicas / especiales que no usan RequireRole

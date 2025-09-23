@@ -1,5 +1,6 @@
 // components/admin/users/UsersTable.tsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import Swal from 'sweetalert2';
 import { useAuth } from '../../../context/AuthContext';
 import { useUser } from '../../../context/UserContext';
 import { LOCATIONS } from '../../../constants/locations';
@@ -22,7 +23,7 @@ interface Role {
 
 interface Props {
   searchTerm: string;
-  selectedLocation: string; // ya lo traes de tu Navbar global
+  selectedLocation: string;
 }
 
 const PAGE_SIZE = 8;
@@ -42,6 +43,28 @@ function ActiveChip({ active }: { active: boolean }) {
       {active ? 'Activo' : 'Inactivo'}
     </span>
   );
+}
+
+// Helper seguro para extraer mensajes de error (evita TS2339)
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    const anyErr = err as {
+      message?: string;
+      error_description?: string;
+      error?: string;
+      code?: string;
+    };
+    return (
+      anyErr.message ??
+      anyErr.error_description ??
+      anyErr.error ??
+      anyErr.code ??
+      'Ocurrió un error'
+    );
+  }
+  return 'Ocurrió un error';
 }
 
 type FormState = {
@@ -105,12 +128,12 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   const { refresh: refreshAuth } = useAuth();
   const { refresh: refreshUser } = useUser();
 
-  // Permisos estilo Assignees
+  // Permisos
   const canRead = useCan('users:read');
-  const canFull = useCan('users:full_access'); // crear/modificar ficha
-  const canCancel = useCan('users:cancel'); // activar/desactivar
-  const canDelete = useCan('users:delete'); // eliminar
-  const canManageRoles = useCan('rbac:manage_roles'); // ⬅️ NUEVO
+  const canFull = useCan('users:full_access');
+  const canCancel = useCan('users:cancel');
+  const canDelete = useCan('users:delete');
+  const canManageRoles = useCan('rbac:manage_roles');
 
   useLayoutEffect(() => {
     const isIndet =
@@ -142,9 +165,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       setCount(count);
       if (resetPage) setPage(0);
     } catch (e) {
-      showToastError(
-        e instanceof Error ? e.message : 'Error cargando usuarios'
-      );
+      showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
@@ -160,6 +181,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
         .from('roles')
         .select('id,name')
         .order('name');
+
       if (!active) return;
       if (error) {
         showToastError(error.message);
@@ -173,11 +195,12 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   }, []);
 
   useEffect(() => {
-    void reload(true); /* filtros */
+    void reload(true); // filtros
   }, [includeInactive, selectedLocation, isSearching, searchTerm]);
+
   useEffect(() => {
     if (isSearching) return;
-    void reload(false); /* paginación */
+    void reload(false); // paginación
   }, [page]);
 
   // --- Acciones ----
@@ -223,35 +246,70 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
         location: form.location,
       };
       if (canManageRoles) {
-        patch.rol_id = typeof form.rol_id === 'number' ? form.rol_id : null; // ⬅️ solo si puede
+        patch.rol_id = typeof form.rol_id === 'number' ? form.rol_id : null;
       }
       await updateUser(form.id, patch as DbUser);
       showToastSuccess('Usuario actualizado.');
       setOpenForm(false);
       await reload();
     } catch (e) {
-      showToastError(
-        e instanceof Error ? e.message : 'Error guardando usuario'
-      );
+      showToastError(extractErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
   }
+
+  // SweetAlert2 de confirmación
+  const confirmDialog = async (opts: {
+    title: string;
+    text: string;
+    confirmText?: string;
+  }) => {
+    const { title, text, confirmText = 'Sí, continuar' } = opts;
+    const res = await Swal.fire({
+      title,
+      text,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: confirmText,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true,
+      allowOutsideClick: () => !Swal.isLoading(),
+      allowEscapeKey: true,
+      focusCancel: true,
+    });
+    return res.isConfirmed;
+  };
 
   async function handleToggleActive(u: DbUser) {
     if (!canCancel) {
       showToastError('No tienes permiso para activar/desactivar usuarios.');
       return;
     }
+
+    const willDeactivate = u.is_active === true;
+    if (willDeactivate) {
+      const ok = await confirmDialog({
+        title: 'Desactivar usuario',
+        text: `¿Seguro que quieres desactivar a "${u.email}"? No podrá iniciar sesión hasta reactivarlo.`,
+        confirmText: 'Sí, desactivar',
+      });
+      if (!ok) return;
+    }
+
     setIsLoading(true);
     try {
       await setUserActive(u.id, !u.is_active);
       showToastSuccess(
-        !u.is_active ? 'Usuario activado.' : 'Usuario desactivado.'
+        !u.is_active
+          ? `Usuario activado: ${u.email}`
+          : `Usuario desactivado: ${u.email}`
       );
       await reload();
     } catch (e) {
-      showToastError(e instanceof Error ? e.message : 'Error cambiando estado');
+      showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
@@ -263,6 +321,14 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       return;
     }
     if (!selectedRows.length) return;
+
+    const ok = await confirmDialog({
+      title: 'Desactivar selección',
+      text: `¿Desactivar ${selectedRows.length} usuario(s) seleccionado(s)?`,
+      confirmText: 'Sí, desactivar',
+    });
+    if (!ok) return;
+
     setIsLoading(true);
     try {
       await bulkSetUserActive(
@@ -273,9 +339,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       setSelectedRows([]);
       await reload();
     } catch (e) {
-      showToastError(
-        e instanceof Error ? e.message : 'Error en desactivación masiva'
-      );
+      showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
@@ -286,25 +350,27 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       showToastError('No tienes permiso para eliminar usuarios.');
       return;
     }
-    const ok = confirm(
-      `¿Eliminar al usuario "${u.email}"? Esta acción no se puede deshacer.`
-    );
+
+    const ok = await confirmDialog({
+      title: 'Eliminar usuario',
+      text: `¿Eliminar al usuario "${u.email}"? Esta acción no se puede deshacer.`,
+      confirmText: 'Sí, eliminar',
+    });
     if (!ok) return;
+
     setIsLoading(true);
     try {
       await deleteUser(u.id);
-      showToastSuccess('Usuario eliminado.');
+      showToastSuccess(`Usuario eliminado: ${u.email}`);
       await reload();
     } catch (e) {
-      showToastError(
-        e instanceof Error ? e.message : 'Error eliminando usuario'
-      );
+      showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
   }
 
-  // Crear (con tu flujo signUp + RPC)
+  // Crear (con signUp + RPC)
   const resetCreate = () => {
     setNameC('');
     setLastNameC('');
@@ -347,30 +413,36 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       if (!newId)
         throw new Error('No se obtuvo el ID del usuario creado en Auth.');
 
-      const { error: rpcErr } = await (
-        await import('../../../lib/supabaseClient')
-      ).supabase.rpc('create_user_in_public', {
+      const payload = {
         p_id: newId,
         p_email: emailC,
         p_name: nameC,
         p_last_name: lastNameC,
         p_location: locationC,
         p_rol_id: canManageRoles ? Number(rolIdC) : null,
-      });
+      };
+
+      const { error: rpcErr } = await (
+        await import('../../../lib/supabaseClient')
+      ).supabase.rpc('create_user_in_public', payload);
+
       if (rpcErr) throw rpcErr;
 
       await Promise.all([
         refreshAuth({ silent: true }),
         refreshUser({ silent: true }),
       ]);
+
+      // ✅ Toast al crear
+      showToastSuccess(`Usuario creado: ${emailC}`);
+
       setMsgCreate({ type: 'ok', text: 'Usuario creado correctamente.' });
       await reload(true);
       setTimeout(closeCreate, 700);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error creando usuario';
+      const msg = extractErrorMessage(err);
       setMsgCreate({ type: 'err', text: msg });
       showToastError(msg);
-      console.error('[create-user]', err);
     } finally {
       setSubmittingCreate(false);
     }
@@ -380,7 +452,6 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     <div className="flex flex-col flex-1 min-h-0">
       {/* Toolbar superior */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Filtro ubicación (si lo usas desde Navbar, aquí solo espejo) */}
         <div className="text-sm text-gray-700">
           <span className="mr-2">Ubicación:</span>
           <strong>{selectedLocation || 'TODAS'}</strong>
@@ -400,7 +471,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
           <button
             type="button"
             onClick={() => setOpenCreate(true)}
-            disabled={!canFull || !canManageRoles} // ⬅️ CAMBIO
+            disabled={!canFull || !canManageRoles}
             title={
               !canFull
                 ? 'No tienes permiso para crear/editar usuarios'
@@ -466,7 +537,6 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   onClick={() => setDetail(u)}
                 >
                   <div className="flex items-start gap-3">
-                    {/* checkbox */}
                     <input
                       type="checkbox"
                       className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
@@ -490,19 +560,16 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     />
 
                     <div className="flex-1 min-w-0">
-                      {/* Nombre + Apellido */}
                       <div className="text-base font-semibold text-gray-900 line-clamp-1">
                         {u.name || u.last_name
                           ? `${u.name ?? ''} ${u.last_name ?? ''}`.trim()
                           : '—'}
                       </div>
 
-                      {/* Email */}
                       <div className="mt-0.5 text-sm text-gray-600 line-clamp-1">
                         {u.email}
                       </div>
 
-                      {/* Rol + Estado */}
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-slate-600">
                           <span className="text-slate-400">Rol:</span>{' '}
@@ -511,7 +578,6 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                         <ActiveChip active={u.is_active} />
                       </div>
 
-                      {/* Ubicación y creado */}
                       <div className="mt-3 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                         <span>
                           <span className="text-gray-400">Ubicación:</span>{' '}
@@ -559,7 +625,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                       }
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleToggleActive(u);
+                        void handleToggleActive(u);
                       }}
                     >
                       {u.is_active ? 'Desactivar' : 'Activar'}
@@ -574,7 +640,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                       }
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(u);
+                        void handleDelete(u);
                       }}
                     >
                       Eliminar
@@ -738,7 +804,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                                     ? 'No tienes permiso para activar/desactivar'
                                     : undefined
                                 }
-                                onClick={() => handleToggleActive(u)}
+                                onClick={() => void handleToggleActive(u)}
                               >
                                 {u.is_active ? 'Desactivar' : 'Activar'}
                               </button>
@@ -750,7 +816,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                                     ? 'No tienes permiso para eliminar'
                                     : undefined
                                 }
-                                onClick={() => handleDelete(u)}
+                                onClick={() => void handleDelete(u)}
                               >
                                 Eliminar
                               </button>
@@ -852,7 +918,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   title={!canFull ? 'No tienes permiso para editar' : undefined}
                   onClick={() => {
                     if (!canFull) return;
-                    openEdit(detail);
+                    openEdit(detail!);
                     setDetail(null);
                   }}
                 >
@@ -1114,7 +1180,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   </select>
                 </div>
 
-                {/* Estado (solo visible para info; cambiar se hace con el botón dedicado por permiso users:cancel) */}
+                {/* Estado solo lectura (cambiar con botón dedicado) */}
                 <label className="inline-flex items-center gap-2 text-sm text-gray-700 select-none">
                   <input
                     type="checkbox"

@@ -157,13 +157,21 @@ export default function RoleList({ searchTerm = '' }: Props) {
                       {r.description?.trim() ? r.description : '—'}
                     </td>
                     <td className="p-3 border-t border-gray-200">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
                         <Link
                           to={`/admin/roles/${r.id}`}
                           className="cursor-pointer inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 hover:bg-gray-50"
                           title="Editar permisos del rol"
                         >
                           Editar permisos
+                        </Link>
+
+                        <Link
+                          to={`/admin/roles/${r.id}/users`}
+                          className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-white border px-3 py-1.5 text-indigo-700 hover:bg-indigo-50"
+                          title="Ver y administrar usuarios del rol"
+                        >
+                          Usuarios
                         </Link>
                       </div>
                     </td>
