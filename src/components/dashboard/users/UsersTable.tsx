@@ -369,6 +369,8 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error creando usuario';
       setMsgCreate({ type: 'err', text: msg });
+      showToastError(msg);
+      console.error('[create-user]', err);
     } finally {
       setSubmittingCreate(false);
     }
