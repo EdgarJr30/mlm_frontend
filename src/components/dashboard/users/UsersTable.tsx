@@ -15,6 +15,7 @@ import {
   type DbUser,
 } from '../../../services/userAdminService';
 import { showToastError, showToastSuccess } from '../../../notifications';
+import { formatDateInTimezone } from '../../../utils/formatDate';
 
 interface Role {
   id: number;
@@ -585,7 +586,11 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                         </span>
                         <span>
                           <span className="text-gray-400">Creado:</span>{' '}
-                          {new Date(u.created_at).toLocaleString('es-DO')}
+                          {formatDateInTimezone(
+                            u.created_at,
+                            'America/Santo_Domingo',
+                            'display'
+                          )}
                         </span>
                       </div>
                     </div>
@@ -777,7 +782,11 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                             <ActiveChip active={u.is_active} />
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
-                            {new Date(u.created_at).toLocaleString('es-DO')}
+                            {formatDateInTimezone(
+                              u.created_at,
+                              'America/Santo_Domingo',
+                              'display'
+                            )}
                           </td>
                           <td
                             className="px-4 py-4 whitespace-nowrap"
@@ -901,7 +910,11 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                 <div>
                   <div className="text-gray-500">Creado</div>
                   <div className="text-gray-900">
-                    {new Date(detail.created_at).toLocaleString('es-DO')}
+                    {formatDateInTimezone(
+                      detail.created_at,
+                      'America/Santo_Domingo',
+                      'display'
+                    )}
                   </div>
                 </div>
               </div>
