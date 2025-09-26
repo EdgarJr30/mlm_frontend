@@ -202,7 +202,14 @@ export default function WorkOrdersColumn({
   useEffect(() => {
     if (isSearching || !lastUpdatedTicket) return;
 
-    // Misma lógica que antes
+    // Al archivar una OT, se quita de la columna, sin importar el status
+    if (lastUpdatedTicket.is_archived) {
+      setLocalTickets((prev) =>
+        prev.filter((t) => t.id !== lastUpdatedTicket.id)
+      );
+      return;
+    }
+
     if (lastUpdatedTicket.status === status) {
       setLocalTickets((prev) => {
         const exists = prev.some((t) => t.id === lastUpdatedTicket.id);

@@ -20,6 +20,8 @@ export interface Ticket {
   phone?: string;
   created_at: string; // ISO date string
   comments?: string;
+  is_archived: boolean;
+  finalized_at?: string | null;
 }
 
 export const Locations = [

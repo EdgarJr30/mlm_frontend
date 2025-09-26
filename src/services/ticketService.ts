@@ -27,7 +27,7 @@ function normalizeDateRange(
 }
 
 export async function createTicket(
-  ticket: Omit<Ticket, "id" | "status" | "created_by">
+  ticket: Omit<Ticket, "id" | "status" | "created_by" | 'is_archived' | 'finalized_at'>
 ) {
   const { data: { user }, error: userErr } = await supabase.auth.getUser();
   if (userErr) throw userErr;
@@ -38,9 +38,11 @@ export async function createTicket(
     .insert([{
       ...ticket,
       status: "Pendiente",
-      assignee: "Sin asignar", // legado (texto visible)
-      assignee_id: null,       // 👈 NUEVO: FK (se llena al asignar responsable)
+      assignee: "Sin asignar",
+      assignee_id: null,
       created_by: user.id,
+      is_archived: false,
+      finalized_at: null,
     }])
     .select("id, title")
     .single();
@@ -56,6 +58,7 @@ export async function getAllTickets(page: number): Promise<Ticket[]> {
   const { data, error } = await supabase
     .from("tickets")
     .select("*")
+    .eq('is_archived', false) 
     .order("id", { ascending: false })
     .range(from, to);
 
@@ -103,6 +106,7 @@ export async function getTicketsByStatusPaginated(
     .select("*")
     .eq("status", status)
     .eq("is_accepted", true)
+    .eq('is_archived', false)
     .order("id", { ascending: false })
     .range(from, to);
 
@@ -130,6 +134,7 @@ export async function getFilteredTickets(
   let query = supabase
     .from("tickets")
     .select("*")
+    .eq('is_archived', false) 
     .order("id", { ascending: false });
 
   if (typeof isAccepted === "boolean") {
@@ -169,6 +174,7 @@ export async function getUnacceptedTicketsPaginated(
     .from("tickets")
     .select("*", { count: "exact" })
     .eq("is_accepted", false)
+    .eq('is_archived', false) 
     .order("id", { ascending: false })
     .range(from, to);
 
@@ -381,7 +387,8 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
   let q = supabase
     .from("tickets")
     .select("*", { count: "exact" })
-    .eq("is_accepted", true);
+    .eq("is_accepted", true)
+    .eq('is_archived', false); 
 
   const termRaw = (values as Record<string, unknown>)["q"];
   const term = typeof termRaw === "string" ? termRaw.trim() : "";
@@ -429,4 +436,14 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
     return { data: [], count: 0 };
   }
   return { data: (data ?? []) as Ticket[], count: count ?? 0 };
+}
+
+export async function archiveTicket(id: number): Promise<void> {
+  const { error } = await supabase
+    .from('tickets')
+    .update({ is_archived: true })
+    .eq('id', id)
+    .eq('is_archived', false);
+
+  if (error) throw new Error(`No se pudo archivar: ${error.message}`);
 }

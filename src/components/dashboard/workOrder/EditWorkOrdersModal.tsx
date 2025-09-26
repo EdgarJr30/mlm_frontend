@@ -8,11 +8,11 @@ import {
   getPublicImageUrl,
 } from '../../../services/storageService';
 import { MAX_COMMENTS_LENGTH } from '../../../utils/validators';
+import { archiveTicket } from '../../../services/ticketService';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import type { Assignee } from '../../../types/Assignee';
-
-// 👇 NUEVO: permisos
 import { useCan } from '../../../rbac/PermissionsContext';
+import { showToastSuccess, showToastError } from '../../../notifications/toast';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -427,6 +427,33 @@ export default function EditWorkOrdersModal({
         >
           Cancelar
         </button>
+
+        {/* 👇 Botón Archivar: solo con permiso, en Finalizadas y si NO está archivada */}
+        {canFullAccess &&
+          edited.status === 'Finalizadas' &&
+          !edited.is_archived && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await archiveTicket(Number(edited.id));
+
+                  // Notifica hacia arriba un "cambio" con is_archived=true para que el board/column lo quite al instante.
+                  onSave({ ...edited, is_archived: true });
+
+                  showToastSuccess('Orden archivada.');
+                  onClose();
+                } catch (e: unknown) {
+                  const msg = e instanceof Error ? e.message : String(e);
+                  showToastError(`No se pudo archivar: ${msg}`);
+                }
+              }}
+              className="bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-800 cursor-pointer"
+              title="Mover a archivadas (dejará de verse en Finalizadas)"
+            >
+              Archivar
+            </button>
+          )}
 
         {/* Guardar: deshabilitado si no tiene full_access */}
         <button

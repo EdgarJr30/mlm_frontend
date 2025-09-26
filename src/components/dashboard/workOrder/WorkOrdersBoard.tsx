@@ -205,7 +205,8 @@ export default function WorkOrdersBoard({ filters }: Props) {
           if (
             oldRow.status !== newRow.status ||
             oldRow.is_accepted !== newRow.is_accepted ||
-            oldRow.location !== newRow.location
+            oldRow.location !== newRow.location ||
+            oldRow.is_archived !== newRow.is_archived
           ) {
             bumpCountsLocal(oldRow, newRow);
             scheduleCountsRefresh();
