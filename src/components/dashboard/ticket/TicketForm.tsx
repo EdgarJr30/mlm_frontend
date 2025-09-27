@@ -670,10 +670,12 @@ export default function TicketForm() {
                     📝 Información del Ticket
                   </h3>
                   <p>
-                    <strong>Título:</strong> {form.title}
+                    <strong>Título:</strong>
+                    <span className="wrap-anywhere">{form.title}</span>
                   </p>
                   <p>
-                    <strong>Descripción:</strong> {form.description}
+                    <strong>Descripción:</strong>
+                    <span className="wrap-anywhere">{form.description}</span>
                   </p>
                   <p>
                     <strong>Urgente:</strong> {form.is_urgent ? 'Sí 🚨' : 'No'}
