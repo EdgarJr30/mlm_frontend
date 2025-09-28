@@ -826,3 +826,82 @@ grant execute on all functions in schema public to anon, authenticated;
 
 -- =========[ LISTO ]=========
 -- Fin de semilla
+
+
+
+//TODO: Actualizar semilla
+-- 1.1) Nueva columna para archivo y fecha de finalización
+alter table public.tickets
+  add column if not exists is_archived boolean not null default false,
+  add column if not exists finalized_at timestamp null;
+
+-- 1.2) Trigger: setea finalized_at cuando pasa a "Finalizadas"
+create or replace function public.set_finalized_at() 
+returns trigger
+language plpgsql
+as $$
+begin
+  -- si pasa a Finalizadas y no tenía timestamp, lo marcamos
+  if new.status = 'Finalizadas' and (old.status is distinct from new.status) then
+    if new.finalized_at is null then
+      new.finalized_at := now();
+    end if;
+  end if;
+
+  -- si sale de Finalizadas, limpiamos finalized_at y forzamos unarchived
+  if old.status = 'Finalizadas' and new.status <> 'Finalizadas' then
+    new.finalized_at := null;
+    new.is_archived := false;
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists trg_set_finalized_at on public.tickets;
+create trigger trg_set_finalized_at
+before update on public.tickets
+for each row
+when (old.status is distinct from new.status)
+execute function public.set_finalized_at();
+
+-- 1.3) JOB nocturno para archivar automáticamente a los 14 días
+-- Requiere pg_cron (disponible en Supabase). Si no está:
+create extension if not exists pg_cron;
+
+-- Corre todos los días a las 03:00 AM GMT (ajusta si quieres)
+select
+  cron.schedule(
+    'archive_finalized_tickets',
+    '0 3 * * *',
+    $sql$
+      update public.tickets
+         set is_archived = true
+       where is_archived = false
+         and status = 'Finalizadas'
+         and coalesce(finalized_at, created_at) < now() - interval '14 days';
+    $sql$
+  );
+
+-- 1.4) Índices que ayudan a tus listas y conteos
+create index if not exists ix_tickets_status_archived_created
+  on public.tickets (status, is_archived, created_at desc);
+
+create index if not exists ix_tickets_accepted_archived_status_loc_assignee_created
+  on public.tickets (is_accepted, is_archived, status, location, assignee_id, created_at desc);
+
+ALTER TABLE public.users
+  ALTER COLUMN created_at
+  SET DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo');
+
+
+  SELECT
+  id,
+  created_at AS old_created_at,
+  (created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santo_Domingo' AS fixed_created_at
+FROM public.users
+ORDER BY created_at DESC
+LIMIT 50;
+
+UPDATE public.users
+SET created_at = (created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santo_Domingo';
