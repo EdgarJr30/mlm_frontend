@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import { useAssignees } from '../../../context/AssigneeContext';
 import { LOCATIONS } from '../../../constants/locations';
@@ -27,17 +27,16 @@ export default function EditWorkOrdersModal({
   onClose,
   ticket,
   onSave,
-  // showFullImage,
   setShowFullImage,
 }: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<Ticket>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
+  const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
-  // 👇 NUEVO: flags de permisos
   const canFullAccess = useCan('work_orders:full_access');
   // Si necesitas mostrar/ocultar botones de negocio en este modal (no están en tu UI actual):
   // const canCancel  = useCan('work_orders:cancel');
@@ -61,6 +60,14 @@ export default function EditWorkOrdersModal({
   useEffect(() => {
     setEdited(ticket);
   }, [ticket]);
+
+  // Auto-ajustar alto del textarea del título según contenido
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+  }, [edited.title]);
 
   const handleChange = (
     e:
@@ -116,11 +123,13 @@ export default function EditWorkOrdersModal({
           {/* Título */}
           <div>
             <label className="block text-sm font-medium">Título</label>
-            <input
+            <textarea
               name="title"
+              ref={titleRef}
               value={edited.title}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              rows={1}
+              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800 wrap-anywhere resize-y min-h-[44px] max-h-[200px]"
             />
           </div>
 
