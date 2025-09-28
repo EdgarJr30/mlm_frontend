@@ -58,7 +58,7 @@ export default function MyTicketsPage() {
           <h2 className="text-3xl font-bold">Mis Tickets</h2>
         </header>
 
-        <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
+        <section className="flex-1 overflow-x-hidden px-4 md:px-6 lg:px-8 pt-4 pb-8">
           {loading ? (
             <p className="text-gray-500">Cargando tickets...</p>
           ) : tickets.length === 0 ? (
@@ -71,8 +71,8 @@ export default function MyTicketsPage() {
                   className="border border-gray-200 bg-white shadow-sm rounded-lg overflow-hidden"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border-b border-gray-200">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 wrap-anywhere">
                         {ticket.title}
                       </h3>
                       <p className="text-sm text-gray-500">
@@ -84,7 +84,7 @@ export default function MyTicketsPage() {
                           : '—'}
                       </p>
                     </div>
-                    <div className="mt-2 md:mt-0 flex gap-2">
+                    <div className="mt-2 md:mt-0 flex gap-2 shrink-0">
                       <span className="px-2 py-0.5 rounded text-xs font-medium border">
                         {ticket.priority}
                       </span>
@@ -121,10 +121,14 @@ export default function MyTicketsPage() {
                   {/* Detalles */}
                   <div className="p-4 space-y-2 text-sm text-gray-700">
                     <p>
-                      <strong>Descripción:</strong> {ticket.description}
+                      <strong>Descripción:</strong>{' '}
+                      <span className="wrap-anywhere">
+                        {ticket.description}
+                      </span>
                     </p>
                     <p>
-                      <strong>Ubicación:</strong> {ticket.location}
+                      <strong>Ubicación:</strong>{' '}
+                      <span className="wrap-anywhere">{ticket.location}</span>
                     </p>
                     <p>
                       <strong>Solicitante:</strong> {ticket.requester}
@@ -143,7 +147,8 @@ export default function MyTicketsPage() {
                     )}
                     {ticket.comments && (
                       <p>
-                        <strong>Comentarios:</strong> {ticket.comments}
+                        <strong>Comentarios:</strong>{' '}
+                        <span className="wrap-anywhere">{ticket.comments}</span>
                       </p>
                     )}
                     <p>

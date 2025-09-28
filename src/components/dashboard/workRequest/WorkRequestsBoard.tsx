@@ -100,13 +100,13 @@ function TicketDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-5xl max-h-[86vh] overflow-y-auto rounded-xl bg-white shadow-2xl"
+        className="w-full max-w-5xl max-h-[86vh] overflow-y-auto no-x-scroll rounded-xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between px-6 py-4 border-b">
-          <div>
+          <div className="flex-1 min-w-0">
             <h3 className="text-xl font-semibold">Solicitud #{ticket.id}</h3>
-            <p className="text-gray-500">{ticket.title}</p>
+            <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
           </div>
           <button
             onClick={onClose}
@@ -131,7 +131,9 @@ function TicketDetailModal({
             <dl className="grid grid-cols-1 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Solicitante</dt>
-                <dd className="text-gray-900">{ticket.requester}</dd>
+                <dd className="text-gray-900 wrap-anywhere">
+                  {ticket.requester}
+                </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Ubicación</dt>
@@ -209,7 +211,7 @@ function TicketDetailModal({
             <h4 className="text-lg font-semibold mb-2">
               Descripción del Problema
             </h4>
-            <p className="text-gray-700 whitespace-pre-wrap">
+            <p className="text-gray-700 wrap-anywhere whitespace-pre-wrap">
               {ticket.description || '—'}
             </p>
           </div>
@@ -510,10 +512,10 @@ export default function WorkRequestsBoard({
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs text-gray-500">#{t.id}</div>
-                      <div className="mt-0.5 text-base font-semibold text-gray-900 line-clamp-1">
+                      <div className="mt-0.5 text-base font-semibold text-gray-900 wrap-anywhere line-clamp-1">
                         {t.title}
                       </div>
-                      <div className="text-sm text-gray-500 line-clamp-2">
+                      <div className="text-sm text-gray-500 wrap-anywhere line-clamp-2">
                         {t.description}
                       </div>
 
@@ -623,7 +625,7 @@ export default function WorkRequestsBoard({
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
             <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full table-fixed divide-y divide-gray-200">
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-6 w-12">
@@ -753,10 +755,10 @@ export default function WorkRequestsBoard({
                             #{t.id}
                           </td>
                           <td className="px-4 py-4">
-                            <div className="text-sm font-medium text-gray-900 line-clamp-1">
+                            <div className="text-sm font-medium text-gray-900 wrap-anywhere line-clamp-1">
                               {t.title}
                             </div>
-                            <div className="text-sm text-gray-500 line-clamp-1">
+                            <div className="text-sm text-gray-500 wrap-anywhere line-clamp-1">
                               {t.description}
                             </div>
                           </td>

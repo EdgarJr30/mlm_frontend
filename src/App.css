@@ -5,4 +5,5 @@
     word-break: break-word;   /* compat extra */
     white-space: pre-wrap;    /* respeta saltos y envuelve */
   }
+  .no-x-scroll { overflow-x: hidden; }
 }
