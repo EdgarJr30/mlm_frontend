@@ -23,8 +23,8 @@ import { showToastSuccess, showToastError } from '../../../notifications/toast';
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
   onClose: () => void;
-  ticket: WorkOrder; // 👈 WorkOrder (no Ticket)
-  onSave: (patch: Partial<WorkOrder>) => void;
+  ticket: WorkOrder;
+  onSave: (patch: Partial<WorkOrder>) => void | Promise<void>;
   showFullImage: boolean;
   setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -35,7 +35,7 @@ export default function EditWorkOrdersModal({
   onSave,
   setShowFullImage,
 }: EditWorkOrdersModalProps) {
-  const [edited, setEdited] = useState<WorkOrder>(ticket); // 👈 WorkOrder
+  const [edited, setEdited] = useState<WorkOrder>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
@@ -60,16 +60,50 @@ export default function EditWorkOrdersModal({
 
   const addSecondary = (id: number) => {
     if (isReadOnly || !id) return;
-    if (secondaryIds.includes(id)) return;
-    if (secondaryIds.length >= maxSecondary) {
+    if (typeof primaryId === 'number' && id === primaryId) return;
+    const next = uniqSorted([...secondaryIds, id]);
+    if (next.length > maxSecondary) {
       showToastError(`Máximo ${maxSecondary} técnicos secundarios.`);
       return;
     }
-    setSecondaryIds([...secondaryIds, id]);
+    setSecondaryIds(next);
   };
+
   const removeSecondary = (id: number) =>
     setSecondaryIds(secondaryIds.filter((x) => x !== id));
 
+  // === Helpers de normalización y comparación
+  const uniqSorted = (arr: number[]) =>
+    Array.from(new Set(arr)).sort((a, b) => a - b);
+
+  const sameArray = (a: number[], b: number[]) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  };
+
+  // Guardamos la lista inicial (normalizada) para detectar cambios reales
+  const initialSecondaryRef = useRef<number[]>(
+    uniqSorted(ticket.secondary_assignee_ids ?? [])
+  );
+
+  // Sincroniza refs cuando cambie el ticket
+  useEffect(() => {
+    setEdited(ticket);
+    setPrimaryId(ticket.primary_assignee_id ?? ticket.assignee_id ?? '');
+    const initial = uniqSorted(ticket.secondary_assignee_ids ?? []);
+    setSecondaryIds(initial);
+    initialSecondaryRef.current = initial; // 👈 importante
+  }, [ticket]);
+
+  // Si el principal es uno de los secundarios, lo quitamos de secundarios
+  useEffect(() => {
+    if (typeof primaryId === 'number') {
+      setSecondaryIds((prev) => prev.filter((id) => id !== primaryId));
+    }
+  }, [primaryId]);
+
+  // Cierra el lightbox con ESC
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShowFullImage(false);
@@ -78,12 +112,7 @@ export default function EditWorkOrdersModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setShowFullImage]);
 
-  useEffect(() => {
-    setEdited(ticket);
-    setPrimaryId(ticket.primary_assignee_id ?? ticket.assignee_id ?? '');
-    setSecondaryIds(ticket.secondary_assignee_ids ?? []);
-  }, [ticket]);
-
+  // Auto-ajusta altura del título
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return;
@@ -122,23 +151,43 @@ export default function EditWorkOrdersModal({
     if (!canFullAccess) return;
 
     try {
-      if (edited.is_accepted) {
-        await setSecondaryAssignees(Number(edited.id), secondaryIds);
+      // Normaliza antes de comparar/enviar
+      const normalizedCurrent = uniqSorted(
+        secondaryIds.filter((id) =>
+          typeof primaryId === 'number' ? id !== primaryId : true
+        )
+      );
+      const normalizedInitial = initialSecondaryRef.current;
+
+      const secondariesChanged = !sameArray(
+        normalizedCurrent,
+        normalizedInitial
+      );
+
+      if (edited.is_accepted && secondariesChanged) {
+        // Si la lista cambió, valida tope aquí también por si acaso
+        if (normalizedCurrent.length > maxSecondary) {
+          throw new Error(
+            `Máximo ${maxSecondary} técnicos secundarios activos por work_order.`
+          );
+        }
+        await setSecondaryAssignees(Number(edited.id), normalizedCurrent);
+        // Actualiza el baseline después de guardar
+        initialSecondaryRef.current = normalizedCurrent;
       }
 
-      // 1) Si además vas a persistir cambios en "tickets", ahí sí usa toTicketUpdate:
-      // await updateTicket(Number(edited.id), toTicketUpdate(edited));
+      // ⚠️ (opcional) Si además persistes columnas de tickets:
+      // await updateTicket(Number(edited.id), toTicketUpdate({ ...edited, ... }));
 
-      // 2) Para la UI -> manda también los EXTRAS al padre
       onSave({
         ...toTicketUpdate({
           ...edited,
           assignee_id:
             typeof primaryId === 'number' ? primaryId : edited.assignee_id,
         }),
-        id: edited.id, // por seguridad para el merge en el padre
+        id: edited.id,
         primary_assignee_id: typeof primaryId === 'number' ? primaryId : null,
-        secondary_assignee_ids: secondaryIds,
+        secondary_assignee_ids: normalizedCurrent, // devuelve la lista ya limpia
       });
 
       showToastSuccess('Cambios guardados.');

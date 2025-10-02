@@ -10,7 +10,8 @@ import { updateTicket } from '../services/ticketService';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import type { FilterState } from '../types/filters';
 import type { WorkOrdersFilterKey } from '../features/tickets/WorkOrdersFilters';
-import type { Ticket } from '../types/Ticket';
+import type { WorkOrder } from '../types/Ticket';
+import { toTicketUpdate } from '../utils/toTicketUpdate';
 
 type ViewMode = 'WorkOrders' | 'list';
 
@@ -26,7 +27,7 @@ export default function WorkOrdersPage() {
   const [view, setView] = useState<ViewMode>('WorkOrders');
 
   // Modal para LISTA (WorkOrders ya maneja su propio modal interno)
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
 
@@ -43,9 +44,17 @@ export default function WorkOrdersPage() {
     // hijos reaccionan a mergedFilters
   }, [mergedFilters]);
 
-  async function handleSave(updated: Ticket) {
+  async function handleSave(patch: Partial<WorkOrder>) {
     try {
-      await updateTicket(Number(updated.id), updated);
+      // Usa tu helper para filtrar SOLO columnas reales de tickets
+      const ticketUpdate = toTicketUpdate(patch);
+
+      // Asegura que tenemos un id para el update
+      const id = Number(patch.id ?? selectedTicket?.id);
+      if (!id) throw new Error('Falta el id del ticket.');
+
+      await updateTicket(id, ticketUpdate);
+
       showToastSuccess('Ticket actualizado correctamente.');
       setModalOpen(false);
       setSelectedTicket(null);
@@ -126,7 +135,7 @@ export default function WorkOrdersPage() {
             <WorkOrdersList
               filters={mergedFilters}
               onOpen={(t) => {
-                setSelectedTicket(t);
+                setSelectedTicket(t as WorkOrder);
                 setModalOpen(true);
               }}
             />
