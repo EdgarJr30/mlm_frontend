@@ -167,7 +167,7 @@ export default function RoleList({ searchTerm = '' }: Props) {
                         </Link>
 
                         <Link
-                          to={`/admin/roles/${r.id}/users`}
+                          to={`/admin/settings?tab=role-users&roleId=${r.id}`}
                           className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-white border px-3 py-1.5 text-indigo-700 hover:bg-indigo-50"
                           title="Ver y administrar usuarios del rol"
                         >

@@ -13,6 +13,7 @@ import RoleManagementPage from '../../pages/admin/RoleManagementPage';
 import RoleEditPage from '../../pages/admin/RoleEditPage';
 import DashboardPage from '../../pages/DashboardPage';
 import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
+import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -271,32 +272,38 @@ export const APP_ROUTES: AppRoute[] = [
 
   // Administración de permisos y roles
   {
-    path: '/admin/permisos',
-    element: <RoleManagementPage />,
-    allowPerms: ['rbac:manage_roles'],
-    name: 'Permisos y Roles',
+    path: '/admin/settings',
+    element: <AdminSettingsHubPage />,
+    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
+    name: 'Configuración',
     icon: IconPermissions,
     showInSidebar: true,
   },
   {
+    path: '/admin/permisos',
+    element: <RoleManagementPage />,
+    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
+    name: 'Permisos y Roles',
+    icon: IconPermissions,
+    showInSidebar: false,
+  },
+  {
     path: '/admin/roles/:id',
     element: <RoleEditPage />,
-    allowPerms: ['rbac:manage_roles'],
+    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
     showInSidebar: false,
   },
   {
     path: '/admin/roles/:roleId/users',
-    element: <RoleManagementPage />,
-    allowPerms: ['rbac:manage_roles'],
-    name: 'Usuarios por rol',
+    element: <Navigate to="/admin/settings?tab=role-users" replace />,
+    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
     showInSidebar: false,
   },
   {
-    path: '/admin/settings',
-    element: <AdminSettingsPage />,
-    allowPerms: ['rbac:manage_permissions'],
-    name: 'Configuración',
-    showInSidebar: true,
+    path: '/admin/settings-old',
+    element: <AdminSettingsPage />, // redirige a /admin/settings
+    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
+    showInSidebar: false,
   },
 ];
 

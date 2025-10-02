@@ -147,7 +147,7 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            to="/admin/permisos"
+            to="/admin/settings?tab=roles"
             className="inline-flex items-center rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
           >
             ← Volver a roles
