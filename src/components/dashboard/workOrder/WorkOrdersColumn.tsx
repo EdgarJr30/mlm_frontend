@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { Ticket } from '../../../types/Ticket';
+import type { Ticket, WorkOrderExtras } from '../../../types/Ticket';
 import { getTicketsByStatusPaginated } from '../../../services/ticketService';
 import {
   getPublicImageUrl,
@@ -451,7 +451,12 @@ export default function WorkOrdersColumn({
 
                   {/* Técnico */}
                   <AssigneeBadge
-                    assigneeId={ticket.assignee_id}
+                    assigneeId={
+                      (ticket as WorkOrderExtras).effective_assignee_id ??
+                      (ticket as WorkOrderExtras).primary_assignee_id ??
+                      (ticket as Ticket).assignee_id ??
+                      null
+                    }
                     size="sm"
                     className="mt-2"
                   />

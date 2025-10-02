@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Ticket } from '../../../types/Ticket';
+import type { Ticket, WorkOrder, WorkOrderExtras } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
 import {
@@ -11,7 +11,7 @@ import AssigneeBadge from '../../common/AssigneeBadge';
 
 type Props = {
   filters?: FilterState<WorkOrdersFilterKey>;
-  onOpen?: (t: Ticket) => void;
+  onOpen?: (t: WorkOrder) => void;
 };
 
 const PAGE_SIZE = 10;
@@ -29,7 +29,7 @@ function priorityClass(p?: Ticket['priority']) {
 }
 
 export default function WorkOrdersList({ filters, onOpen }: Props) {
-  const [rows, setRows] = useState<Ticket[]>([]);
+  const [rows, setRows] = useState<WorkOrder[]>([]);
   const [page, setPage] = useState(0);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -136,7 +136,15 @@ export default function WorkOrdersList({ filters, onOpen }: Props) {
 
                   {/* Técnico */}
                   <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    <AssigneeBadge assigneeId={t.assignee_id} size="xs" />
+                    <AssigneeBadge
+                      assigneeId={
+                        (t as WorkOrderExtras).effective_assignee_id ??
+                        (t as WorkOrderExtras).primary_assignee_id ??
+                        (t as Ticket).assignee_id ??
+                        null
+                      }
+                      size="xs"
+                    />
                   </td>
 
                   {/* Estado */}

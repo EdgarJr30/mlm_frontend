@@ -12,6 +12,7 @@ import AssigneeManagementPage from '../../pages/admin/AssigneePage';
 import RoleManagementPage from '../../pages/admin/RoleManagementPage';
 import RoleEditPage from '../../pages/admin/RoleEditPage';
 import DashboardPage from '../../pages/DashboardPage';
+import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -289,6 +290,13 @@ export const APP_ROUTES: AppRoute[] = [
     allowPerms: ['rbac:manage_roles'],
     name: 'Usuarios por rol',
     showInSidebar: false,
+  },
+  {
+    path: '/admin/settings',
+    element: <AdminSettingsPage />,
+    allowPerms: ['rbac:manage_permissions'],
+    name: 'Configuración',
+    showInSidebar: true,
   },
 ];
 

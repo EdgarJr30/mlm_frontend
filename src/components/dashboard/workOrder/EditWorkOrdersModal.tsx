@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Ticket } from '../../../types/Ticket';
+import type { WorkOrder } from '../../../types/Ticket';
+import { toTicketUpdate } from '../../../utils/toTicketUpdate';
 import { useAssignees } from '../../../context/AssigneeContext';
 import { LOCATIONS } from '../../../constants/locations';
 import { STATUSES } from '../../../constants/const_ticket';
@@ -12,13 +13,18 @@ import { archiveTicket } from '../../../services/ticketService';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import type { Assignee } from '../../../types/Assignee';
 import { useCan } from '../../../rbac/PermissionsContext';
+import { useSettings } from '../../../context/SettingsContext';
+import {
+  acceptWorkOrderWithPrimary,
+  setSecondaryAssignees,
+} from '../../../services/ticketService';
 import { showToastSuccess, showToastError } from '../../../notifications/toast';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
   onClose: () => void;
-  ticket: Ticket;
-  onSave: (ticket: Ticket) => void;
+  ticket: WorkOrder; // 👈 WorkOrder (no Ticket)
+  onSave: (patch: Partial<WorkOrder>) => void;
   showFullImage: boolean;
   setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -29,29 +35,44 @@ export default function EditWorkOrdersModal({
   onSave,
   setShowFullImage,
 }: EditWorkOrdersModalProps) {
-  const [edited, setEdited] = useState<Ticket>(ticket);
+  const [edited, setEdited] = useState<WorkOrder>(ticket); // 👈 WorkOrder
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
+  const { maxSecondary } = useSettings();
+
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
   const canFullAccess = useCan('work_orders:full_access');
-  // Si necesitas mostrar/ocultar botones de negocio en este modal (no están en tu UI actual):
-  // const canCancel  = useCan('work_orders:cancel');
-  // const canDelete  = useCan('work_orders:delete');
-
-  // bloquea edición si no hay full_access
   const isReadOnly = !canFullAccess;
   const addDisabledCls = (base = '') =>
     base + (isReadOnly ? ' opacity-50 cursor-not-allowed bg-gray-100' : '');
 
+  // --- principal & secundarios ---
+  const [primaryId, setPrimaryId] = useState<number | ''>(
+    ticket.primary_assignee_id ?? ticket.assignee_id ?? ''
+  );
+  const [secondaryIds, setSecondaryIds] = useState<number[]>(
+    ticket.secondary_assignee_ids ?? []
+  );
+
+  const addSecondary = (id: number) => {
+    if (isReadOnly || !id) return;
+    if (secondaryIds.includes(id)) return;
+    if (secondaryIds.length >= maxSecondary) {
+      showToastError(`Máximo ${maxSecondary} técnicos secundarios.`);
+      return;
+    }
+    setSecondaryIds([...secondaryIds, id]);
+  };
+  const removeSecondary = (id: number) =>
+    setSecondaryIds(secondaryIds.filter((x) => x !== id));
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowFullImage(false);
-      }
+      if (e.key === 'Escape') setShowFullImage(false);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -59,9 +80,10 @@ export default function EditWorkOrdersModal({
 
   useEffect(() => {
     setEdited(ticket);
+    setPrimaryId(ticket.primary_assignee_id ?? ticket.assignee_id ?? '');
+    setSecondaryIds(ticket.secondary_assignee_ids ?? []);
   }, [ticket]);
 
-  // Auto-ajustar alto del textarea del título según contenido
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return;
@@ -75,14 +97,13 @@ export default function EditWorkOrdersModal({
       | React.ChangeEvent<HTMLTextAreaElement>
       | React.ChangeEvent<HTMLSelectElement>
   ) => {
-    if (isReadOnly) return; // 👈 doble blindaje en UI
+    if (isReadOnly) return;
     const { name, type, value } = e.target;
     if (type === 'checkbox') {
-      setEdited({ ...edited, [name]: (e.target as HTMLInputElement).checked });
-      return;
-    }
-    if (name === 'assignee_id') {
-      setEdited({ ...edited, assignee_id: Number(value) });
+      setEdited({
+        ...edited,
+        [name]: (e.target as HTMLInputElement).checked,
+      } as WorkOrder);
       return;
     }
     if (name === 'deadline_date') {
@@ -92,24 +113,94 @@ export default function EditWorkOrdersModal({
       });
       return;
     }
-    setEdited({ ...edited, [name]: value });
+    setEdited({ ...edited, [name]: value } as WorkOrder);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  // Guardar cambios generales + secundarios
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canFullAccess) return; // 👈 evita submit sin permiso
-    onSave(edited);
-    onClose();
+    if (!canFullAccess) return;
+
+    try {
+      if (edited.is_accepted) {
+        await setSecondaryAssignees(Number(edited.id), secondaryIds);
+      }
+
+      // 1) Si además vas a persistir cambios en "tickets", ahí sí usa toTicketUpdate:
+      // await updateTicket(Number(edited.id), toTicketUpdate(edited));
+
+      // 2) Para la UI -> manda también los EXTRAS al padre
+      onSave({
+        ...toTicketUpdate({
+          ...edited,
+          assignee_id:
+            typeof primaryId === 'number' ? primaryId : edited.assignee_id,
+        }),
+        id: edited.id, // por seguridad para el merge en el padre
+        primary_assignee_id: typeof primaryId === 'number' ? primaryId : null,
+        secondary_assignee_ids: secondaryIds,
+      });
+
+      showToastSuccess('Cambios guardados.');
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToastError(`No se pudo guardar: ${msg}`);
+    }
+  };
+
+  const handleAcceptWithPrimary = async () => {
+    if (!canFullAccess) return;
+    if (!primaryId || typeof primaryId !== 'number') {
+      showToastError('Selecciona un responsable principal para aceptar.');
+      return;
+    }
+    try {
+      await acceptWorkOrderWithPrimary(Number(edited.id), primaryId);
+
+      onSave({
+        // columnas reales del ticket (si quieres reflejarlas)
+        ...toTicketUpdate({
+          ...edited,
+          is_accepted: true,
+          assignee_id: primaryId,
+        }),
+        // y los EXTRAS para la UI
+        id: edited.id,
+        is_accepted: true,
+        primary_assignee_id: primaryId,
+        // no toques secundarios aquí, deja los que ya tenga el estado/BD
+      });
+
+      showToastSuccess('Orden aceptada y responsable asignado.');
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToastError(msg);
+    }
   };
 
   if (!ticket) return null;
 
+  // Opciones de técnicos
+  const renderAssigneeOptions = () =>
+    SECTIONS_ORDER.map((grupo) => (
+      <optgroup key={grupo} label={grupo}>
+        {(bySectionActive[grupo] ?? []).map((a: Assignee | undefined) =>
+          a ? (
+            <option key={a.id} value={a.id}>
+              {formatAssigneeFullName(a)}
+            </option>
+          ) : null
+        )}
+      </optgroup>
+    ));
+
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna 1: ID, Título, Fecha incidente, Descripción, Comentarios */}
+        {/* Columna 1 */}
         <div className="flex flex-col gap-4">
-          {/* Ticket ID */}
           <div>
             <label className="block text-sm font-medium">ID</label>
             <input
@@ -120,7 +211,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Título */}
           <div>
             <label className="block text-sm font-medium">Título</label>
             <textarea
@@ -133,7 +223,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Fecha del incidente */}
           <div>
             <label className="block text-sm font-medium">
               Fecha del Incidente
@@ -147,7 +236,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Descripción */}
           <div>
             <label className="block text-sm font-medium">Descripción</label>
             <textarea
@@ -158,7 +246,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Comentarios */}
           <div>
             <label className="block text-sm font-medium">Comentarios</label>
             <textarea
@@ -176,9 +263,8 @@ export default function EditWorkOrdersModal({
           </div>
         </div>
 
-        {/* Columna 2: Solicitante, Email, Teléfono, Ubicación */}
+        {/* Columna 2 */}
         <div className="flex flex-col gap-4">
-          {/* Solicitante */}
           <div>
             <label className="block text-sm font-medium">Solicitante</label>
             <input
@@ -189,7 +275,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium">Email</label>
             <input
@@ -200,7 +285,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Teléfono */}
           <div>
             <label className="block text-sm font-medium">Teléfono</label>
             <input
@@ -211,7 +295,6 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* Ubicación (ya estaba deshabilitado; lo dejamos así) */}
           <div>
             <label className="block text-sm font-medium">Ubicación</label>
             <select
@@ -232,33 +315,116 @@ export default function EditWorkOrdersModal({
           </div>
         </div>
 
-        {/* Columna 3: Responsable, Prioridad, Estatus, Fecha entrega */}
+        {/* Columna 3 */}
         <div className="flex flex-col gap-4">
-          {/* Responsable */}
+          {/* === NUEVO: Responsable principal === */}
           <div>
-            <label className="block text-sm font-medium">Responsable</label>
+            <label className="block text-sm font-medium">
+              Responsable principal
+            </label>
             <select
-              name="assignee_id"
-              value={edited.assignee_id || ''}
-              onChange={handleChange}
+              name="primary_assignee_id"
+              value={primaryId === '' ? '' : Number(primaryId)}
+              onChange={(e) => setPrimaryId(Number(e.target.value) || '')}
               className={addDisabledCls(
                 'mt-1 p-2 w-full border rounded cursor-pointer'
               )}
               disabled={loadingAssignees || isReadOnly}
             >
-              {SECTIONS_ORDER.map((grupo) => (
-                <optgroup key={grupo} label={grupo}>
-                  {(bySectionActive[grupo] ?? []).map(
-                    (assignee: Assignee | undefined) =>
-                      assignee ? (
-                        <option key={assignee.id} value={assignee.id}>
-                          {formatAssigneeFullName(assignee)}
-                        </option>
-                      ) : null
-                  )}
-                </optgroup>
-              ))}
+              <option value="">Selecciona responsable…</option>
+              {renderAssigneeOptions()}
             </select>
+            {!edited.is_accepted && (
+              <p className="text-xs text-gray-500 mt-1">
+                Obligatorio para aceptar la orden.
+              </p>
+            )}
+          </div>
+
+          {/* === NUEVO: Técnicos secundarios (chips) === */}
+          <div>
+            <label className="block text-sm font-medium">
+              Técnicos secundarios{' '}
+              <span className="text-gray-500 text-xs">
+                (máx. {maxSecondary})
+              </span>
+            </label>
+            <div className="flex items-center gap-3 mt-1">
+              <select
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  if (val) addSecondary(val);
+                  e.currentTarget.value = '';
+                }}
+                disabled={
+                  loadingAssignees ||
+                  isReadOnly ||
+                  secondaryIds.length >= maxSecondary
+                }
+                className={addDisabledCls('p-2 border rounded w-full')}
+                value=""
+              >
+                <option value="">Añadir técnico…</option>
+                {SECTIONS_ORDER.map((grupo) => (
+                  <optgroup key={grupo} label={grupo}>
+                    {(bySectionActive[grupo] ?? []).map(
+                      (a: Assignee | undefined) =>
+                        a ? (
+                          <option
+                            key={a.id}
+                            value={a.id}
+                            disabled={
+                              a.id === primaryId || secondaryIds.includes(a.id)
+                            }
+                          >
+                            {formatAssigneeFullName(a)}
+                          </option>
+                        ) : null
+                    )}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2 flex-wrap mt-2">
+              {secondaryIds.map((id) => {
+                // Busca nombre
+                let label = `#${id}`;
+                for (const g of SECTIONS_ORDER) {
+                  const hit = (bySectionActive[g] ?? []).find(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (a: any) => a?.id === id
+                  );
+                  if (hit) {
+                    label = formatAssigneeFullName(hit);
+                    break;
+                  }
+                }
+                return (
+                  <span
+                    key={id}
+                    className="px-2 py-1 rounded-full bg-slate-200 text-slate-800 text-sm inline-flex items-center gap-2"
+                  >
+                    {label}
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        className="hover:text-red-600"
+                        onClick={() => removeSecondary(id)}
+                        title="Quitar"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
+              {secondaryIds.length === 0 && (
+                <span className="text-xs text-gray-500">
+                  Sin técnicos secundarios.
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Prioridad */}
@@ -299,7 +465,7 @@ export default function EditWorkOrdersModal({
             </select>
           </div>
 
-          {/* Fecha estimada de entrega (deadline_date) */}
+          {/* Fecha estimada de entrega */}
           <div>
             <label className="block text-sm font-medium">
               Fecha estimada de entrega
@@ -317,7 +483,7 @@ export default function EditWorkOrdersModal({
             />
           </div>
 
-          {/* IMÁGENES DEL TICKET */}
+          {/* Imágenes */}
           {ticket.image &&
             (() => {
               const imagePaths = getTicketImagePaths(ticket.image ?? '[]');
@@ -337,7 +503,7 @@ export default function EditWorkOrdersModal({
               );
             })()}
 
-          {/* Urgente? */}
+          {/* Urgente */}
           <div className="flex items-center gap-6 flex-wrap">
             <div className="flex items-center gap-2">
               <input
@@ -359,6 +525,7 @@ export default function EditWorkOrdersModal({
         </div>
       </div>
 
+      {/* Lightbox imágenes */}
       {fullImageIdx !== null &&
         (() => {
           const imagePaths = getTicketImagePaths(ticket.image ?? '[]');
@@ -376,27 +543,13 @@ export default function EditWorkOrdersModal({
                   aria-label="Cerrar"
                   type="button"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  ✕
                 </button>
                 <img
                   src={getPublicImageUrl(path)}
                   alt="Vista ampliada"
                   className="max-w-full max-h-[80vh] rounded shadow-lg"
                 />
-                {/* Flechas para navegar entre imágenes */}
                 {imagePaths.length > 1 && (
                   <>
                     <button
@@ -428,6 +581,7 @@ export default function EditWorkOrdersModal({
           );
         })()}
 
+      {/* Footer acciones */}
       <div className="flex justify-end gap-2 mt-6">
         <button
           type="button"
@@ -437,7 +591,19 @@ export default function EditWorkOrdersModal({
           Cancelar
         </button>
 
-        {/* 👇 Botón Archivar: solo con permiso, en Finalizadas y si NO está archivada */}
+        {/* ACEPTAR (si aún no aceptada) */}
+        {canFullAccess && !edited.is_accepted && (
+          <button
+            type="button"
+            onClick={handleAcceptWithPrimary}
+            className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 cursor-pointer"
+            title="Aceptar y asignar responsable principal"
+          >
+            Aceptar y asignar
+          </button>
+        )}
+
+        {/* Archivar: solo en Finalizadas y no archivada */}
         {canFullAccess &&
           edited.status === 'Finalizadas' &&
           !edited.is_archived && (
@@ -446,10 +612,7 @@ export default function EditWorkOrdersModal({
               onClick={async () => {
                 try {
                   await archiveTicket(Number(edited.id));
-
-                  // Notifica hacia arriba un "cambio" con is_archived=true para que el board/column lo quite al instante.
                   onSave({ ...edited, is_archived: true });
-
                   showToastSuccess('Orden archivada.');
                   onClose();
                 } catch (e: unknown) {
@@ -458,13 +621,13 @@ export default function EditWorkOrdersModal({
                 }
               }}
               className="bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-800 cursor-pointer"
-              title="Mover a archivadas (dejará de verse en Finalizadas)"
+              title="Mover a archivadas"
             >
               Archivar
             </button>
           )}
 
-        {/* Guardar: deshabilitado si no tiene full_access */}
+        {/* Guardar (ediciones generales y secundarios si ya es OT) */}
         <button
           type="submit"
           disabled={!canFullAccess}

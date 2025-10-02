@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import type { Ticket } from "../types/Ticket";
+import type { Ticket, WorkOrder } from "../types/Ticket";
 import type { FilterState } from "../types/filters";
 import type { WorkRequestsFilterKey } from "../features/tickets/workRequestsFilters";
 
@@ -102,7 +102,7 @@ export async function getTicketsByStatusPaginated(
   const to = from + pageSize - 1;
 
   let query = supabase
-    .from("tickets")
+    .from("v_tickets_compat")
     .select("*")
     .eq("status", status)
     .eq("is_accepted", true)
@@ -123,7 +123,7 @@ export async function getTicketsByStatusPaginated(
     console.error(`❌ Error al cargar tickets con estado "${status}":`, error.message);
     return [];
   }
-  return data as Ticket[];
+  return data as unknown as WorkOrder[];
 }
 
 export async function getFilteredTickets(
@@ -132,7 +132,7 @@ export async function getFilteredTickets(
   isAccepted?: boolean
 ): Promise<Ticket[]> {
   let query = supabase
-    .from("tickets")
+    .from("v_tickets_compat")
     .select("*")
     .eq('is_archived', false) 
     .order("id", { ascending: false });
@@ -159,7 +159,7 @@ export async function getFilteredTickets(
     console.error("❌ Error buscando tickets:", error.message);
     return [];
   }
-  return data as Ticket[];
+  return (data ?? []) as unknown as WorkOrder[];
 }
 
 export async function getUnacceptedTicketsPaginated(
@@ -192,11 +192,6 @@ export async function getUnacceptedTicketsPaginated(
   return { data: data as Ticket[], count: count || 0 };
 }
 
-/**
- * Acepta tickets.
- * - NUEVO: si pasas [{id, assignee_id}, ...] asigna responsable y marca is_accepted=true (bulk).
- * - LEGADO: si pasas string[] con ids, solo marcará is_accepted=true (seguirás necesitando setear assignee_id aparte).
- */
 /**
  * Acepta tickets.
  * - NUEVO: si pasas [{id, assignee_id}, ...] asigna responsable y marca is_accepted=true (bulk).
@@ -380,15 +375,16 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
   values: FilterState<TKeys>,
   page: number,
   pageSize: number
-): Promise<{ data: Ticket[]; count: number }> {
+): Promise<{ data: WorkOrder[]; count: number }> {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
+  // 👇 cambiamos la fuente a la vista que trae los extras:
   let q = supabase
-    .from("tickets")
+    .from("v_tickets_compat")
     .select("*", { count: "exact" })
     .eq("is_accepted", true)
-    .eq('is_archived', false); 
+    .eq('is_archived', false);
 
   const termRaw = (values as Record<string, unknown>)["q"];
   const term = typeof termRaw === "string" ? termRaw.trim() : "";
@@ -405,7 +401,10 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
 
   const assigneeIdRaw = (values as Record<string, unknown>)["assignee_id"];
   if (assigneeIdRaw !== undefined && assigneeIdRaw !== null && assigneeIdRaw !== "") {
-    q = q.eq("assignee_id", Number(assigneeIdRaw));
+    q = q.filter('id', 'in', `(
+      select work_order_id from v_work_order_assignees_current
+      where assignee_id = ${Number(assigneeIdRaw)}
+    )`);
   }
 
   const createdRaw = (values as Record<string, unknown>)["created_at"];
@@ -435,7 +434,7 @@ export async function getTicketsByWorkOrdersFiltersPaginated<TKeys extends strin
     console.error("❌ getTicketsByWorkOrdersFiltersPaginated error:", error.message);
     return { data: [], count: 0 };
   }
-  return { data: (data ?? []) as Ticket[], count: count ?? 0 };
+  return { data: (data ?? []) as WorkOrder[], count: count ?? 0 };
 }
 
 export async function archiveTicket(id: number): Promise<void> {
@@ -446,4 +445,20 @@ export async function archiveTicket(id: number): Promise<void> {
     .eq('is_archived', false);
 
   if (error) throw new Error(`No se pudo archivar: ${error.message}`);
+}
+
+export async function acceptWorkOrderWithPrimary(workOrderId: number, primaryAssigneeId: number) {
+  const { error } = await supabase.rpc('accept_work_order', {
+    p_work_order_id: workOrderId,
+    p_primary_assignee_id: primaryAssigneeId
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function setSecondaryAssignees(workOrderId: number, secondaryIds: number[]) {
+  const { error } = await supabase.rpc('set_secondary_assignees', {
+    p_work_order_id: workOrderId,
+    p_secondary_ids: secondaryIds.length ? secondaryIds : null
+  });
+  if (error) throw new Error(error.message);
 }

@@ -6,7 +6,7 @@ import {
   getTicketCountsRPC,
   getTicketsByWorkOrdersFiltersPaginated,
 } from '../../../services/ticketService';
-import type { Ticket } from '../../../types/Ticket';
+import type { Ticket, WorkOrder } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
 import WorkOrdersColumn from './WorkOrdersColumn';
@@ -25,15 +25,15 @@ interface Props {
 }
 
 export default function WorkOrdersBoard({ filters }: Props) {
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [lastUpdatedTicket, setLastUpdatedTicket] = useState<Ticket | null>(
+  const [lastUpdatedTicket, setLastUpdatedTicket] = useState<WorkOrder | null>(
     null
   );
-  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<WorkOrder[]>([]);
   const [counts, setCounts] = useState<Record<Ticket['status'], number>>({
     Pendiente: 0,
     'En Ejecución': 0,
@@ -81,7 +81,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
           0,
           FILTERED_LIMIT
         );
-        if (alive) setFilteredTickets(data);
+        if (alive) setFilteredTickets((data ?? []) as WorkOrder[]);
       } else {
         setFilteredTickets([]);
         setReloadKey((p) => p + 1); // fuerza recarga de columnas con paginación local
@@ -131,7 +131,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
   }
 
   /** Modal */
-  const openModal = (ticket: Ticket) => {
+  const openModal = (ticket: WorkOrder) => {
     setSelectedTicket(ticket);
     setModalOpen(true);
   };
@@ -140,31 +140,46 @@ export default function WorkOrdersBoard({ filters }: Props) {
     setModalOpen(false);
   };
 
-  const handleSave = async (updatedTicket: Ticket) => {
+  /** Guardar cambios desde el modal (conservando extras en memoria) */
+  const handleSave = async (patch: Partial<WorkOrder>) => {
     try {
-      const prev = selectedTicket || updatedTicket;
+      const prev = (selectedTicket as WorkOrder) || (patch as WorkOrder);
 
-      await updateTicket(Number(updatedTicket.id), {
-        comments: updatedTicket.comments ?? undefined,
-        assignee_id: updatedTicket.assignee_id ?? undefined,
-        priority: updatedTicket.priority,
-        status: updatedTicket.status,
-        is_urgent: !!updatedTicket.is_urgent,
-        deadline_date: updatedTicket.deadline_date ?? undefined,
+      // 1) Persiste SOLO columnas reales de "tickets"
+      await updateTicket(Number(patch.id), {
+        comments: patch.comments ?? undefined,
+        assignee_id: patch.assignee_id ?? undefined,
+        priority: patch.priority as Ticket['priority'],
+        status: patch.status as Ticket['status'],
+        is_urgent: !!patch.is_urgent,
+        deadline_date: patch.deadline_date ?? undefined,
       });
 
-      setLastUpdatedTicket(updatedTicket);
+      // 2) Actualiza estado local conservando extras
+      setLastUpdatedTicket(
+        (p) => ({ ...(p ?? {}), ...(patch as WorkOrder) } as WorkOrder)
+      );
+
+      // 3) Si estás en modo filtrado, mezcla el patch en la lista filtrada
+      setFilteredTickets((rows) =>
+        rows.map((r) =>
+          r.id === patch.id
+            ? ({ ...r, ...(patch as WorkOrder) } as WorkOrder)
+            : r
+        )
+      );
+
       showToastSuccess('Ticket actualizado correctamente.');
       setModalOpen(false);
       setSelectedTicket(null);
 
       const affected =
-        prev.status !== updatedTicket.status ||
-        prev.is_accepted !== updatedTicket.is_accepted ||
-        prev.location !== updatedTicket.location;
+        prev.status !== patch.status ||
+        prev.is_accepted !== patch.is_accepted ||
+        prev.location !== patch.location;
 
       if (affected) {
-        bumpCountsLocal(prev, updatedTicket);
+        bumpCountsLocal(prev as Ticket, patch as Ticket);
         scheduleCountsRefresh();
       }
     } catch (error: unknown) {
@@ -257,7 +272,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
           isLoading={isLoading}
           onFirstLoad={handleColumnLoaded}
           reloadSignal={reloadKey}
-          lastUpdatedTicket={lastUpdatedTicket}
+          lastUpdatedTicket={lastUpdatedTicket as unknown as Ticket}
           selectedLocation={
             typeof (filters as Record<string, unknown> | undefined)
               ?.location === 'string'

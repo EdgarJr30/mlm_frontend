@@ -24,6 +24,14 @@ export interface Ticket {
   finalized_at?: string | null;
 }
 
+export type WorkOrderExtras = {
+  primary_assignee_id?: number | null;
+  secondary_assignee_ids?: number[] | null;
+  effective_assignee_id?: number | null;
+};
+
+export type WorkOrder = Ticket & WorkOrderExtras;
+
 export const Locations = [
   "Operadora de Servicios Alimenticios",
   "Adrian Tropical 27",
