@@ -30,6 +30,9 @@ export default function WorkOrdersPage() {
   const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
+  const [lastUpdatedTicket, setLastUpdatedTicket] = useState<WorkOrder | null>(
+    null
+  );
 
   const mergedFilters = useMemo<FilterState<WorkOrdersFilterKey>>(
     () => ({
@@ -46,14 +49,17 @@ export default function WorkOrdersPage() {
 
   async function handleSave(patch: Partial<WorkOrder>) {
     try {
-      // Usa tu helper para filtrar SOLO columnas reales de tickets
       const ticketUpdate = toTicketUpdate(patch);
 
-      // Asegura que tenemos un id para el update
       const id = Number(patch.id ?? selectedTicket?.id);
       if (!id) throw new Error('Falta el id del ticket.');
 
       await updateTicket(id, ticketUpdate);
+
+      // 👇 Muy importante: levantar el patch para mezclarlo en la lista
+      setLastUpdatedTicket(
+        (prev) => ({ ...(prev ?? {}), ...(patch as WorkOrder) } as WorkOrder)
+      );
 
       showToastSuccess('Ticket actualizado correctamente.');
       setModalOpen(false);
@@ -138,6 +144,8 @@ export default function WorkOrdersPage() {
                 setSelectedTicket(t as WorkOrder);
                 setModalOpen(true);
               }}
+              // 👇 NUEVO
+              lastUpdatedTicket={lastUpdatedTicket}
             />
           )}
         </section>

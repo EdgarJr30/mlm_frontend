@@ -12,6 +12,7 @@ import AssigneeBadge from '../../common/AssigneeBadge';
 type Props = {
   filters?: FilterState<WorkOrdersFilterKey>;
   onOpen?: (t: WorkOrder) => void;
+  lastUpdatedTicket?: Partial<WorkOrder> | null;
 };
 
 const PAGE_SIZE = 10;
@@ -28,7 +29,26 @@ function priorityClass(p?: Ticket['priority']) {
   return 'bg-green-100 text-green-800 border-green-200';
 }
 
-export default function WorkOrdersList({ filters, onOpen }: Props) {
+function withEffective(w: WorkOrder): WorkOrder {
+  const primary =
+    (w as WorkOrderExtras).primary_assignee_id ?? w.assignee_id ?? null;
+  const sec = (w as WorkOrderExtras).secondary_assignee_ids ?? [];
+  const effective =
+    (w as WorkOrderExtras).effective_assignee_id ??
+    primary ??
+    (sec.length > 0 ? sec[0] : null) ??
+    null;
+  return {
+    ...(w as WorkOrderExtras),
+    effective_assignee_id: effective,
+  } as WorkOrder;
+}
+
+export default function WorkOrdersList({
+  filters,
+  onOpen,
+  lastUpdatedTicket,
+}: Props) {
   const [rows, setRows] = useState<WorkOrder[]>([]);
   const [page, setPage] = useState(0);
   const [count, setCount] = useState(0);
@@ -56,6 +76,51 @@ export default function WorkOrdersList({ filters, onOpen }: Props) {
     void reload(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, fkey]);
+
+  // 👇 Mezcla local optimista cuando llega un patch desde el modal
+  useEffect(() => {
+    if (!lastUpdatedTicket?.id) return;
+
+    setRows((prev) => {
+      let touched = false;
+      const next = prev.map((r) => {
+        if (r.id === lastUpdatedTicket.id) {
+          touched = true;
+          return withEffective({
+            ...r,
+            ...(lastUpdatedTicket as WorkOrder),
+          } as WorkOrder);
+        }
+        return r;
+      });
+      // Si la fila no está en la página actual, no hacemos nada (paginación)
+      return touched ? next : prev;
+    });
+  }, [lastUpdatedTicket]);
+
+  useEffect(() => {
+    if (!lastUpdatedTicket?.id) return;
+
+    let touched = false;
+    setRows((prev) => {
+      const next = prev.map((r) => {
+        if (r.id === lastUpdatedTicket.id) {
+          touched = true;
+          return withEffective({
+            ...r,
+            ...(lastUpdatedTicket as WorkOrder),
+          } as WorkOrder);
+        }
+        return r;
+      });
+      return touched ? next : prev;
+    });
+
+    if (!touched) {
+      // 👇 recarga solo la página actual (puede ser costoso si haces muchos guardados seguidos)
+      void reload(page);
+    }
+  }, [lastUpdatedTicket]);
 
   return (
     <div className="overflow-auto rounded-lg ring-1 ring-gray-200 bg-white">
