@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import {
@@ -8,6 +8,9 @@ import {
 import { useAssignees } from '../../../context/AssigneeContext';
 import type { Assignee } from '../../../types/Assignee';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
+// 👇 NUEVO
+import { acceptTickets } from '../../../services/ticketService';
+import { showToastError, showToastSuccess } from '../../../notifications';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -57,12 +60,15 @@ export default function WorkRequestsDetailModal({
   canFullWR,
   getAssigneeFor,
   setAssigneeFor,
+  // 👇 NUEVO: callback para que el padre recargue y cierre
+  onAccepted,
 }: {
   ticket: Ticket;
   onClose: () => void;
   canFullWR: boolean;
   getAssigneeFor: (id: number) => number | '';
   setAssigneeFor: (id: number, assigneeId: number) => void;
+  onAccepted?: () => void;
 }) {
   const imagePaths = getTicketImagePaths(ticket.image ?? '');
   const { loading, bySectionActive } = useAssignees();
@@ -76,6 +82,43 @@ export default function WorkRequestsDetailModal({
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [onClose]);
+
+  // 👇 NUEVO: estado de envío y valor del responsable
+  const [submitting, setSubmitting] = useState(false);
+  const assigneeValue = useMemo(
+    () => getAssigneeFor(Number(ticket.id)),
+    [getAssigneeFor, ticket.id]
+  );
+
+  // 👇 NUEVO: acción Aceptar
+  async function handleAccept() {
+    if (!canFullWR) {
+      showToastError('No tienes permiso para aceptar solicitudes.');
+      return;
+    }
+    if (!assigneeValue) {
+      showToastError('Selecciona un responsable antes de aceptar.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await acceptTickets([
+        { id: Number(ticket.id), assignee_id: Number(assigneeValue) },
+      ]);
+      showToastSuccess('Solicitud aceptada correctamente.');
+      onAccepted?.(); // permite que el padre recargue y cierre
+    } catch (error) {
+      showToastError(
+        `Hubo un error al aceptar la solicitud. Error: ${
+          error instanceof Error ? error.message : 'Desconocido'
+        }`
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const acceptDisabled = !canFullWR || !assigneeValue || submitting;
 
   return (
     <div
@@ -91,13 +134,34 @@ export default function WorkRequestsDetailModal({
             <h3 className="text-xl font-semibold">Solicitud #{ticket.id}</h3>
             <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 grid place-items-center cursor-pointer"
-            aria-label="Cerrar"
-          >
-            ✕
-          </button>
+
+          {/* 👇 NUEVO: botón Aceptar en el header */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAccept}
+              disabled={acceptDisabled}
+              title={
+                !canFullWR
+                  ? 'No tienes permiso para aceptar'
+                  : !assigneeValue
+                  ? 'Selecciona un responsable'
+                  : undefined
+              }
+              className={
+                'inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
+              }
+            >
+              {submitting ? 'Aceptando…' : 'Aceptar solicitud'}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 grid place-items-center cursor-pointer"
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
+          </div>
         </header>
 
         <nav className="px-6 pt-3">
@@ -159,13 +223,13 @@ export default function WorkRequestsDetailModal({
                 </label>
                 <select
                   className={
-                    'mt-1 w-full rounded border-gray-300' +
+                    'mt-1 w-full rounded border-gray-300 cursor-pointer' +
                     (!canFullWR
                       ? ' opacity-50 cursor-not-allowed bg-gray-100'
                       : '')
                   }
                   disabled={loading || !canFullWR}
-                  value={getAssigneeFor(Number(ticket.id))}
+                  value={assigneeValue}
                   onChange={(e) =>
                     setAssigneeFor(Number(ticket.id), Number(e.target.value))
                   }

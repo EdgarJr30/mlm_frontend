@@ -716,6 +716,10 @@ export default function WorkRequestsBoard({
           canFullWR={canFullWR}
           getAssigneeFor={getAssigneeFor}
           setAssigneeFor={setAssigneeFor}
+          onAccepted={async () => {
+            await reload();
+            setDetailTicket(null);
+          }}
         />
       )}
     </div>
