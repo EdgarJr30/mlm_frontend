@@ -11,7 +11,7 @@ import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
 import WorkOrdersColumn from './WorkOrdersColumn';
 import Modal from '../../ui/Modal';
-import { showToastSuccess, showToastError } from '../../../notifications/toast';
+import { showToastError } from '../../../notifications/toast';
 
 const STATUSES: Ticket['status'][] = [
   'Pendiente',
@@ -169,7 +169,6 @@ export default function WorkOrdersBoard({ filters }: Props) {
         )
       );
 
-      showToastSuccess('Ticket actualizado correctamente.');
       setModalOpen(false);
       setSelectedTicket(null);
 

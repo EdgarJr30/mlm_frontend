@@ -7,7 +7,7 @@ import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
 import Modal from '../components/ui/Modal';
 import EditTicketModal from '../components/dashboard/workOrder/EditWorkOrdersModal';
 import { updateTicket } from '../services/ticketService';
-import { showToastError, showToastSuccess } from '../notifications/toast';
+import { showToastError } from '../notifications/toast';
 import type { FilterState } from '../types/filters';
 import type { WorkOrdersFilterKey } from '../features/tickets/WorkOrdersFilters';
 import type { WorkOrder } from '../types/Ticket';
@@ -61,7 +61,6 @@ export default function WorkOrdersPage() {
         (prev) => ({ ...(prev ?? {}), ...(patch as WorkOrder) } as WorkOrder)
       );
 
-      showToastSuccess('Ticket actualizado correctamente.');
       setModalOpen(false);
       setSelectedTicket(null);
     } catch (e: unknown) {
