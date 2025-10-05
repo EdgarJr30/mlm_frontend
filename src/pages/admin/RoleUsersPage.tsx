@@ -1,13 +1,13 @@
-// components/admin/roles/RoleUsersPage.tsx
+// src/components/admin/roles/RoleUsersPage.tsx
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import {
   getUsersByRolePaginated,
   getUsersWithoutRolePaginated,
   bulkSetUsersRole,
   bulkClearUsersRole,
   type DbUser,
-} from '../../services/userAdminService'; // 👈 ajusta si tu estructura difiere
+} from '../../services/userAdminService';
 import { showToastError, showToastSuccess } from '../../notifications';
 import { useCan } from '../../rbac/PermissionsContext';
 
@@ -33,15 +33,35 @@ function ActiveChip({ active }: { active: boolean }) {
 type Props = {
   /** (opcional) Búsqueda que viene del Navbar externo del layout */
   externalSearchTerm?: string;
+  /** (opcional) Forzar roleId (útil cuando se usa como modal) */
+  roleId?: number;
+  /** (opcional) callback de cierre cuando se usa en modal */
+  onClose?: (changed?: boolean) => void;
+  /** (opcional) ocultar botón “Volver a roles” cuando está dentro de modal */
+  hideBackLink?: boolean;
 };
 
-export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
-  const { roleId } = useParams();
-  const roleIdNum = Number(roleId);
+export default function RoleUsersPage({
+  externalSearchTerm = '',
+  roleId,
+  onClose,
+  hideBackLink = false,
+}: Props) {
+  // Permitir seguir funcionando por URL si no nos pasan roleId
+  const { roleId: roleIdFromParams } = useParams();
+  const { search: locationSearch } = useLocation();
+  const q = new URLSearchParams(locationSearch);
+  const roleIdFromQuery = q.get('roleId') ?? q.get('reoleId') ?? undefined;
+
+  const resolvedRoleId =
+    typeof roleId === 'number'
+      ? roleId
+      : Number(roleIdFromParams ?? roleIdFromQuery);
+
   const canManageRoles = useCan('rbac:manage_roles');
 
   const [roleName, setRoleName] = useState<string>('Rol');
-  const [search, setSearch] = useState(''); // búsqueda local (se sincroniza con externa si viene)
+  const [search, setSearch] = useState('');
   const [includeInactive, setIncludeInactive] = useState(false);
 
   const [rows, setRows] = useState<DbUser[]>([]);
@@ -52,7 +72,7 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
 
   const [openAdd, setOpenAdd] = useState(false);
 
-  // Sincroniza la búsqueda externa del Navbar (RoleManagementPage) con la local
+  // Sincroniza búsqueda externa
   useEffect(() => {
     setPage(0);
     setSearch(externalSearchTerm || '');
@@ -66,23 +86,24 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
   }, [indeterminate]);
 
   const loadRole = useCallback(async () => {
+    if (!resolvedRoleId) return;
     const { data, error } = await (
       await import('../../lib/supabaseClient')
     ).supabase
       .from('roles')
       .select('name')
-      .eq('id', roleIdNum)
+      .eq('id', resolvedRoleId)
       .maybeSingle();
     if (error) showToastError(error.message);
     else if (data?.name) setRoleName(data.name);
-  }, [roleIdNum]);
+  }, [resolvedRoleId]);
 
   const load = useCallback(async () => {
-    if (!roleIdNum) return;
+    if (!resolvedRoleId) return;
     setLoading(true);
     try {
       const { data, count } = await getUsersByRolePaginated({
-        roleId: roleIdNum,
+        roleId: resolvedRoleId,
         page,
         pageSize: PAGE_SIZE,
         search: search.trim().length >= 2 ? search : undefined,
@@ -98,10 +119,10 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [roleIdNum, page, search, includeInactive]);
+  }, [resolvedRoleId, page, search, includeInactive]);
 
   useEffect(() => {
-    loadRole();
+    void loadRole();
   }, [loadRole]);
 
   useEffect(() => {
@@ -125,6 +146,8 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
           : 'Usuarios removidos del rol.'
       );
       await load();
+      // Si se usa como modal, opcionalmente puedes avisar cambio:
+      // onClose?.(true);
     } catch (e) {
       showToastError(
         e instanceof Error ? e.message : 'Error removiendo usuarios del rol'
@@ -134,7 +157,7 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 space-y-6">
-      {/* Header propio de la sección */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -146,12 +169,24 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            to="/admin/settings?tab=roles"
-            className="inline-flex items-center rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
-          >
-            ← Volver a roles
-          </Link>
+          {!hideBackLink && (
+            <Link
+              to="/admin/settings?tab=roles"
+              className="inline-flex items-center rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+            >
+              ← Volver a roles
+            </Link>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={() => onClose(false)}
+              className="inline-flex items-center rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+              aria-label="Cerrar"
+            >
+              ✕ Cerrar
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setOpenAdd(true)}
@@ -164,7 +199,7 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
         </div>
       </div>
 
-      {/* Toolbar interna (además de la búsqueda del Navbar) */}
+      {/* Toolbar interna */}
       <div className="flex flex-wrap items-center gap-3">
         <input
           placeholder="Buscar (nombre, apellido, email, ubicación)…"
@@ -332,7 +367,7 @@ export default function RoleUsersPage({ externalSearchTerm = '' }: Props) {
 
       {openAdd && (
         <AddUsersModal
-          roleId={roleIdNum}
+          roleId={resolvedRoleId}
           roleName={roleName}
           onClose={async (changed) => {
             setOpenAdd(false);

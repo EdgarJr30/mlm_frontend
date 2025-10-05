@@ -9,9 +9,11 @@ export type Role = { id: number; name: string; description?: string | null };
 
 interface Props {
   searchTerm?: string;
+  /** Abre el modal de usuarios para el rol indicado */
+  onOpenUsers?: (roleId: number) => void;
 }
 
-export default function RoleList({ searchTerm = '' }: Props) {
+export default function RoleList({ searchTerm = '', onOpenUsers }: Props) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
@@ -129,10 +131,8 @@ export default function RoleList({ searchTerm = '' }: Props) {
             </div>
           </div>
         ) : (
-          // Tabla responsive con scroll horizontal
+          // Tabla
           <div className="overflow-x-auto">
-            {/* Usamos border-separate + border-spacing-0 para respetar el radio del contenedor
-                y aplicar los radios directamente en los TH sin que se “rompa” el borde superior */}
             <table className="w-full text-sm table-fixed border-separate border-spacing-0">
               <thead>
                 <tr>
@@ -166,13 +166,14 @@ export default function RoleList({ searchTerm = '' }: Props) {
                           Editar permisos
                         </Link>
 
-                        <Link
-                          to={`/admin/settings?tab=role-users&roleId=${r.id}`}
+                        <button
+                          type="button"
+                          onClick={() => onOpenUsers?.(r.id)}
                           className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-white border px-3 py-1.5 text-indigo-700 hover:bg-indigo-50"
                           title="Ver y administrar usuarios del rol"
                         >
                           Usuarios
-                        </Link>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -201,8 +202,7 @@ export default function RoleList({ searchTerm = '' }: Props) {
   );
 }
 
-/* Modal en el mismo archivo para tu conveniencia.
-   Si prefieres, muévelo a: ./RoleCreateModal.tsx y exporta por default. */
+/* Modal de creación (sin any) */
 function RoleCreateModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -210,13 +210,12 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Cerrar con ESC
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const createRole = async (e: React.FormEvent) => {
+  const createRole = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMsg(null);
     if (!name.trim()) {
@@ -230,9 +229,8 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
         .insert({ name: name.trim(), description: description.trim() || null });
       if (error) throw error;
       onClose();
-    } catch (err: unknown) {
-      if (err instanceof Error) setMsg(err.message);
-      else setMsg('Error creando rol');
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Error creando rol');
     } finally {
       setSubmitting(false);
     }
@@ -240,13 +238,11 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50">
-      {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/40"
         onClick={onClose}
         aria-hidden
       />
-      {/* Dialog */}
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div
           role="dialog"

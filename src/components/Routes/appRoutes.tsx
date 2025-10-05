@@ -294,12 +294,6 @@ export const APP_ROUTES: AppRoute[] = [
     showInSidebar: false,
   },
   {
-    path: '/admin/roles/:roleId/users',
-    element: <Navigate to="/admin/settings?tab=role-users" replace />,
-    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
-    showInSidebar: false,
-  },
-  {
     path: '/admin/settings-old',
     element: <AdminSettingsPage />, // redirige a /admin/settings
     allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
