@@ -905,3 +905,437 @@ LIMIT 50;
 
 UPDATE public.users
 SET created_at = (created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santo_Domingo';
+
+-- =========================================================
+-- MLM – Work Order Assignees (PRIMARY/SECONDARY) Full Setup
+-- Ejecuta TODO este bloque una sola vez en tu BD.
+-- Idempotente: usa IF NOT EXISTS / DROP IF EXISTS donde aplica.
+-- =========================================================
+
+-- 1) Tipo ENUM para rol de asignación
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'assignee_role_enum') THEN
+    CREATE TYPE assignee_role_enum AS ENUM ('PRIMARY', 'SECONDARY');
+  END IF;
+END$$;
+
+-- 2) Tabla base
+CREATE TABLE IF NOT EXISTS public.work_order_assignees (
+  work_order_id     bigint NOT NULL REFERENCES public.tickets(id) ON DELETE CASCADE,
+  assignee_id       bigint NOT NULL REFERENCES public.assignees(id),
+  role              assignee_role_enum NOT NULL,
+  is_active         boolean NOT NULL DEFAULT true,
+  assigned_at       timestamp NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  unassigned_at     timestamp,
+
+  created_at        timestamp NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at        timestamp NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by        uuid DEFAULT auth.uid() REFERENCES public.users(id),
+  updated_by        uuid REFERENCES public.users(id)
+);
+
+-- Índices auxiliares
+CREATE INDEX IF NOT EXISTS i_work_order_assignees_work_order
+  ON public.work_order_assignees(work_order_id) WHERE is_active;
+
+CREATE INDEX IF NOT EXISTS i_work_order_assignees_assignee
+  ON public.work_order_assignees(assignee_id) WHERE is_active;
+
+CREATE INDEX IF NOT EXISTS i_work_order_assignees_role
+  ON public.work_order_assignees(role) WHERE is_active;
+
+-- 3) Función de mantenimiento de updated_* y unassigned_at
+CREATE OR REPLACE FUNCTION public.set_work_order_assignees_updated_fields()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at := now();
+  NEW.updated_by := auth.uid();
+
+  IF (TG_OP = 'UPDATE' AND NEW.is_active = false AND OLD.is_active = true AND NEW.unassigned_at IS NULL) THEN
+    NEW.unassigned_at := now();
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger BEFORE UPDATE
+DROP TRIGGER IF EXISTS trg_work_order_assignees_updated ON public.work_order_assignees;
+CREATE TRIGGER trg_work_order_assignees_updated
+  BEFORE UPDATE ON public.work_order_assignees
+  FOR EACH ROW EXECUTE FUNCTION public.set_work_order_assignees_updated_fields();
+
+-- 4) Vista de activos
+CREATE OR REPLACE VIEW public.v_work_order_assignees_current AS
+SELECT *
+FROM public.work_order_assignees
+WHERE is_active = true;
+
+-- 5) Vista agregada por OT (PRIMARY + array de SECONDARY)
+CREATE OR REPLACE VIEW public.v_work_order_assignees_agg AS
+SELECT
+  t.id AS work_order_id,
+  (
+    SELECT wa.assignee_id
+    FROM public.work_order_assignees wa
+    WHERE wa.work_order_id = t.id AND wa.is_active AND wa.role = 'PRIMARY'
+    LIMIT 1
+  ) AS primary_assignee_id,
+  (
+    SELECT array_agg(wa.assignee_id ORDER BY wa.assignee_id)
+    FROM public.work_order_assignees wa
+    WHERE wa.work_order_id = t.id AND wa.is_active AND wa.role = 'SECONDARY'
+  ) AS secondary_assignee_ids
+FROM public.tickets t;
+
+-- 6) Compatibilidad: tickets + agregados + effective_assignee_id
+CREATE OR REPLACE VIEW public.v_tickets_compat AS
+SELECT
+  t.*,
+  a.primary_assignee_id,
+  a.secondary_assignee_ids,
+  COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
+FROM public.tickets t
+LEFT JOIN public.v_work_order_assignees_agg a
+  ON a.work_order_id = t.id;
+
+-- 7) RLS y Policies
+ALTER TABLE public.work_order_assignees ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='work_order_assignees' AND policyname='read_work_order_assignees') THEN
+    EXECUTE 'DROP POLICY "read_work_order_assignees" ON public.work_order_assignees';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='work_order_assignees' AND policyname='write_work_order_assignees') THEN
+    EXECUTE 'DROP POLICY "write_work_order_assignees" ON public.work_order_assignees';
+  END IF;
+END$$;
+
+CREATE POLICY "read_work_order_assignees"
+ON public.work_order_assignees
+FOR SELECT TO authenticated
+USING (
+  EXISTS (SELECT 1 FROM public.tickets tk WHERE tk.id = work_order_id AND tk.created_by = auth.uid())
+  OR EXISTS (
+    SELECT 1
+    FROM public.work_order_assignees me
+    JOIN public.assignees a ON a.id = me.assignee_id
+    WHERE me.work_order_id = work_order_id AND me.is_active AND a.user_id = auth.uid()
+  )
+  OR public.me_has_permission('work_orders:read')
+);
+
+CREATE POLICY "write_work_order_assignees"
+ON public.work_order_assignees
+FOR ALL TO authenticated
+USING ( public.me_has_permission('work_orders:full_access') )
+WITH CHECK ( public.me_has_permission('work_orders:full_access') );
+
+-- 8) app_settings + helpers
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  key         text PRIMARY KEY,
+  value       jsonb NOT NULL,
+  updated_at  timestamp NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_by  uuid REFERENCES public.users(id)
+);
+
+CREATE OR REPLACE FUNCTION public.set_app_setting(p_key text, p_value jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.app_settings(key, value, updated_by)
+  VALUES (p_key, p_value, auth.uid())
+  ON CONFLICT (key) DO UPDATE
+    SET value = EXCLUDED.value,
+        updated_at = now(),
+        updated_by = auth.uid();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_app_setting_int(p_key text, p_default int)
+RETURNS int LANGUAGE sql STABLE AS $$
+  SELECT COALESCE((value->>'v')::int, p_default)
+  FROM public.app_settings
+  WHERE key = p_key
+  LIMIT 1
+$$;
+
+-- Semilla: max 2 secundarios
+SELECT public.set_app_setting('max_secondary_assignees', '{"v": 2}'::jsonb);
+
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='app_settings' AND policyname='read_app_settings') THEN
+    EXECUTE 'DROP POLICY "read_app_settings" ON public.app_settings';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='app_settings' AND policyname='write_app_settings') THEN
+    EXECUTE 'DROP POLICY "write_app_settings" ON public.app_settings';
+  END IF;
+END$$;
+
+CREATE POLICY "read_app_settings"
+ON public.app_settings
+FOR SELECT TO authenticated
+USING ( public.me_has_permission('rbac:manage_permissions') OR public.is_admin() );
+
+CREATE POLICY "write_app_settings"
+ON public.app_settings
+FOR ALL TO authenticated
+USING ( public.me_has_permission('rbac:manage_permissions') OR public.is_admin() )
+WITH CHECK ( public.me_has_permission('rbac:manage_permissions') OR public.is_admin() );
+
+-- 9) Límite de activos (trigger)
+CREATE OR REPLACE FUNCTION public.enforce_active_assignees_limits()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  max_secondary int := public.get_app_setting_int('max_secondary_assignees', 2);
+  sec_count int;
+  total_active int;
+  becoming_active boolean;
+  role_changed boolean;
+BEGIN
+  -- ¿La fila entra al conjunto activo?
+  becoming_active :=
+    (TG_OP = 'INSERT' AND NEW.is_active)
+    OR (TG_OP = 'UPDATE' AND NEW.is_active AND (OLD.is_active IS DISTINCT FROM NEW.is_active));
+
+  -- ¿Cambia el rol?
+  role_changed := (TG_OP = 'UPDATE' AND (OLD.role IS DISTINCT FROM NEW.role));
+
+  -- 1) Límite de secundarios activos
+  IF (NEW.role = 'SECONDARY') AND (becoming_active OR (TG_OP='UPDATE' AND NEW.is_active AND role_changed)) THEN
+    SELECT COUNT(*) INTO sec_count
+    FROM public.work_order_assignees
+    WHERE work_order_id = NEW.work_order_id
+      AND is_active = true
+      AND role = 'SECONDARY';
+
+    IF sec_count >= max_secondary THEN
+      RAISE EXCEPTION 'Máximo % técnicos secundarios activos por work_order.', max_secondary;
+    END IF;
+  END IF;
+
+  -- 2) Límite total activos: 1 PRIMARY + max_secondary
+  IF becoming_active OR (TG_OP = 'UPDATE' AND NEW.is_active AND role_changed) THEN
+    SELECT COUNT(*) INTO total_active
+    FROM public.work_order_assignees
+    WHERE work_order_id = NEW.work_order_id
+      AND is_active = true;
+
+    IF total_active >= (1 + max_secondary) THEN
+      RAISE EXCEPTION 'No puedes superar % técnicos activos (1 principal + % secundarios).',
+        1 + max_secondary, max_secondary;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_active_limits ON public.work_order_assignees;
+CREATE TRIGGER trg_enforce_active_limits
+  BEFORE INSERT OR UPDATE ON public.work_order_assignees
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_active_assignees_limits();
+
+-- 10) Helpers de configuración rápida
+CREATE OR REPLACE FUNCTION public.set_max_secondary_assignees(p_value int)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF p_value < 0 THEN
+    RAISE EXCEPTION 'El límite no puede ser negativo.';
+  END IF;
+  PERFORM public.set_app_setting('max_secondary_assignees', jsonb_build_object('v', p_value));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_max_secondary_assignees()
+RETURNS int LANGUAGE sql STABLE AS $$
+  SELECT public.get_app_setting_int('max_secondary_assignees', 2);
+$$;
+
+-- 11) Migración inicial: llevar assignee_id de tickets como PRIMARY activo (solo si no existe ya)
+INSERT INTO public.work_order_assignees(work_order_id, assignee_id, role, is_active)
+SELECT id, assignee_id, 'PRIMARY'::assignee_role_enum, true
+FROM public.tickets
+WHERE assignee_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM public.work_order_assignees wa
+    WHERE wa.work_order_id = tickets.id
+      AND wa.assignee_id   = tickets.assignee_id
+  );
+
+-- 12) Unicidad base (sin filtro)
+DROP INDEX IF EXISTS ux_work_order_assignees_unique;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_work_order_assignees_unique
+  ON public.work_order_assignees(work_order_id, assignee_id);
+
+-- 13) Un principal activo por OT (índice único parcial)
+DROP INDEX IF EXISTS ux_one_primary_per_work_order;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_one_primary_per_work_order
+  ON public.work_order_assignees(work_order_id)
+  WHERE role = 'PRIMARY' AND is_active = true;
+
+-- 14) Un secundario ACTIVO por persona/OT (parcial)
+DROP INDEX IF EXISTS ux_woa_one_active_secondary_per_person;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_woa_one_active_secondary_per_person
+  ON public.work_order_assignees (work_order_id, assignee_id)
+  WHERE role = 'SECONDARY' AND is_active = true;
+
+-- 15) Desactivar duplicados de secundarios dejando el más antiguo activo
+UPDATE public.work_order_assignees w
+   SET is_active     = false,
+       unassigned_at = now(),
+       updated_at    = now(),
+       updated_by    = auth.uid()
+ WHERE w.role = 'SECONDARY'
+   AND w.is_active = true
+   AND EXISTS (
+     SELECT 1
+     FROM public.work_order_assignees w2
+     WHERE w2.work_order_id = w.work_order_id
+       AND w2.assignee_id   = w.assignee_id
+       AND w2.role          = w.role
+       AND w2.is_active     = true
+       AND (
+            w2.assigned_at < w.assigned_at
+         OR (w2.assigned_at = w.assigned_at AND w2.created_at < w.created_at)
+       )
+   );
+
+-- 16) Aceptar work order (corrige variables p_* incoherentes)
+CREATE OR REPLACE FUNCTION public.accept_work_order(p_work_order_id bigint, p_primary_assignee_id bigint)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_creator uuid;
+BEGIN
+  IF p_primary_assignee_id IS NULL THEN
+    RAISE EXCEPTION 'Debes indicar el responsable principal para aceptar.';
+  END IF;
+
+  -- Permiso: full_access o creador del ticket
+  SELECT created_by INTO v_creator FROM public.tickets WHERE id = p_work_order_id;
+  IF NOT (public.me_has_permission('work_orders:full_access') OR v_creator = auth.uid()) THEN
+    RAISE EXCEPTION 'forbidden: necesitas permiso para aceptar o ser el creador del work_order';
+  END IF;
+
+  -- Upsert del PRIMARY activo
+  INSERT INTO public.work_order_assignees(work_order_id, assignee_id, role, is_active)
+  VALUES (p_work_order_id, p_primary_assignee_id, 'PRIMARY', true)
+  ON CONFLICT (work_order_id, assignee_id) DO UPDATE
+     SET role='PRIMARY', is_active=true, unassigned_at=NULL;
+
+  -- Marca aceptación en tickets
+  UPDATE public.tickets
+     SET is_accepted = true
+   WHERE id = p_work_order_id AND COALESCE(is_accepted,false) = false;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'work_order inexistente o ya aceptado.';
+  END IF;
+END;
+$$;
+
+-- 17) set_secondary_assignees (versión final con lock y validaciones)
+CREATE OR REPLACE FUNCTION public.set_secondary_assignees(
+  p_work_order_id bigint,
+  p_secondary_ids bigint[]
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_now timestamptz := (now() at time zone 'America/Santo_Domingo');
+  max_secondary int := public.get_app_setting_int('max_secondary_assignees', 2);
+  v_ids bigint[];
+  v_primary bigint;
+  v_id bigint;
+BEGIN
+  -- Normaliza array
+  v_ids := COALESCE(p_secondary_ids, ARRAY[]::bigint[]);
+
+  -- Chequea límite por parámetro
+  IF array_length(v_ids, 1) IS NOT NULL AND array_length(v_ids, 1) > max_secondary THEN
+    RAISE EXCEPTION 'Máximo % técnicos secundarios activos por work_order.', max_secondary;
+  END IF;
+
+  -- Lock por OT para evitar race conditions
+  PERFORM pg_advisory_xact_lock(p_work_order_id);
+
+  -- No permitir que el PRIMARY esté también como SECONDARY
+  SELECT assignee_id INTO v_primary
+    FROM public.work_order_assignees
+   WHERE work_order_id = p_work_order_id AND role = 'PRIMARY' AND is_active = true
+   LIMIT 1;
+
+  IF v_primary IS NOT NULL AND v_primary = ANY(v_ids) THEN
+    RAISE EXCEPTION 'El responsable principal no puede ser secundario a la vez (assignee_id=%).', v_primary;
+  END IF;
+
+  -- Desactivar los que ya no están
+  UPDATE public.work_order_assignees
+     SET is_active     = false,
+         unassigned_at = v_now,
+         updated_at    = v_now,
+         updated_by    = auth.uid()
+   WHERE work_order_id = p_work_order_id
+     AND role = 'SECONDARY'
+     AND is_active = true
+     AND assignee_id <> ALL (v_ids);
+
+  -- Insertar/Reactivar los que sí están
+  FOREACH v_id IN ARRAY v_ids LOOP
+    UPDATE public.work_order_assignees
+       SET is_active    = true,
+           assigned_at  = COALESCE(assigned_at, v_now),
+           unassigned_at= NULL,
+           updated_at   = v_now,
+           updated_by   = auth.uid()
+     WHERE work_order_id = p_work_order_id
+       AND role = 'SECONDARY'
+       AND assignee_id   = v_id;
+
+    IF NOT FOUND THEN
+      INSERT INTO public.work_order_assignees
+        (work_order_id, assignee_id, role, is_active, assigned_at, created_by, updated_by, created_at, updated_at)
+      VALUES
+        (p_work_order_id, v_id, 'SECONDARY', true, v_now, auth.uid(), auth.uid(), v_now, v_now);
+    END IF;
+  END LOOP;
+
+  -- Chequeo final contra el límite
+  IF (SELECT COUNT(*) FROM public.work_order_assignees
+        WHERE work_order_id = p_work_order_id AND role = 'SECONDARY' AND is_active = true) > max_secondary THEN
+    RAISE EXCEPTION 'Máximo % técnicos secundarios activos por work_order.', max_secondary;
+  END IF;
+END;
+$$;
+
+-- 18) Re-crear vistas (por si algo cambió)
+CREATE OR REPLACE VIEW public.v_work_order_assignees_agg AS
+SELECT
+  t.id AS work_order_id,
+  (
+    SELECT wa.assignee_id
+    FROM public.work_order_assignees wa
+    WHERE wa.work_order_id = t.id AND wa.is_active AND wa.role = 'PRIMARY'
+    LIMIT 1
+  ) AS primary_assignee_id,
+  (
+    SELECT array_agg(wa.assignee_id ORDER BY wa.assignee_id)
+    FROM public.work_order_assignees wa
+    WHERE wa.work_order_id = t.id AND wa.is_active AND wa.role = 'SECONDARY'
+  ) AS secondary_assignee_ids
+FROM public.tickets t;
+
+CREATE OR REPLACE VIEW public.v_tickets_compat AS
+SELECT
+  t.*,
+  a.primary_assignee_id,
+  a.secondary_assignee_ids,
+  COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
+FROM public.tickets t
+LEFT JOIN public.v_work_order_assignees_agg a
+  ON a.work_order_id = t.id;
