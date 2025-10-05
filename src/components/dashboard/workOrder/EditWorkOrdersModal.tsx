@@ -155,35 +155,45 @@ export default function EditWorkOrdersModal({
     if (!canFullAccess) return;
 
     try {
-      // Normaliza antes de comparar/enviar
+      // Normaliza secundarios antes de comparar/enviar
       const normalizedCurrent = uniqSorted(
         secondaryIds.filter((id) =>
           typeof primaryId === 'number' ? id !== primaryId : true
         )
       );
       const normalizedInitial = initialSecondaryRef.current;
-
       const secondariesChanged = !sameArray(
         normalizedCurrent,
         normalizedInitial
       );
 
       if (edited.is_accepted && secondariesChanged) {
-        // Si la lista cambió, valida tope aquí también por si acaso
+        // Validación de tope por si acaso
         if (normalizedCurrent.length > maxSecondary) {
           throw new Error(
             `Máximo ${maxSecondary} técnicos secundarios activos por work_order.`
           );
         }
         await setSecondaryAssignees(Number(edited.id), normalizedCurrent);
-        // Actualiza el baseline después de guardar
+        // Actualiza baseline después de guardar
         initialSecondaryRef.current = normalizedCurrent;
       }
 
-      // ⚠️ (opcional) Si además persistes columnas de tickets:
-      // await updateTicket(Number(edited.id), toTicketUpdate({ ...edited, ... }));
+      // --- Fecha estimada: valida SOLO si cambió ---
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const deadlineChanged = edited.deadline_date !== ticket.deadline_date;
 
-      onSave({
+      if (
+        deadlineChanged &&
+        edited.deadline_date &&
+        edited.deadline_date < todayISO
+      ) {
+        showToastError('La fecha estimada debe ser hoy o posterior.');
+        return;
+      }
+
+      // Patch (siempre incluye deadline_date para mantener estado/UI consistente)
+      const patch: Partial<WorkOrder> = {
         ...toTicketUpdate({
           ...edited,
           assignee_id:
@@ -191,8 +201,12 @@ export default function EditWorkOrdersModal({
         }),
         id: edited.id,
         primary_assignee_id: typeof primaryId === 'number' ? primaryId : null,
-        secondary_assignee_ids: normalizedCurrent, // devuelve la lista ya limpia
-      });
+        secondary_assignee_ids: normalizedCurrent,
+        // 👇 importante: mantener la fecha actual (aunque no haya cambiado)
+        deadline_date: edited.deadline_date ?? undefined,
+      };
+
+      await onSave(patch);
 
       showToastSuccess('Cambios guardados.');
       onClose();
@@ -248,6 +262,13 @@ export default function EditWorkOrdersModal({
         )}
       </optgroup>
     ));
+
+  // === deadline helpers ===
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const hasExistingDeadline = !!ticket.deadline_date;
+  // Si ya existe fecha, NO aplicamos min para evitar el tooltip del navegador.
+  // Si NO existe, obligamos a que sea >= hoy.
+  const minForDeadline = hasExistingDeadline ? undefined : todayISO;
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
@@ -528,7 +549,7 @@ export default function EditWorkOrdersModal({
               name="deadline_date"
               value={edited.deadline_date ?? ''}
               onChange={handleChange}
-              min={new Date().toISOString().slice(0, 10)}
+              min={minForDeadline}
               disabled={isReadOnly}
               className={addDisabledCls(
                 'mt-1 p-2 w-full border rounded text-gray-800'
