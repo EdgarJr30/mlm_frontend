@@ -838,12 +838,6 @@ export default function WorkRequestsBoard({
                           >
                             <div className="flex items-center gap-3">
                               <button
-                                className="text-indigo-600 hover:text-indigo-500 cursor-pointer"
-                                onClick={() => setDetailTicket(t)}
-                              >
-                                👁️
-                              </button>
-                              <button
                                 className={
                                   'text-emerald-600 hover:text-emerald-500 cursor-pointer' +
                                   (!canFullWR || !assigneeValue
