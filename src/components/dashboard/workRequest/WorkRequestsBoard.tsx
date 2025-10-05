@@ -12,12 +12,11 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import type { WorkRequestsFilterKey } from '../../../features/tickets/workRequestsFilters';
 import type { FilterState } from '../../../types/filters';
-
-// 👇 NUEVO
 import { useCan } from '../../../rbac/PermissionsContext';
 import { useAssignees } from '../../../context/AssigneeContext';
 import type { Assignee } from '../../../types/Assignee';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
+import WorkRequestsDetailModal from './WorkRequestsDetailModal';
 
 interface Props {
   searchTerm: string;
@@ -68,185 +67,6 @@ function StatusChip({ value }: { value: string }) {
   );
 }
 
-/** ===== Modal de Detalle con selector de responsable ===== */
-function TicketDetailModal({
-  ticket,
-  onClose,
-  canFullWR,
-  getAssigneeFor,
-  setAssigneeFor,
-}: {
-  ticket: Ticket;
-  onClose: () => void;
-  canFullWR: boolean;
-  getAssigneeFor: (id: number) => number | '';
-  setAssigneeFor: (id: number, assigneeId: number) => void;
-}) {
-  const imagePaths = getTicketImagePaths(ticket.image ?? '');
-  const { loading, bySectionActive } = useAssignees();
-  const SECTIONS_ORDER: Array<
-    'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
-  > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
-
-  useEffect(() => {
-    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onEsc);
-    return () => window.removeEventListener('keydown', onEsc);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-5xl max-h-[86vh] overflow-y-auto no-x-scroll rounded-xl bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="flex items-center justify-between px-6 py-4 border-b">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-semibold">Solicitud #{ticket.id}</h3>
-            <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 grid place-items-center cursor-pointer"
-            aria-label="Cerrar"
-          >
-            ✕
-          </button>
-        </header>
-
-        <nav className="px-6 pt-3">
-          <div className="flex gap-6 text-sm">
-            <span className="font-medium text-indigo-600">Detalles</span>
-            <span className="text-gray-400">Comentarios</span>
-            <span className="text-gray-400">Historial</span>
-          </div>
-        </nav>
-
-        <section className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Información General</h4>
-            <dl className="grid grid-cols-1 gap-3 text-sm">
-              <div>
-                <dt className="text-gray-500">Solicitante</dt>
-                <dd className="text-gray-900 wrap-anywhere">
-                  {ticket.requester}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500">Ubicación</dt>
-                <dd className="text-gray-900">{ticket.location}</dd>
-              </div>
-              <div>
-                <dt className="text-gray-500">Fecha de creación</dt>
-                <dd className="text-gray-900">
-                  {formatDateInTimezone(ticket.created_at)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Estado y Prioridad</h4>
-            <dl className="grid grid-cols-1 gap-3 text-sm">
-              <div>
-                <dt className="text-gray-500">Estado actual</dt>
-                <dd className="mt-1">
-                  <StatusChip value={ticket.status ?? 'Nueva'} />
-                </dd>
-              </div>
-              <div>
-                <dt className="text-gray-500">Prioridad</dt>
-                <dd className="mt-1">
-                  <PriorityChip value={ticket.priority ?? 'Media'} />
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          {/* 👇 NUEVO: Asignar responsable también desde el modal */}
-          <div className="md:col-span-2">
-            <h4 className="text-lg font-semibold mb-2">Asignación</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm text-gray-600">
-                  Responsable
-                </label>
-                <select
-                  className={
-                    'mt-1 w-full rounded border-gray-300' +
-                    (!canFullWR
-                      ? ' opacity-50 cursor-not-allowed bg-gray-100'
-                      : '')
-                  }
-                  disabled={loading || !canFullWR}
-                  value={getAssigneeFor(Number(ticket.id))}
-                  onChange={(e) =>
-                    setAssigneeFor(Number(ticket.id), Number(e.target.value))
-                  }
-                >
-                  <option value="" disabled>
-                    Selecciona…
-                  </option>
-                  {SECTIONS_ORDER.map((g) => (
-                    <optgroup key={g} label={g}>
-                      {(bySectionActive[g] ?? []).map(
-                        (a: Assignee | undefined) =>
-                          a ? (
-                            <option key={a.id} value={a.id}>
-                              {formatAssigneeFullName(a)}
-                            </option>
-                          ) : null
-                      )}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h4 className="text-lg font-semibold mb-2">
-              Descripción del Problema
-            </h4>
-            <p className="text-gray-700 wrap-anywhere whitespace-pre-wrap">
-              {ticket.description || '—'}
-            </p>
-          </div>
-
-          <div className="md:col-span-2">
-            <h4 className="text-lg font-semibold mb-3">Fotos Adjuntas</h4>
-            {imagePaths.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay imágenes.</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {imagePaths.map((p, i) => (
-                  <a
-                    key={i}
-                    href={getPublicImageUrl(p)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <img
-                      src={getPublicImageUrl(p)}
-                      alt={`Adjunto ${i + 1}`}
-                      className="w-full h-28 object-cover rounded"
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-/** ===== Componente principal ===== */
 export default function WorkRequestsBoard({
   searchTerm,
   selectedLocation,
@@ -261,23 +81,21 @@ export default function WorkRequestsBoard({
   const [isLoading, setIsLoading] = useState(true);
   const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
 
-  // 👇 NUEVO: permisos y assignees
   const canFullWR = useCan('work_requests:full_access');
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
-  /** Mapa local de responsables por ticket (para inline + modal) */
+  // Mapa local de responsables
   const [assigneesMap, setAssigneesMap] = useState<Record<number, number | ''>>(
     {}
   );
-
   const getAssigneeFor = (id: number) => assigneesMap[id] ?? '';
   const setAssigneeFor = (id: number, assigneeId: number) =>
     setAssigneesMap((prev) => ({ ...prev, [id]: assigneeId }));
 
-  /** Estado de filtros (FilterBar) */
+  // Filtros
   const [filters, setFilters] = useState<Record<string, unknown>>({
     q: searchTerm || undefined,
     location: selectedLocation || undefined,
@@ -293,7 +111,7 @@ export default function WorkRequestsBoard({
 
   const ticketsToShow = tickets;
 
-  // sin cambios visuales: solo control de checkbox maestro
+  // Checkbox maestro
   useLayoutEffect(() => {
     const isInd =
       selectedTicket.length > 0 && selectedTicket.length < ticketsToShow.length;
@@ -311,7 +129,6 @@ export default function WorkRequestsBoard({
     setIndeterminate(false);
   }
 
-  /** Validación local: todos los seleccionados con responsable */
   const canMassAccept = useMemo(() => {
     if (!canFullWR) return false;
     if (selectedTicket.length === 0) return false;
@@ -325,7 +142,6 @@ export default function WorkRequestsBoard({
     }
     if (selectedTicket.length === 0) return;
 
-    // Chequea responsables
     const missing = selectedTicket
       .filter((t) => !getAssigneeFor(Number(t.id)))
       .map((t) => `#${t.id}`);
@@ -387,7 +203,6 @@ export default function WorkRequestsBoard({
     }
   }
 
-  /** Carga datos aplicando filtros (siempre servidor) */
   async function reload() {
     const { data, count } = await getTicketsByFiltersPaginated(
       filters as FilterState<WorkRequestsFilterKey>,
@@ -398,10 +213,8 @@ export default function WorkRequestsBoard({
     setSelectedTicket([]);
     setTotalCount(count);
 
-    // Hidrata mapa de responsables con lo que venga del backend
     const next: Record<number, number | ''> = {};
     for (const t of data) {
-      // si el backend ya trae assignee_id, lo usamos; si no, dejamos ''
       const idNum = Number(t.id);
       const current = assigneesMap[idNum];
       next[idNum] =
@@ -412,26 +225,23 @@ export default function WorkRequestsBoard({
     setAssigneesMap(next);
   }
 
-  // Reset selección al cambiar página o filtros
   useEffect(() => {
     setSelectedTicket([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, JSON.stringify(filters)]);
 
-  // Reaccionar a cambios de filtros o página
   useEffect(() => {
     setIsLoading(true);
     void reload().finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, JSON.stringify(filters)]);
 
-  // Helpers visuales
   const disabledCtlCls = (cond: boolean) =>
     cond ? ' disabled:opacity-40 disabled:cursor-not-allowed' : '';
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Barra superior: texto + botón masivo */}
+      {/* Barra superior */}
       <div className="flex items-center gap-3">
         <p className="text-sm text-gray-700">
           Solicitudes pendientes de aprobación — Página {page + 1} de{' '}
@@ -461,9 +271,9 @@ export default function WorkRequestsBoard({
         </div>
       </div>
 
-      {/* CONTENEDOR SCROLLABLE */}
+      {/* Contenido scrollable */}
       <div className="mt-3 flex-1 min-h-0">
-        {/* ===== Vista Móvil: tarjetas ===== */}
+        {/* ===== Móvil: tarjetas ===== */}
         <div className="md:hidden space-y-3 overflow-y-auto">
           {isLoading ? (
             <div className="py-8 text-center text-gray-400">Cargando…</div>
@@ -519,7 +329,7 @@ export default function WorkRequestsBoard({
                         {t.description}
                       </div>
 
-                      {/* 👇 NUEVO: selector inline de responsable (móvil) */}
+                      {/* Selector responsable (móvil) */}
                       <div className="mt-2">
                         <label className="block text-xs text-gray-600">
                           Responsable
@@ -621,7 +431,7 @@ export default function WorkRequestsBoard({
           )}
         </div>
 
-        {/* ===== Vista md+: tabla ===== */}
+        {/* ===== md+: tabla ===== */}
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
             <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
@@ -670,12 +480,9 @@ export default function WorkRequestsBoard({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Adjuntos
                     </th>
-
-                    {/* 👇 NUEVO: columna Responsable inline */}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Responsable
                     </th>
-
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                       Fecha
                     </th>
@@ -789,8 +596,6 @@ export default function WorkRequestsBoard({
                               <span className="text-gray-400">—</span>
                             )}
                           </td>
-
-                          {/* 👇 NUEVO: celda de Responsable inline */}
                           <td
                             className="px-4 py-4 text-sm text-gray-700"
                             onClick={(e) => e.stopPropagation()}
@@ -828,7 +633,6 @@ export default function WorkRequestsBoard({
                               ))}
                             </select>
                           </td>
-
                           <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                             {formatDateInTimezone(t.created_at)}
                           </td>
@@ -904,9 +708,9 @@ export default function WorkRequestsBoard({
         </button>
       </div>
 
-      {/* Modal con selector de responsable */}
+      {/* Modal (componente externo) */}
       {detailTicket && (
-        <TicketDetailModal
+        <WorkRequestsDetailModal
           ticket={detailTicket}
           onClose={() => setDetailTicket(null)}
           canFullWR={canFullWR}
