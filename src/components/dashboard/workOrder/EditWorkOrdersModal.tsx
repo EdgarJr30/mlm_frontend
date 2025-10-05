@@ -18,7 +18,11 @@ import {
   acceptWorkOrderWithPrimary,
   setSecondaryAssignees,
 } from '../../../services/ticketService';
-import { showToastSuccess, showToastError } from '../../../notifications/toast';
+import {
+  showToastSuccess,
+  showToastError,
+  confirmArchiveWorkOrder,
+} from '../../../notifications/index';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -659,6 +663,8 @@ export default function EditWorkOrdersModal({
             <button
               type="button"
               onClick={async () => {
+                const ok = await confirmArchiveWorkOrder(Number(edited.id));
+                if (!ok) return;
                 try {
                   await archiveTicket(Number(edited.id));
                   onSave({ ...edited, is_archived: true });

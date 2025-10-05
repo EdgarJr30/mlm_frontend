@@ -15,7 +15,6 @@ export function showSuccessAlert(title: string, text: string) {
   })
 }
 
-// Puedes agregar más funciones aquí
 export function showErrorAlert(title: string, text: string) {
   return Swal.fire({
     title,
@@ -26,4 +25,20 @@ export function showErrorAlert(title: string, text: string) {
     allowOutsideClick: true,
     allowEscapeKey: true,
   });
+}
+
+export async function confirmArchiveWorkOrder(id: number): Promise<boolean> {
+  const res = await Swal.fire({
+    title: '¿Archivar orden?',
+    text: `La orden #${id} pasará a "Archivadas".`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, archivar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#334155',
+    cancelButtonColor: '#9ca3af',
+    reverseButtons: true,
+    focusCancel: true,
+  });
+  return res.isConfirmed === true;
 }
