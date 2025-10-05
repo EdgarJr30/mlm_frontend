@@ -6,6 +6,7 @@ import {
   getTicketImagePaths,
 } from '../../../services/storageService';
 import AssigneeBadge from '../../common/AssigneeBadge';
+
 interface Props {
   tickets?: Ticket[];
   isSearching: boolean;
@@ -53,14 +54,11 @@ export default function WorkOrdersColumn({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
 
-  // Skeleton loader
-  const skeletonTickets = Array.from({ length: 5 });
   // Decide qué tickets renderizar
   const ticketsToRender = isFiltering ? tickets ?? [] : localTickets;
   // Loading solo cuando no hay tickets para mostrar y está cargando
   const showSkeleton = isInitialLoading && !isFiltering;
 
-  // Pagina y agrega tickets SOLO en modo normal
   const loadMoreTickets = useCallback(
     async (force = false) => {
       if (isFiltering) return;
@@ -114,7 +112,6 @@ export default function WorkOrdersColumn({
     ]
   );
 
-  // Fallback por si no recibimos count (p.ej. primer render)
   const visibleCount =
     typeof count === 'number'
       ? count
@@ -130,11 +127,6 @@ export default function WorkOrdersColumn({
     isPaginatingRef.current = isPaginating;
   }, [isPaginating]);
 
-  // Efecto: resetea y carga los tickets solo si NO estás buscando
-  // Resetea y recarga cada vez que:
-  // - sales del modo búsqueda (isSearching pasa a false)
-  // - cambia el status (columna)
-  // - cambia reloadSignal (se fuerza recarga global)
   useEffect(() => {
     if (!isFiltering) {
       setLocalTickets([]);
@@ -147,7 +139,6 @@ export default function WorkOrdersColumn({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFiltering, status, reloadSignal, selectedLocation]);
 
-  // Cuando termina de cargar los tickets por primera vez, notificamos al board
   useEffect(() => {
     if (!firstLoaded && (isSearching || localTickets.length > 0)) {
       setFirstLoaded(true);
@@ -155,10 +146,8 @@ export default function WorkOrdersColumn({
     }
   }, [isSearching, localTickets.length, firstLoaded, onFirstLoad]);
 
-  // Observador de intersección para el sentinel
   useEffect(() => {
-    if (isSearching) return; // No observar en modo búsqueda
-
+    if (isSearching) return;
     if (!sentinelRef.current || !columnRef.current || !hasMore) return;
 
     if (observer.current) observer.current.disconnect();
@@ -166,9 +155,6 @@ export default function WorkOrdersColumn({
     observer.current = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        console.log(
-          `👁️ Observando sentinel "${status}": isIntersecting = ${entry.isIntersecting}`
-        );
         if (entry.isIntersecting && hasMore) {
           loadMoreTickets();
         }
@@ -185,24 +171,9 @@ export default function WorkOrdersColumn({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSearching, localTickets.length, hasMore]);
 
-  // Efecto: actualiza los tickets locales cuando hay un ticket actualizado
-  // y no estás buscando
-  // Esta lógica se mantiene igual que antes, pero ahora se asegura de que
-  // no se ejecute si estás buscando tickets.
-  // Esto evita que se actualicen los tickets mientras estás en modo búsqueda,
-  // lo cual podría causar inconsistencias o problemas de rendimiento.
-  // Si estás buscando, simplemente ignoramos este efecto.
-  // Si no estás buscando, se aplica la lógica de actualización de tickets.
-  // Si el ticket actualizado tiene el mismo estado que la columna,
-  // lo actualizamos o lo agregamos a la lista local.
-  // Si el ticket actualizado tiene un estado diferente, lo eliminamos de la lista local.
-  // Esto asegura que la columna siempre muestre los tickets correctos según su estado,
-  // incluso si se actualizan en tiempo real mientras estás en modo búsqueda.
-  // Si estás buscando, simplemente ignoramos este efecto.
   useEffect(() => {
     if (isSearching || !lastUpdatedTicket) return;
 
-    // Al archivar una OT, se quita de la columna, sin importar el status
     if (lastUpdatedTicket.is_archived) {
       setLocalTickets((prev) =>
         prev.filter((t) => t.id !== lastUpdatedTicket.id)
@@ -229,9 +200,9 @@ export default function WorkOrdersColumn({
   }, [isSearching, lastUpdatedTicket, status]);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col">
-      {/* <div className="bg-white rounded-lg shadow-lg p-4 w-[350px] min-w-[300px] flex-shrink-0 flex flex-col"> */}
-      <h3 className="font-semibold text-lg mb-4 flex items-center">
+    // 🔧 Evitar que la card “crezca” horizontalmente por contenido interno
+    <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col overflow-hidden">
+      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
         <span
           className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles(
             status
@@ -240,26 +211,21 @@ export default function WorkOrdersColumn({
           {status}
         </span>
 
-        {/* Badge */}
         <span
-          className="
-            inline-flex items-center justify-center
-            rounded-full border border-gray-300
-            text-xs min-w-6 h-6 px-1.5
-            bg-white text-gray-700
-          "
+          className="inline-flex items-center justify-center rounded-full border border-gray-300 text-xs min-w-6 h-6 px-1.5 bg-white text-gray-700"
           title={`Total en ${status}`}
         >
           {visibleCount}
         </span>
       </h3>
+
+      {/* 🔧 Scroll solo vertical; jamás horizontal */}
       <div
         ref={columnRef}
-        className="flex flex-col gap-3 overflow-y-auto max-h-[80vh]"
+        className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden max-h-[80vh] pr-1"
       >
         {showSkeleton ? (
-          skeletonTickets.map((_, idx) => (
-            // {/* ...skeleton ... */}
+          Array.from({ length: 5 }).map((_, idx) => (
             <div
               key={idx}
               className="bg-gray-100 animate-pulse border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col gap-2"
@@ -276,45 +242,42 @@ export default function WorkOrdersColumn({
         ) : (
           <>
             {ticketsToRender.map((ticket) => {
-              // {/* ...ticket ... */}
               return (
+                // 🔧 min-w-0 permite que los truncados funcionen dentro de flex
                 <div
                   key={ticket.id}
                   onClick={() => onOpenModal(ticket)}
-                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
+                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer min-w-0"
                 >
-                  {/* Imágenes */}
+                  {/* 🔧 Imágenes en GRID (2 cols) para evitar overflow horizontal */}
                   {ticket.image &&
                     (() => {
                       const imagePaths = getTicketImagePaths(ticket.image);
                       if (imagePaths.length === 0) return null;
                       return (
-                        // Imágenes
-                        <div className="flex gap-1 mb-3">
-                          {imagePaths.map((path, idx) => (
+                        <div className="grid grid-cols-2 gap-1 mb-3">
+                          {imagePaths.slice(0, 4).map((path, idx) => (
                             <img
                               key={idx}
                               src={getPublicImageUrl(path)}
                               alt={`Adjunto ${idx + 1}`}
-                              className="w-full h-24 object-contain rounded mb-3"
+                              className="w-full h-24 object-cover rounded"
                             />
                           ))}
                         </div>
                       );
                     })()}
 
-                  <div className="flex items-start justify-between mb-1">
-                    {/* Título */}
-                    <h4 className="font-semibold text-sm text-gray-900">
-                      {ticket.title.length > 100
-                        ? `${ticket.title.slice(0, 100)}...`
-                        : ticket.title}
+                  <div className="flex items-start justify-between gap-2 mb-1 min-w-0">
+                    {/* 🔧 Título truncado y rompible */}
+                    <h4 className="font-semibold text-sm text-gray-900 truncate break-words max-w-[85%]">
+                      {ticket.title}
                     </h4>
 
-                    {/* Ver más detalles (...) */}
+                    {/* Botón ... */}
                     <button
                       type="button"
-                      className="text-gray-900 hover:text-gray-600"
+                      className="text-gray-900 hover:text-gray-600 shrink-0"
                       title="Ver más detalles"
                     >
                       <svg
@@ -323,7 +286,7 @@ export default function WorkOrdersColumn({
                         viewBox="0 0 24 24"
                         strokeWidth="1.5"
                         stroke="currentColor"
-                        className="size-6 cursor-pointer"
+                        className="size-6"
                       >
                         <path
                           strokeLinecap="round"
@@ -334,13 +297,13 @@ export default function WorkOrdersColumn({
                     </button>
                   </div>
 
-                  {/* Descripción */}
-                  <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                  {/* 🔧 Descripción: 2 líneas máx + rompe palabras largas */}
+                  <p className="text-xs text-gray-600 line-clamp-2 break-words mb-2">
                     {ticket.description || 'Sin descripción'}
                   </p>
 
+                  {/* 🔧 Chips con wrap para no desbordar */}
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    {/* Urgente? */}
                     {ticket.is_urgent && (
                       <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
                         <svg
@@ -360,7 +323,6 @@ export default function WorkOrdersColumn({
                       </span>
                     )}
 
-                    {/* Prioridad */}
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded border ${getPriorityStyles(
                         ticket.priority
@@ -369,7 +331,6 @@ export default function WorkOrdersColumn({
                       {capitalize(ticket.priority)}
                     </span>
 
-                    {/* Estatus */}
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded border ${getStatusStyles(
                         ticket.status
@@ -379,11 +340,11 @@ export default function WorkOrdersColumn({
                     </span>
                   </div>
 
-                  <div className="text-xs text-gray-500 space-y-1">
-                    {/* Solicitante */}
+                  {/* 🔧 Metadatos: asegúrate de truncar y permitir saltos */}
+                  <div className="text-xs text-gray-500 space-y-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <svg
-                        className="w-3 h-3"
+                        className="w-3 h-3 shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -395,10 +356,11 @@ export default function WorkOrdersColumn({
                           d="M5.121 17.804A3 3 0 008 19h8a3 3 0 002.879-1.196M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
-                      Solicitante: {ticket.requester}
+                      <span className="truncate break-words">
+                        Solicitante: {ticket.requester}
+                      </span>
                     </div>
 
-                    {/* Ubicación */}
                     <div className="flex items-center gap-1">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -406,7 +368,7 @@ export default function WorkOrdersColumn({
                         viewBox="0 0 24 24"
                         strokeWidth="1.5"
                         stroke="currentColor"
-                        className="w-3 h-3"
+                        className="w-3 h-3 shrink-0"
                       >
                         <path
                           strokeLinecap="round"
@@ -419,13 +381,14 @@ export default function WorkOrdersColumn({
                           d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
                         />
                       </svg>
-                      Ubicación: {ticket.location || 'No especificada'}
+                      <span className="truncate break-words">
+                        Ubicación: {ticket.location || 'No especificada'}
+                      </span>
                     </div>
 
-                    {/* Fecha del incidente */}
                     <div className="flex items-center gap-1">
                       <svg
-                        className="w-3 h-3"
+                        className="w-3 h-3 shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -437,15 +400,17 @@ export default function WorkOrdersColumn({
                           d="M8 7V3m8 4V3m-9 9h10m-11 5h12a2 2 0 002-2v-5H3v5a2 2 0 002 2z"
                         />
                       </svg>
-                      Fecha:{' '}
-                      {ticket.incident_date
-                        ? ticket.incident_date
-                        : 'No especificada'}
+                      <span className="truncate">
+                        Fecha:{' '}
+                        {ticket.incident_date
+                          ? ticket.incident_date
+                          : 'No especificada'}
+                      </span>
                     </div>
 
-                    {/* Ticket ID */}
                     <div className="flex items-center gap-1">
-                      <strong className="text-xs">ID:</strong> {ticket.id}
+                      <strong className="text-xs shrink-0">ID:</strong>
+                      <span className="truncate">{ticket.id}</span>
                     </div>
                   </div>
 
@@ -489,6 +454,7 @@ export default function WorkOrdersColumn({
             )}
           </>
         )}
+
         <div ref={sentinelRef} className="h-2 w-full" />
       </div>
     </div>
