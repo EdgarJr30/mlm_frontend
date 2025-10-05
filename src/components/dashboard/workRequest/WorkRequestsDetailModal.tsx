@@ -8,7 +8,6 @@ import {
 import { useAssignees } from '../../../context/AssigneeContext';
 import type { Assignee } from '../../../types/Assignee';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
-// 👇 NUEVO
 import { acceptTickets } from '../../../services/ticketService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 
@@ -60,7 +59,6 @@ export default function WorkRequestsDetailModal({
   canFullWR,
   getAssigneeFor,
   setAssigneeFor,
-  // 👇 NUEVO: callback para que el padre recargue y cierre
   onAccepted,
 }: {
   ticket: Ticket;
@@ -83,14 +81,12 @@ export default function WorkRequestsDetailModal({
     return () => window.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
-  // 👇 NUEVO: estado de envío y valor del responsable
   const [submitting, setSubmitting] = useState(false);
   const assigneeValue = useMemo(
     () => getAssigneeFor(Number(ticket.id)),
     [getAssigneeFor, ticket.id]
   );
 
-  // 👇 NUEVO: acción Aceptar
   async function handleAccept() {
     if (!canFullWR) {
       showToastError('No tienes permiso para aceptar solicitudes.');
@@ -135,7 +131,6 @@ export default function WorkRequestsDetailModal({
             <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
           </div>
 
-          {/* 👇 NUEVO: botón Aceptar en el header */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleAccept}
