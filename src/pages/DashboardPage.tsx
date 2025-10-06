@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import KpiCard from '../components/layout/KpiCard';
@@ -8,31 +8,19 @@ import PreventiveVsCorrective from '../components/dashboard/charts/PreventiveVsC
 import AgeDistribution from '../components/dashboard/charts/AgeDistribution';
 import ComplianceByLocation from '../components/dashboard/charts/ComplianceByLocation';
 import TechnicianLoadBar from '../components/dashboard/charts/TechnicianLoadBar';
-
-import { getDashboardKpis } from '../services/reportService';
 import type { ReportFilters } from '../types/Report';
 
 export default function DashboardPage() {
   const [, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
-  const [kpis, setKpis] = useState<{
-    openCount: number;
-    overdueCount: number;
-    mttrHours: number;
-    preventiveCompliance: number;
-    criticalBacklog: number;
-  } | null>(null);
 
+  // Mantén los filtros por compatibilidad futura
   const filters = useMemo<ReportFilters>(
     () => ({
       location: selectedLocation || undefined,
     }),
     [selectedLocation]
   );
-
-  useEffect(() => {
-    (async () => setKpis(await getDashboardKpis(filters)))();
-  }, [JSON.stringify(filters)]);
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -53,36 +41,36 @@ export default function DashboardPage() {
           </p>
         </header>
 
-        {/* KPIs */}
+        {/* KPIs (UI vacía / placeholders) */}
         <section className="px-4 md:px-6 lg:px-8 pt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5">
           <KpiCard
             title="OTs Abiertas"
-            value={kpis?.openCount ?? '—'}
+            value="—"
             subtitle="Actualmente abiertas"
           />
           <KpiCard
             title="OTs Vencidas"
-            value={kpis?.overdueCount ?? '—'}
+            value="—"
             subtitle="No cerradas a tiempo"
           />
           <KpiCard
             title="MTTR (h)"
-            value={kpis?.mttrHours ?? '—'}
+            value="—"
             subtitle="Tiempo medio de reparación"
           />
           <KpiCard
             title="Cumplimiento Preventivo"
-            value={`${kpis?.preventiveCompliance ?? 0}%`}
+            value={`0%`}
             subtitle="OTs preventivas completadas"
           />
           <KpiCard
             title="Backlog Crítico"
-            value={kpis?.criticalBacklog ?? '—'}
+            value="—"
             subtitle="Prioridad Crítica abiertas"
           />
         </section>
 
-        {/* Gráficos */}
+        {/* Gráficos (ya los dejamos sin consultas en la respuesta anterior) */}
         <section className="px-4 md:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-auto">
           <MttrTrendBar filters={filters} />
           <PreventiveVsCorrective filters={filters} />
