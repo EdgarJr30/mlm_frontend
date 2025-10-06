@@ -323,6 +323,7 @@ export default function FilterBar<T extends string>({
     <div className={`${sticky ? 'sticky top-0 z-10' : ''}`}>
       <div className={toolbar}>
         {/* ===== Encabezado con toggle en móvil y desktop ===== */}
+        {/* ===== Encabezado ===== */}
         <div className="mb-2 flex items-center gap-2">
           <button
             type="button"
@@ -348,32 +349,8 @@ export default function FilterBar<T extends string>({
             </span>
           </button>
 
-          {drawerFields.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setOpenDrawer(true)}
-              className={pillBtn}
-              title="Abrir más filtros"
-            >
-              Más filtros ({activeCount})
-            </button>
-          )}
-
+          {/* 👉 Header limpio: solo Aplicar a la derecha */}
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={reset}
-              className={`${pillBtn} hidden md:inline-flex`}
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={askAndSaveView}
-              className={`${pillBtn} hidden md:inline-flex`}
-            >
-              Guardar Vista
-            </button>
             <button
               type="button"
               onClick={apply}
@@ -447,17 +424,18 @@ export default function FilterBar<T extends string>({
               )}
 
               {/* En móvil, mostramos Reset/Guardar aquí cuando está abierto */}
+              {/* Acciones dentro del panel expandido */}
               <button
                 type="button"
                 onClick={reset}
-                className={`${pillBtn} md:hidden`}
+                className={pillBtn} // ⬅️ quitamos 'md:hidden'
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={askAndSaveView}
-                className={`${pillBtn} md:hidden`}
+                className={pillBtn} // ⬅️ quitamos 'md:hidden'
               >
                 Guardar Vista
               </button>
