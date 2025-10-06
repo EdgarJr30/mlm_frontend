@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
@@ -16,11 +16,7 @@ import { toTicketUpdate } from '../utils/toTicketUpdate';
 type ViewMode = 'WorkOrders' | 'list';
 
 export default function WorkOrdersPage() {
-  // Navbar
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-
-  // Filtros avanzados
+  // 🔁 Filtros avanzados (ÚNICA fuente de verdad para filtros)
   const [filters, setFilters] = useState<Record<WorkOrdersFilterKey, unknown>>(
     {} as Record<WorkOrdersFilterKey, unknown>
   );
@@ -36,29 +32,20 @@ export default function WorkOrdersPage() {
     null
   );
 
+  // ✅ mergedFilters viene SOLO de FilterBar
   const mergedFilters = useMemo<FilterState<WorkOrdersFilterKey>>(
-    () => ({
-      ...(filters as FilterState<WorkOrdersFilterKey>),
-      q: searchTerm || undefined,
-      location: selectedLocation || undefined,
-    }),
-    [filters, searchTerm, selectedLocation]
+    () => filters as FilterState<WorkOrdersFilterKey>,
+    [filters]
   );
-
-  useEffect(() => {
-    // hijos reaccionan a mergedFilters
-  }, [mergedFilters]);
 
   async function handleSave(patch: Partial<WorkOrder>) {
     try {
       const ticketUpdate = toTicketUpdate(patch);
-
       const id = Number(patch.id ?? selectedTicket?.id);
       if (!id) throw new Error('Falta el id del ticket.');
 
       await updateTicket(id, ticketUpdate);
 
-      // 👇 Muy importante: levantar el patch para mezclarlo en la lista
       setLastUpdatedTicket(
         (prev) => ({ ...(prev ?? {}), ...(patch as WorkOrder) } as WorkOrder)
       );
@@ -75,10 +62,11 @@ export default function WorkOrdersPage() {
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
+        {/* 🧭 Navbar PASIVO: no filtra ni ubicación ni búsqueda */}
         <Navbar
-          onSearch={setSearchTerm}
-          onFilterLocation={setSelectedLocation}
-          selectedLocation={selectedLocation}
+          onSearch={() => {}} // 👈 no-op
+          onFilterLocation={() => {}} // 👈 no-op
+          selectedLocation="" // 👈 siempre vacío
         />
 
         <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6 flex items-center gap-3">
@@ -134,16 +122,9 @@ export default function WorkOrdersPage() {
         <div className="px-4 md:px-6 lg:px-8 pt-3">
           <WorkOrdersFiltersBar
             onApply={(vals) => {
+              // ✅ ÚNICA sincronización de filtros
               setFilters((prev) =>
                 JSON.stringify(prev) === JSON.stringify(vals) ? prev : vals
-              );
-              const q = vals.q as string | undefined;
-              const loc = vals.location as string | undefined;
-              setSearchTerm((prev) =>
-                q !== undefined && prev !== q ? q : prev
-              );
-              setSelectedLocation((prev) =>
-                loc !== undefined && prev !== loc ? loc : prev
               );
             }}
           />
@@ -159,13 +140,12 @@ export default function WorkOrdersPage() {
                 setSelectedTicket(t as WorkOrder);
                 setModalOpen(true);
               }}
-              // 👇 NUEVO
               lastUpdatedTicket={lastUpdatedTicket}
             />
           )}
         </section>
 
-        {/* Modal (LISTA) — usa el MISMO componente que WorkOrders */}
+        {/* Modal (LISTA) */}
         <Modal
           isOpen={modalOpen}
           onClose={() => {
