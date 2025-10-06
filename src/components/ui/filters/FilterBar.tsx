@@ -121,10 +121,9 @@ function FieldRenderer<T extends string>({
   f: FilterField<T>;
   value: unknown;
   onChange: (v: unknown) => void;
-  onSearchImmediate?: (nextValue: unknown) => void; // ahora admite cualquier tipo
+  onSearchImmediate?: (nextValue: unknown) => void;
 }) {
   if (f.type === 'text') {
-    // ÚNICO buscador global 'q' con GlobalSearch
     if ((f.key as string) === 'q') {
       const min =
         'minChars' in f &&
@@ -144,7 +143,6 @@ function FieldRenderer<T extends string>({
         />
       );
     }
-    // otros campos de texto (si aparecieran en otros módulos)
     return (
       <SearchInput
         placeholder={f.placeholder ?? 'Buscar…'}
@@ -163,7 +161,6 @@ function FieldRenderer<T extends string>({
         value={(value as string) ?? ''}
         onChange={(v) => {
           onChange(v);
-          // aplica inmediatamente si el campo lo declara
           if (f.immediate) onSearchImmediate?.(v);
         }}
         placeholder={f.label}
@@ -257,6 +254,11 @@ export default function FilterBar<T extends string>({
   sticky,
 }: Props<T>) {
   const { values, setValue, reset, activeCount } = useFilters(schema);
+
+  // 🔽 Nuevo: colapsado por defecto en móvil
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Drawer adicional (más filtros)
   const [openDrawer, setOpenDrawer] = useState(false);
 
   // vistas guardadas
@@ -275,7 +277,6 @@ export default function FilterBar<T extends string>({
       if (field.responsive === 'bar') bar.push(field);
       else if (field.responsive === 'drawer') drawer.push(field);
       else {
-        // both o undefined: en ambos
         bar.push(field);
         drawer.push(field);
       }
@@ -310,203 +311,261 @@ export default function FilterBar<T extends string>({
   return (
     <div className={`${sticky ? 'sticky top-0 z-10' : ''}`}>
       <div className={toolbar}>
-        {/* fila principal */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          {barFields.slice(0, 4).map((f: FilterField<T>) => (
-            <div key={f.key}>
-              <FieldRenderer
-                f={f}
-                value={(values as Record<T, unknown>)[f.key]}
-                onChange={(v) => setValue(f.key, v as FilterValue | undefined)}
-                onSearchImmediate={(nextValue) => {
-                  if (!onApply) return;
-                  const merged = {
-                    ...(values as Record<T, unknown>),
-                    [f.key]: nextValue,
-                  } as Record<T, unknown>;
-                  onApply(merged);
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        {/* ===== Encabezado compacto en móvil ===== */}
+        <div className="mb-2 flex items-center gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileOpen((s) => !s)}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
+            aria-expanded={isMobileOpen}
+            aria-controls="filters-mobile-content"
+            title={isMobileOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+          >
+            {/* icono caret */}
+            <svg
+              className={`h-4 w-4 transition-transform ${
+                isMobileOpen ? 'rotate-180' : ''
+              }`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden
+            >
+              <path d="M5.25 7.5L10 12.25 14.75 7.5H5.25z" />
+            </svg>
+            {isMobileOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+              {activeCount}
+            </span>
+          </button>
 
-        {/* fila secundaria: presets + acciones */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {/* presets de fecha */}
-          {dateField && (
-            <DateRangePreset
-              labelText="Últimos 30 días"
-              value={
-                (values as Record<T, unknown>)[dateField.key as T] as
-                  | { from?: string; to?: string }
-                  | undefined
-              }
-              pillBtnCls={pillBtn}
-              onPick={(nextRange) => {
-                setValue(dateField.key as T, nextRange as FilterValue);
-                if (onApply) {
-                  onApply({
-                    ...(values as Record<T, unknown>),
-                    [dateField.key as T]: nextRange,
-                  } as Record<T, unknown>);
-                }
-              }}
-            />
-          )}
-
-          {/* botón para abrir drawer (más filtros) en md- */}
+          {/* acceso directo a “Más filtros” en móvil */}
           {drawerFields.length > 0 && (
             <button
               type="button"
               onClick={() => setOpenDrawer(true)}
               className={pillBtn}
+              title="Abrir más filtros"
             >
               Más filtros ({activeCount})
             </button>
           )}
 
-          <button type="button" onClick={reset} className={pillBtn}>
-            Reset
+          {/* Acción aplicar visible en móvil */}
+          <button
+            type="button"
+            onClick={apply}
+            className={`${primaryBtn} ml-auto`}
+            title="Aplicar filtros"
+          >
+            Aplicar
           </button>
-
-          <button type="button" onClick={askAndSaveView} className={pillBtn}>
-            Guardar Vista
-          </button>
-
-          <div className="ml-auto flex items-center gap-2">
-            <button type="button" onClick={apply} className={primaryBtn}>
-              Aplicar
-            </button>
-          </div>
         </div>
 
-        {/* chips activos */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          {schema.fields.map((f: FilterField<T>) => {
-            if (f.hidden) return null;
-            const v = (values as Record<T, unknown>)[f.key];
-            const empty =
-              v === undefined ||
-              v === null ||
-              v === '' ||
-              (Array.isArray(v) && v.length === 0) ||
-              (typeof v === 'object' &&
-                v !== null &&
-                !('from' in v) &&
-                !('to' in v));
-            if (empty) return null;
-
-            let text = '';
-            if (f.type === 'multiselect')
-              text = `${f.label}: ${(v as unknown[]).join(', ')}`;
-            else if (f.type === 'daterange') {
-              const { from = '—', to = '—' } =
-                (v as { from?: string; to?: string }) ?? {};
-              text = `${f.label}: ${from} → ${to}`;
-            } else if (f.type === 'boolean')
-              text = `${f.label}: ${v ? 'Sí' : 'No'}`;
-            else text = `${f.label}: ${v}`;
-
-            return (
-              <span key={f.key} className={chipCls}>
-                {text}
-                <button
-                  onClick={() => setValue(f.key as T, undefined)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </span>
-            );
-          })}
-        </div>
-
-        {/* vistas guardadas (pills) */}
-        {views.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-600">Vistas:</span>
-            {views.map((v) => (
-              <span key={v.id} className={chipCls}>
-                <button className="font-medium" onClick={() => applyView(v)}>
-                  {v.name}
-                </button>
-                <button
-                  className="text-gray-500 hover:text-gray-700"
-                  title="Eliminar vista"
-                  onClick={() => removeView(v.id)}
-                >
-                  ✕
-                </button>
-              </span>
+        {/* ===== Contenido completo: visible siempre en md+, y en móvil solo si isMobileOpen ===== */}
+        <div
+          id="filters-mobile-content"
+          className={`${isMobileOpen ? 'block' : 'hidden'} md:block`}
+        >
+          {/* fila principal */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            {barFields.slice(0, 4).map((f: FilterField<T>) => (
+              <div key={f.key}>
+                <FieldRenderer
+                  f={f}
+                  value={(values as Record<T, unknown>)[f.key]}
+                  onChange={(v) =>
+                    setValue(f.key, v as FilterValue | undefined)
+                  }
+                  onSearchImmediate={(nextValue) => {
+                    if (!onApply) return;
+                    const merged = {
+                      ...(values as Record<T, unknown>),
+                      [f.key]: nextValue,
+                    } as Record<T, unknown>;
+                    onApply(merged);
+                  }}
+                />
+              </div>
             ))}
           </div>
-        )}
-      </div>
 
-      {/* Drawer móvil */}
-      {openDrawer && (
-        <div
-          className="fixed inset-0 z-50 md:hidden"
-          onClick={() => setOpenDrawer(false)}
-        >
-          <div className="absolute inset-0 bg-black/30" />
+          {/* fila secundaria: presets + acciones */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {/* presets de fecha */}
+            {dateField && (
+              <DateRangePreset
+                labelText="Últimos 30 días"
+                value={
+                  (values as Record<T, unknown>)[dateField.key as T] as
+                    | { from?: string; to?: string }
+                    | undefined
+                }
+                pillBtnCls={pillBtn}
+                onPick={(nextRange) => {
+                  setValue(dateField.key as T, nextRange as FilterValue);
+                  if (onApply) {
+                    onApply({
+                      ...(values as Record<T, unknown>),
+                      [dateField.key as T]: nextRange,
+                    } as Record<T, unknown>);
+                  }
+                }}
+              />
+            )}
+
+            {/* botón para abrir drawer (más filtros) */}
+            {drawerFields.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setOpenDrawer(true)}
+                className={pillBtn}
+              >
+                Más filtros ({activeCount})
+              </button>
+            )}
+
+            <button type="button" onClick={reset} className={pillBtn}>
+              Reset
+            </button>
+
+            <button type="button" onClick={askAndSaveView} className={pillBtn}>
+              Guardar Vista
+            </button>
+
+            <div className="ml-auto hidden md:flex items-center gap-2">
+              <button type="button" onClick={apply} className={primaryBtn}>
+                Aplicar
+              </button>
+            </div>
+          </div>
+
+          {/* chips activos */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {schema.fields.map((f: FilterField<T>) => {
+              if (f.hidden) return null;
+              const v = (values as Record<T, unknown>)[f.key];
+              const empty =
+                v === undefined ||
+                v === null ||
+                v === '' ||
+                (Array.isArray(v) && v.length === 0) ||
+                (typeof v === 'object' &&
+                  v !== null &&
+                  !('from' in v) &&
+                  !('to' in v));
+              if (empty) return null;
+
+              let text = '';
+              if (f.type === 'multiselect')
+                text = `${f.label}: ${(v as unknown[]).join(', ')}`;
+              else if (f.type === 'daterange') {
+                const { from = '—', to = '—' } =
+                  (v as { from?: string; to?: string }) ?? {};
+                text = `${f.label}: ${from} → ${to}`;
+              } else if (f.type === 'boolean')
+                text = `${f.label}: ${v ? 'Sí' : 'No'}`;
+              else text = `${f.label}: ${v}`;
+
+              return (
+                <span key={f.key} className={chipCls}>
+                  {text}
+                  <button
+                    onClick={() => setValue(f.key as T, undefined)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+
+          {/* vistas guardadas (pills) */}
+          {views.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-600">Vistas:</span>
+              {views.map((v) => (
+                <span key={v.id} className={chipCls}>
+                  <button className="font-medium" onClick={() => applyView(v)}>
+                    {v.name}
+                  </button>
+                  <button
+                    className="text-gray-500 hover:text-gray-700"
+                    title="Eliminar vista"
+                    onClick={() => removeView(v.id)}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ===== Drawer móvil ===== */}
+        {openDrawer && (
           <div
-            className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 md:hidden"
+            onClick={() => setOpenDrawer(false)}
           >
-            <div className="mx-auto max-w-xl">
-              <div className="mb-3 h-1 w-10 rounded bg-gray-300 mx-auto" />
-              <h3 className="text-base font-semibold mb-3">Filtros</h3>
-              <div className="grid grid-cols-1 gap-3">
-                {schema.fields
-                  .filter(
-                    (f: FilterField<T>) =>
-                      !f.hidden &&
-                      (f.responsive === 'drawer' || f.responsive === 'both')
-                  )
-                  .map((f: FilterField<T>) => (
-                    <div key={f.key}>
-                      <div className="mb-1 text-xs font-medium text-gray-600">
-                        {f.label}
+            <div className="absolute inset-0 bg-black/30" />
+            <div
+              className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mx-auto max-w-xl">
+                <div className="mb-3 h-1 w-10 rounded bg-gray-300 mx-auto" />
+                <h3 className="text-base font-semibold mb-3">Filtros</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {schema.fields
+                    .filter(
+                      (f: FilterField<T>) =>
+                        !f.hidden &&
+                        (f.responsive === 'drawer' || f.responsive === 'both')
+                    )
+                    .map((f: FilterField<T>) => (
+                      <div key={f.key}>
+                        <div className="mb-1 text-xs font-medium text-gray-600">
+                          {f.label}
+                        </div>
+                        <FieldRenderer
+                          f={f}
+                          value={(values as Record<T, unknown>)[f.key]}
+                          onChange={(v) =>
+                            setValue(f.key, v as FilterValue | undefined)
+                          }
+                          onSearchImmediate={(nextValue) => {
+                            if (!onApply) return;
+                            const merged = {
+                              ...(values as Record<T, unknown>),
+                              [f.key]: nextValue,
+                            } as Record<T, unknown>;
+                            onApply(merged);
+                          }}
+                        />
                       </div>
-                      <FieldRenderer
-                        f={f}
-                        value={(values as Record<T, unknown>)[f.key]}
-                        onChange={(v) =>
-                          setValue(f.key, v as FilterValue | undefined)
-                        }
-                        onSearchImmediate={(nextValue) => {
-                          if (!onApply) return;
-                          const merged = {
-                            ...(values as Record<T, unknown>),
-                            [f.key]: nextValue,
-                          } as Record<T, unknown>;
-                          onApply(merged);
-                        }}
-                      />
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
 
-              <div className="mt-4 flex items-center justify-end gap-2">
-                <button className={pillBtn} onClick={reset}>
-                  Limpiar
-                </button>
-                <button
-                  className={primaryBtn}
-                  onClick={() => {
-                    setOpenDrawer(false);
-                    apply();
-                  }}
-                >
-                  Aplicar
-                </button>
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <button className={pillBtn} onClick={reset}>
+                    Limpiar
+                  </button>
+                  <button
+                    className={primaryBtn}
+                    onClick={() => {
+                      setOpenDrawer(false);
+                      apply();
+                    }}
+                  >
+                    Aplicar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
