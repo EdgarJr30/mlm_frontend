@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
-import Navbar from '../components/navigation/Navbar';
+// import Navbar from '../components/navigation/Navbar';
 import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
 import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
 import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFiltersBar';
@@ -63,11 +63,11 @@ export default function WorkOrdersPage() {
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
         {/* 🧭 Navbar PASIVO: no filtra ni ubicación ni búsqueda */}
-        <Navbar
+        {/* <Navbar
           onSearch={() => {}} // 👈 no-op
           onFilterLocation={() => {}} // 👈 no-op
           selectedLocation="" // 👈 siempre vacío
-        />
+        /> */}
 
         <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6 flex items-center gap-3">
           <h2 className="text-3xl font-bold">Órdenes de Trabajo</h2>
