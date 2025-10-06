@@ -228,10 +228,16 @@ export default function WorkOrdersBoard({ filters }: Props) {
         }
       )
       .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      // ❇️ Importante: NO await aquí y NO removeChannel
+      try {
+        void channel.unsubscribe();
+      } catch {
+        // ignorar errores de desconexión si el socket no llegó a abrir
+      }
     };
-  }, [JSON.stringify(countsFilters)]);
+  }, []); // 👈 suscríbete una sola vez
 
   return (
     <div className="flex gap-6 h-full w-full overflow-x-auto">
