@@ -3,7 +3,7 @@ import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/navigation/Navbar';
 import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
 import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
-// import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFiltersBar';
+import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFiltersBar';
 import Modal from '../components/ui/Modal';
 import EditTicketModal from '../components/dashboard/workOrder/EditWorkOrdersModal';
 import { updateTicket } from '../services/ticketService';
@@ -21,7 +21,9 @@ export default function WorkOrdersPage() {
   const [selectedLocation, setSelectedLocation] = useState('');
 
   // Filtros avanzados
-  const [filters] = useState<Record<string, unknown>>({});
+  const [filters, setFilters] = useState<Record<WorkOrdersFilterKey, unknown>>(
+    {} as Record<WorkOrdersFilterKey, unknown>
+  );
 
   // Vista actual
   const [view, setView] = useState<ViewMode>('WorkOrders');
@@ -129,9 +131,9 @@ export default function WorkOrdersPage() {
           </div>
         </header>
 
-        {/* <div className="px-4 md:px-6 lg:px-8 pt-3">
+        <div className="px-4 md:px-6 lg:px-8 pt-3">
           <WorkOrdersFiltersBar onApply={(vals) => setFilters(vals)} />
-        </div> */}
+        </div>
 
         <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
           {view === 'WorkOrders' ? (

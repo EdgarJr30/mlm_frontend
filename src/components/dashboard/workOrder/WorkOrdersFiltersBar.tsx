@@ -1,13 +1,21 @@
-// import FilterBar from '../../ui/filters/FilterBar';
-// import { WorkOrders } from '../../../features/tickets/WorkOrders';
+// src/components/dashboard/workOrder/WorkOrdersFiltersBar.tsx
+import FilterBar from '../../ui/filters/FilterBar';
+import {
+  WorkOrdersFilters,
+  type WorkOrdersFilterKey,
+} from '../../../features/tickets/WorkOrdersFilters';
 
-export default function WorkOrdersFiltersBar() {
-  //     {
-  //   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  //   onApply,
-  // }: {
-  //   onApply: (values: Record<string, unknown>) => void;
-  // }
-  //   return <FilterBar schema={WorkOrders} onApply={onApply} sticky />;
-  return null;
+type Props = {
+  onApply: (values: Record<WorkOrdersFilterKey, unknown>) => void;
+};
+
+export default function WorkOrdersFiltersBar({ onApply }: Props) {
+  // ✅ pasa el genérico para que los tipos de clave coincidan
+  return (
+    <FilterBar<WorkOrdersFilterKey>
+      schema={WorkOrdersFilters}
+      onApply={onApply}
+      sticky
+    />
+  );
 }
