@@ -121,7 +121,7 @@ function FieldRenderer<T extends string>({
   f: FilterField<T>;
   value: unknown;
   onChange: (v: unknown) => void;
-  onSearchImmediate?: (term: string) => void; // solo para 'q'
+  onSearchImmediate?: (nextValue: unknown) => void; // ahora admite cualquier tipo
 }) {
   if (f.type === 'text') {
     // ÚNICO buscador global 'q' con GlobalSearch
@@ -149,26 +149,36 @@ function FieldRenderer<T extends string>({
       <SearchInput
         placeholder={f.placeholder ?? 'Buscar…'}
         value={(value as string) ?? ''}
-        onChange={(v) => onChange(v)}
+        onChange={(v) => {
+          onChange(v);
+          if (f.immediate) onSearchImmediate?.(v);
+        }}
       />
     );
   }
+
   if (f.type === 'select') {
     return (
       <Select
         value={(value as string) ?? ''}
-        onChange={(v) => onChange(v)}
+        onChange={(v) => {
+          onChange(v);
+          // aplica inmediatamente si el campo lo declara
+          if (f.immediate) onSearchImmediate?.(v);
+        }}
         placeholder={f.label}
         options={f.options}
       />
     );
   }
+
   if (f.type === 'multiselect') {
     const arr = (Array.isArray(value) ? value : []) as (string | number)[];
-    const toggle = (v: string | number) =>
-      arr.includes(v)
-        ? onChange(arr.filter((x) => x !== v))
-        : onChange([...arr, v]);
+    const toggle = (v: string | number) => {
+      const next = arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+      onChange(next);
+      if (f.immediate) onSearchImmediate?.(next);
+    };
     return (
       <div className="flex flex-wrap gap-1">
         {f.options.map((op) => (
@@ -188,6 +198,7 @@ function FieldRenderer<T extends string>({
       </div>
     );
   }
+
   if (f.type === 'boolean') {
     return (
       <label className="inline-flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 shadow-sm">
@@ -195,34 +206,41 @@ function FieldRenderer<T extends string>({
           type="checkbox"
           className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
           checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
+          onChange={(e) => {
+            onChange(e.target.checked);
+            if (f.immediate) onSearchImmediate?.(e.target.checked);
+          }}
         />
         {f.label}
       </label>
     );
   }
+
   if (f.type === 'daterange') {
     const v = (value ?? {}) as { from?: string; to?: string };
+    const fire = (next: { from?: string; to?: string }) => {
+      onChange(next);
+      if (f.immediate) onSearchImmediate?.(next);
+    };
     return (
       <div className="flex items-center gap-2">
         <input
           type="date"
           value={v.from ?? ''}
-          onChange={(e) =>
-            onChange({ ...v, from: e.target.value || undefined })
-          }
+          onChange={(e) => fire({ ...v, from: e.target.value || undefined })}
           className={control}
         />
         <span className="text-gray-400">—</span>
         <input
           type="date"
           value={v.to ?? ''}
-          onChange={(e) => onChange({ ...v, to: e.target.value || undefined })}
+          onChange={(e) => fire({ ...v, to: e.target.value || undefined })}
           className={control}
         />
       </div>
     );
   }
+
   return null;
 }
 
@@ -300,11 +318,11 @@ export default function FilterBar<T extends string>({
                 f={f}
                 value={(values as Record<T, unknown>)[f.key]}
                 onChange={(v) => setValue(f.key, v as FilterValue | undefined)}
-                onSearchImmediate={(term) => {
+                onSearchImmediate={(nextValue) => {
                   if (!onApply) return;
                   const merged = {
                     ...(values as Record<T, unknown>),
-                    [f.key]: term,
+                    [f.key]: nextValue,
                   } as Record<T, unknown>;
                   onApply(merged);
                 }}
@@ -458,11 +476,11 @@ export default function FilterBar<T extends string>({
                         onChange={(v) =>
                           setValue(f.key, v as FilterValue | undefined)
                         }
-                        onSearchImmediate={(term) => {
+                        onSearchImmediate={(nextValue) => {
                           if (!onApply) return;
                           const merged = {
                             ...(values as Record<T, unknown>),
-                            [f.key]: term,
+                            [f.key]: nextValue,
                           } as Record<T, unknown>;
                           onApply(merged);
                         }}

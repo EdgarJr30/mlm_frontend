@@ -20,6 +20,7 @@ export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
       placeholder: 'Buscar por título, código, activo o solicitante…',
       responsive: 'bar',
       minChars: 2, 
+      immediate: true,
     },
     {
       key: 'status',
@@ -49,6 +50,7 @@ export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
       label: 'Todas las ubicaciones',
       options: LOCATIONS.map((l) => ({ label: l, value: l })),
       responsive: 'bar',
+      immediate: true,
     },
     // Secundarios (van en el drawer del FilterBar)
     {

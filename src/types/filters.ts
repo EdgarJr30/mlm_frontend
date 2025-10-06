@@ -24,6 +24,7 @@ export type BaseField<T extends string = string> = {
   hidden?: boolean;       // para tener campos “técnicos”
   defaultValue?: FilterValue;
   responsive?: 'bar' | 'drawer' | 'both'; // dónde aparece por defecto
+  immediate?: boolean;
 };
 
 export type TextField<T extends string = string> = BaseField<T> & {
