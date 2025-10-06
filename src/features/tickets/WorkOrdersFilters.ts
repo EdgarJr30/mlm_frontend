@@ -19,6 +19,7 @@ export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
       label: 'Buscar',
       placeholder: 'Buscar por título, código, activo o solicitante…',
       responsive: 'bar',
+      minChars: 2, 
     },
     {
       key: 'status',

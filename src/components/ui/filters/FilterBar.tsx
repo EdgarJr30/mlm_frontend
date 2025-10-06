@@ -1,12 +1,13 @@
 // src/components/ui/filters/FilterBar.tsx
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo, useState } from 'react';
 import type {
   FilterSchema,
   FilterField,
   FilterValue,
 } from '../../../types/filters';
 import { useFilters } from '../../../hooks/useFilters';
+import GlobalSearch from '../../common/GlobalSearch';
+import { DateRangePreset } from './DateRangePreset';
 
 /* ============ helpers de UI ============ */
 const control =
@@ -15,99 +16,10 @@ const pillBtn =
   'inline-flex items-center rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-50';
 const primaryBtn =
   'inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500';
-const subtleBtn =
-  'inline-flex items-center rounded-xl bg-gray-100 px-3 py-2 text-sm text-gray-800 hover:bg-gray-200';
 const chipCls =
   'inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700';
 const toolbar =
   'rounded-2xl border border-gray-200 bg-white p-3 md:p-4 shadow-sm';
-
-// Popover que se renderiza en <body> y se posiciona bajo el botón
-function AnchoredPopover({
-  anchorRef,
-  open,
-  onClose,
-  children,
-  minWidth,
-}: {
-  anchorRef: React.RefObject<HTMLElement>;
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-  minWidth?: number;
-}) {
-  const [pos, setPos] = useState<{ top: number; left: number; width: number }>({
-    top: 0,
-    left: 0,
-    width: 0,
-  });
-
-  // 👇 ref al contenedor del popover renderizado en portal
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function recalc() {
-      const el = anchorRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setPos({ top: r.bottom + 8, left: r.left, width: r.width });
-    }
-
-    function handleDocPointerDown(e: MouseEvent) {
-      const target = e.target as Node | null;
-      // Si el click ocurre dentro del anchor o dentro del popover, NO cerrar
-      if (
-        (anchorRef.current && anchorRef.current.contains(target)) ||
-        (popoverRef.current && popoverRef.current.contains(target))
-      ) {
-        return;
-      }
-      onClose();
-    }
-
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-
-    if (open) {
-      recalc();
-      const opts = { passive: true } as AddEventListenerOptions;
-      window.addEventListener('scroll', recalc, opts);
-      window.addEventListener('resize', recalc, opts);
-      // importante: usar mousedown/pointerdown, pero ignorar si es dentro del popover
-      document.addEventListener('mousedown', handleDocPointerDown);
-      document.addEventListener('keydown', handleKey);
-      return () => {
-        window.removeEventListener('scroll', recalc);
-        window.removeEventListener('resize', recalc);
-        document.removeEventListener('mousedown', handleDocPointerDown);
-        document.removeEventListener('keydown', handleKey);
-      };
-    }
-  }, [open, anchorRef, onClose]);
-
-  if (!open) return null;
-
-  return createPortal(
-    <div
-      ref={popoverRef}
-      style={{
-        position: 'fixed',
-        top: pos.top,
-        left: pos.left,
-        minWidth: minWidth ?? pos.width,
-        zIndex: 9999,
-      }}
-      className="rounded-xl border border-gray-200 bg-white p-2 shadow-2xl max-h-72 overflow-auto"
-      role="menu"
-      // Cinturón y tirantes: evita burbujeo por si algún handler global usa capture
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
 
 /* ============ vistas guardadas (localStorage) ============ */
 type SavedView<T extends string> = {
@@ -152,6 +64,7 @@ function SearchInput({
         />
       </svg>
       <input
+        type="search"
         className={`${control} pl-10`}
         placeholder={placeholder ?? 'Buscar…'}
         value={value ?? ''}
@@ -203,12 +116,35 @@ function FieldRenderer<T extends string>({
   f,
   value,
   onChange,
+  onSearchImmediate,
 }: {
   f: FilterField<T>;
   value: unknown;
   onChange: (v: unknown) => void;
+  onSearchImmediate?: (term: string) => void; // solo para 'q'
 }) {
   if (f.type === 'text') {
+    // ÚNICO buscador global 'q' con GlobalSearch
+    if ((f.key as string) === 'q') {
+      const min =
+        'minChars' in f &&
+        typeof (f as { minChars: number }).minChars === 'number'
+          ? (f as { minChars: number }).minChars
+          : 2;
+      return (
+        <GlobalSearch
+          placeholder={f.placeholder ?? 'Buscar…'}
+          value={(value as string) ?? ''}
+          minChars={min}
+          delay={500}
+          onSearch={(term) => {
+            onChange(term);
+            onSearchImmediate?.(term);
+          }}
+        />
+      );
+    }
+    // otros campos de texto (si aparecieran en otros módulos)
     return (
       <SearchInput
         placeholder={f.placeholder ?? 'Buscar…'}
@@ -309,19 +245,21 @@ export default function FilterBar<T extends string>({
   const [views, setViews] = useState<SavedView<T>[]>(() =>
     loadViews<T>(schema.id)
   );
+
   const apply = () => onApply?.(values as Record<T, unknown>);
 
-  // separar campos por ubicación
+  // Separar campos por ubicación (bar vs drawer)
   const [barFields, drawerFields] = useMemo(() => {
     const bar: FilterField<T>[] = [];
     const drawer: FilterField<T>[] = [];
-    schema.fields.forEach((f) => {
-      if (f.hidden) return;
-      if (f.responsive === 'bar') bar.push(f);
-      else if (f.responsive === 'drawer') drawer.push(f);
+    schema.fields.forEach((field) => {
+      if (field.hidden) return;
+      if (field.responsive === 'bar') bar.push(field);
+      else if (field.responsive === 'drawer') drawer.push(field);
       else {
-        bar.push(f);
-        drawer.push(f);
+        // both o undefined: en ambos
+        bar.push(field);
+        drawer.push(field);
       }
     });
     return [bar, drawer];
@@ -343,7 +281,6 @@ export default function FilterBar<T extends string>({
     saveViews(schema.id, next);
   }
   function applyView(v: SavedView<T>) {
-    // aplica y dispara onApply
     onApply?.(v.values);
   }
   function removeView(id: string) {
@@ -355,121 +292,50 @@ export default function FilterBar<T extends string>({
   return (
     <div className={`${sticky ? 'sticky top-0 z-10' : ''}`}>
       <div className={toolbar}>
-        {/* fila principal (como tu captura 1) */}
+        {/* fila principal */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          {barFields.slice(0, 4).map((f) => (
+          {barFields.slice(0, 4).map((f: FilterField<T>) => (
             <div key={f.key}>
               <FieldRenderer
                 f={f}
                 value={(values as Record<T, unknown>)[f.key]}
                 onChange={(v) => setValue(f.key, v as FilterValue | undefined)}
+                onSearchImmediate={(term) => {
+                  if (!onApply) return;
+                  const merged = {
+                    ...(values as Record<T, unknown>),
+                    [f.key]: term,
+                  } as Record<T, unknown>;
+                  onApply(merged);
+                }}
               />
             </div>
           ))}
         </div>
 
-        {/* fila secundaria (como tu captura 2): presets + acciones */}
+        {/* fila secundaria: presets + acciones */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {/* presets de fecha */}
-          {dateField &&
-            (() => {
-              // eslint-disable-next-line react-hooks/rules-of-hooks
-              const btnRef = useRef<HTMLButtonElement>(null);
-              // eslint-disable-next-line react-hooks/rules-of-hooks
-              const [open, setOpen] = useState(false);
-
-              const label = (() => {
-                const v = (values as Record<string, unknown>)[dateField.key] as
+          {dateField && (
+            <DateRangePreset
+              labelText="Últimos 30 días"
+              value={
+                (values as Record<T, unknown>)[dateField.key as T] as
                   | { from?: string; to?: string }
-                  | undefined;
-                return v?.from && v?.to
-                  ? `${v.from} – ${v.to}`
-                  : 'Últimos 30 días';
-              })();
-
-              const handleSelect = (days: number) => {
-                if (!dateField) return;
-
-                // calcula el rango
-                const to = new Date();
-                const from = new Date();
-                from.setDate(to.getDate() - (days - 1));
-
-                const nextRange = {
-                  from: from.toISOString().slice(0, 10),
-                  to: to.toISOString().slice(0, 10),
-                };
-
-                // 1) actualiza en el hook de filtros
+                  | undefined
+              }
+              pillBtnCls={pillBtn}
+              onPick={(nextRange) => {
                 setValue(dateField.key as T, nextRange as FilterValue);
-
-                // 2) dispara onApply con los valores fusionados
                 if (onApply) {
-                  const merged = {
+                  onApply({
                     ...(values as Record<T, unknown>),
-                    [dateField.key]: nextRange,
-                  } as Record<T, unknown>;
-                  onApply(merged);
+                    [dateField.key as T]: nextRange,
+                  } as Record<T, unknown>);
                 }
-
-                // 3) cierra popover
-                setOpen(false);
-              };
-
-              return (
-                <div className="relative">
-                  <button
-                    ref={btnRef}
-                    type="button"
-                    onClick={() => setOpen((v) => !v)}
-                    className={`${pillBtn}`}
-                    aria-haspopup="menu"
-                    aria-expanded={open}
-                  >
-                    <svg
-                      className="mr-2 h-4 w-4 text-gray-600"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M6 2a1 1 0 112 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v2H3V5a2 2 0 012-2h1V2zM3 9h14v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    </svg>
-                    {label}
-                    <svg
-                      className="ml-2 h-4 w-4 text-gray-500"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M5.25 7.5L10 12.25 14.75 7.5H5.25z" />
-                    </svg>
-                  </button>
-
-                  <AnchoredPopover
-                    anchorRef={btnRef as React.RefObject<HTMLElement>}
-                    open={open}
-                    onClose={() => setOpen(false)}
-                  >
-                    <button
-                      className={`${subtleBtn} w-full justify-start`}
-                      onClick={() => handleSelect(7)}
-                    >
-                      Últimos 7 días
-                    </button>
-                    <button
-                      className={`${subtleBtn} w-full justify-start mt-1`}
-                      onClick={() => handleSelect(30)}
-                    >
-                      Últimos 30 días
-                    </button>
-                    <button
-                      className={`${subtleBtn} w-full justify-start mt-1`}
-                      onClick={() => handleSelect(90)}
-                    >
-                      Últimos 90 días
-                    </button>
-                  </AnchoredPopover>
-                </div>
-              );
-            })()}
+              }}
+            />
+          )}
 
           {/* botón para abrir drawer (más filtros) en md- */}
           {drawerFields.length > 0 && (
@@ -499,9 +365,9 @@ export default function FilterBar<T extends string>({
 
         {/* chips activos */}
         <div className="mt-3 flex flex-wrap gap-2">
-          {schema.fields.map((f) => {
+          {schema.fields.map((f: FilterField<T>) => {
             if (f.hidden) return null;
-            const v = (values as Record<string, unknown>)[f.key];
+            const v = (values as Record<T, unknown>)[f.key];
             const empty =
               v === undefined ||
               v === null ||
@@ -577,11 +443,11 @@ export default function FilterBar<T extends string>({
               <div className="grid grid-cols-1 gap-3">
                 {schema.fields
                   .filter(
-                    (f) =>
+                    (f: FilterField<T>) =>
                       !f.hidden &&
                       (f.responsive === 'drawer' || f.responsive === 'both')
                   )
-                  .map((f) => (
+                  .map((f: FilterField<T>) => (
                     <div key={f.key}>
                       <div className="mb-1 text-xs font-medium text-gray-600">
                         {f.label}
@@ -592,6 +458,14 @@ export default function FilterBar<T extends string>({
                         onChange={(v) =>
                           setValue(f.key, v as FilterValue | undefined)
                         }
+                        onSearchImmediate={(term) => {
+                          if (!onApply) return;
+                          const merged = {
+                            ...(values as Record<T, unknown>),
+                            [f.key]: term,
+                          } as Record<T, unknown>;
+                          onApply(merged);
+                        }}
                       />
                     </div>
                   ))}

@@ -132,7 +132,21 @@ export default function WorkOrdersPage() {
         </header>
 
         <div className="px-4 md:px-6 lg:px-8 pt-3">
-          <WorkOrdersFiltersBar onApply={(vals) => setFilters(vals)} />
+          <WorkOrdersFiltersBar
+            onApply={(vals) => {
+              setFilters((prev) =>
+                JSON.stringify(prev) === JSON.stringify(vals) ? prev : vals
+              );
+              const q = vals.q as string | undefined;
+              const loc = vals.location as string | undefined;
+              setSearchTerm((prev) =>
+                q !== undefined && prev !== q ? q : prev
+              );
+              setSelectedLocation((prev) =>
+                loc !== undefined && prev !== loc ? loc : prev
+              );
+            }}
+          />
         </div>
 
         <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
