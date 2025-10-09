@@ -1166,6 +1166,20 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     }
                     required
                   />
+                  <div className="flex justify-between items-center">
+                    {errors.email && (
+                      <p className="text-sm text-red-500">{errors.email}</p>
+                    )}
+                    <p
+                      className={`text-xs ml-auto ${
+                        form.email.length >= Math.floor(MAX_EMAIL_LENGTH * 0.85)
+                          ? 'text-red-500'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {form.email.length}/{MAX_EMAIL_LENGTH} caracteres
+                    </p>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
