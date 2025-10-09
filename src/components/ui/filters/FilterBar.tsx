@@ -8,6 +8,7 @@ import type {
 import { useFilters } from '../../../hooks/useFilters';
 import GlobalSearch from '../../common/GlobalSearch';
 import { DateRangePreset } from './DateRangePreset';
+import ExportTicketsCsvAdapter from './ExportTicketsCsvAdapter';
 
 /* ============ helpers de UI ============ */
 const control =
@@ -351,6 +352,11 @@ export default function FilterBar<T extends string>({
 
           {/* 👉 Header limpio: solo Aplicar a la derecha */}
           <div className="ml-auto flex items-center gap-2">
+            {/* Botón CSV, desacoplado de la lógica interna */}
+            <ExportTicketsCsvAdapter
+              filters={values as Record<T, unknown>}
+              pillBtnClassName={pillBtn}
+            />
             <button
               type="button"
               onClick={apply}
