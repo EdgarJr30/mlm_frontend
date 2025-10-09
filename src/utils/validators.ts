@@ -1,7 +1,7 @@
 export const MAX_TITLE_LENGTH = 60
 export const MAX_DESCRIPTION_LENGTH = 200
 export const MAX_REQUESTER_LENGTH = 30
-export const MAX_EMAIL_LENGTH = 30
+export const MAX_EMAIL_LENGTH = 60
 export const MAX_PHONE_LENGTH = 20
 export const MAX_COMMENTS_LENGTH = 200
 

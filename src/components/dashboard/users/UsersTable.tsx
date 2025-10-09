@@ -1,4 +1,3 @@
-// components/admin/users/UsersTable.tsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../../context/AuthContext';
@@ -16,6 +15,7 @@ import {
 } from '../../../services/userAdminService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
+import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
 
 interface Role {
   id: number;
@@ -135,6 +135,10 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   const canCancel = useCan('users:cancel');
   const canDelete = useCan('users:delete');
   const canManageRoles = useCan('rbac:manage_roles');
+
+  const [errors] = useState<Partial<Record<keyof FormState | 'image', string>>>(
+    {}
+  );
 
   useLayoutEffect(() => {
     const isIndet =
@@ -988,11 +992,27 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   </label>
                   <input
                     type="email"
+                    maxLength={MAX_EMAIL_LENGTH}
+                    placeholder="tuemail@cilm.do"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={emailC}
                     onChange={(e) => setEmailC(e.target.value)}
                     required
                   />
+                  <div className="flex justify-between items-center">
+                    {errors.email && (
+                      <p className="text-sm text-red-500">{errors.email}</p>
+                    )}
+                    <p
+                      className={`text-xs ml-auto ${
+                        emailC.length >= Math.floor(MAX_EMAIL_LENGTH * 0.85)
+                          ? 'text-red-500'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {emailC.length}/{MAX_EMAIL_LENGTH} caracteres
+                    </p>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
