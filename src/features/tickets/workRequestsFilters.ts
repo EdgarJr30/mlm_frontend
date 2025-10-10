@@ -7,7 +7,8 @@ export type WorkRequestsFilterKey =
   | 'priority'
   | 'location'
   | 'created_at'
-  | 'has_image';
+  | 'has_image'
+  | 'accepted';
 
 export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
   id: 'work_requests',
@@ -26,12 +27,10 @@ export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
       type: 'multiselect',
       label: 'Todos los estados',
       options: [
-        // Ajusta estos valores si tu backend usa otros textos/códigos
-        { label: 'Pendiente', value: 'Pendiente' },
-        { label: 'En Revisión', value: 'En Revisión' },
-        { label: 'Aprobada', value: 'Aprobada' },
-        { label: 'Rechazada', value: 'Rechazada' },
-        { label: 'Convertida a OT', value: 'Convertida a OT' },
+        // { label: 'Pendiente', value: 'Pendiente' },
+        // { label: 'En Revisión', value: 'En Revisión' },
+        // { label: 'Aprobada', value: 'Aprobada' },
+        // { label: 'Convertida a OT', value: 'Convertida a OT' },
       ],
       responsive: 'bar',
     },
@@ -40,9 +39,9 @@ export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
       type: 'multiselect',
       label: 'Todas las prioridades',
       options: [
-        { label: 'Baja', value: 'baja' },
-        { label: 'Media', value: 'media' },
-        { label: 'Alta', value: 'alta' },
+        // { label: 'Baja', value: 'baja' },
+        // { label: 'Media', value: 'media' },
+        // { label: 'Alta', value: 'alta' },
       ],
       responsive: 'bar',
     },
@@ -66,6 +65,12 @@ export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
       type: 'boolean',
       label: 'Con imágenes',
       responsive: 'drawer',
+    },
+    {
+      key: 'accepted',
+      type: 'boolean',
+      label: 'Solo aceptadas',
+      responsive: 'bar',
     },
   ],
 };
