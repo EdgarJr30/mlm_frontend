@@ -14,6 +14,7 @@ export default function WorkRequestsFiltersBar({ onApply }: Props) {
       schema={WorkRequestsFilters}
       onApply={onApply}
       sticky
+      exportMerge={{ is_accepted: false }}
     />
   );
 }

@@ -247,12 +247,14 @@ type Props<T extends string> = {
   schema: FilterSchema<T>;
   onApply?: (values: Record<T, unknown>) => void;
   sticky?: boolean;
+  exportMerge?: Record<string, unknown>;
 };
 
 export default function FilterBar<T extends string>({
   schema,
   onApply,
   sticky,
+  exportMerge,
 }: Props<T>) {
   const { values, setValue, reset, activeCount } = useFilters(schema);
 
@@ -355,6 +357,7 @@ export default function FilterBar<T extends string>({
             {/* Botón CSV, desacoplado de la lógica interna */}
             <ExportTicketsCsvAdapter
               filters={values as Record<T, unknown>}
+              exportMerge={exportMerge}
               pillBtnClassName={pillBtn}
             />
             <button

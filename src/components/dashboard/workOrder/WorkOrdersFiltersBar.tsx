@@ -16,6 +16,7 @@ export default function WorkOrdersFiltersBar({ onApply }: Props) {
       schema={WorkOrdersFilters}
       onApply={onApply}
       sticky
+      exportMerge={{ is_accepted: true }}
     />
   );
 }

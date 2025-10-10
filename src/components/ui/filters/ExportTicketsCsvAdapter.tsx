@@ -1,27 +1,41 @@
+// src/components/ui/filters/ExportTicketsCsvAdapter.tsx
 import ExportCsvButton from '../../common/ExportCsvButton';
 import { useCsvExport } from '../../../hooks/useCsvExport';
 import {
   fetchTicketsCsv,
-  type WorkOrdersFilters,
+  type WorkOrdersFilters, // lo seguimos usando internamente
 } from '../../../services/exports/ticketsExportService';
 
 type Props = {
-  filters: WorkOrdersFilters;
+  /** Filtros provenientes del FilterBar (genéricos por vista) */
+  filters: Record<string, unknown>;
+  /** Clase opcional para estilado del botón */
   pillBtnClassName?: string;
+  /** Filtros a fusionar específicamente para la exportación (tienen prioridad) */
+  exportMerge?: Record<string, unknown>;
 };
 
 export default function ExportTicketsCsvAdapter({
   filters,
   pillBtnClassName,
+  exportMerge,
 }: Props) {
   const { exportCsv, exporting } = useCsvExport<WorkOrdersFilters>({
-    fetcher: fetchTicketsCsv,
+    fetcher: async () => {
+      // Nota: baseFilters aquí no lo usamos; usamos lo que viene desde FilterBar.
+      // Fusionamos: lo que viene del FilterBar + exportMerge (prioridad)
+      const merged = {
+        ...filters,
+        ...(exportMerge ?? {}),
+      } as WorkOrdersFilters;
+      return fetchTicketsCsv(merged);
+    },
     baseFilename: 'tickets',
   });
 
   return (
     <ExportCsvButton
-      onExport={() => exportCsv(filters)}
+      onExport={() => exportCsv({} as WorkOrdersFilters)}
       disabled={exporting}
       label="Exportar"
       className={

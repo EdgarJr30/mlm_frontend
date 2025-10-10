@@ -26,6 +26,7 @@ export interface WorkOrdersFilters {
   requester?: string;
   daterange?: { from?: string; to?: string };
   created_by?: string;
+  is_accepted?: boolean;
 }
 
 /** Fila de la vista v_tickets_compat (incluye nuevas columnas) */
@@ -54,8 +55,6 @@ export interface TicketCompatRow {
   primary_assignee_id: number | null;
   secondary_assignee_ids: number[] | null;
   effective_assignee_id: number | null;
-
-  // nuevas columnas añadidas al final
   updated_at: string | null;
   updated_by: string | null;
   created_by_name: string | null;
@@ -151,8 +150,6 @@ function buildQuery(filters: WorkOrdersFilters) {
         'primary_assignee_id',
         'secondary_assignee_ids',
         'effective_assignee_id',
-
-        // nuevas
         'updated_at',
         'updated_by',
         'created_by_name',
@@ -161,6 +158,10 @@ function buildQuery(filters: WorkOrdersFilters) {
         'secondary_assignees_names',
       ].join(',')
     );
+
+    if (typeof filters.is_accepted === 'boolean') {
+    q = q.eq('is_accepted', filters.is_accepted);
+  }
 
   if (filters.created_by) q = q.eq('created_by', filters.created_by);
   if (filters.status?.length) q = q.in('status', filters.status);
@@ -217,7 +218,6 @@ export async function fetchTicketsCsv(filters: WorkOrdersFilters): Promise<{
 
   let from = 0;
   // loop de paginación
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const to = from + pageSize - 1;
     const { data, error } = await buildQuery(filters)
