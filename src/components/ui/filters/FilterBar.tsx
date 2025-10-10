@@ -248,6 +248,7 @@ type Props<T extends string> = {
   onApply?: (values: Record<T, unknown>) => void;
   sticky?: boolean;
   exportMerge?: Record<string, unknown>;
+  baseFilename?: string;
 };
 
 export default function FilterBar<T extends string>({
@@ -255,6 +256,7 @@ export default function FilterBar<T extends string>({
   onApply,
   sticky,
   exportMerge,
+  baseFilename,
 }: Props<T>) {
   const { values, setValue, reset, activeCount } = useFilters(schema);
 
@@ -359,6 +361,7 @@ export default function FilterBar<T extends string>({
               filters={values as Record<T, unknown>}
               exportMerge={exportMerge}
               pillBtnClassName={pillBtn}
+              baseFilename={baseFilename ?? schema.id}
             />
             <button
               type="button"

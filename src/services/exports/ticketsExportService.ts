@@ -211,7 +211,6 @@ function buildQuery(filters: WorkOrdersFilters) {
 export async function fetchTicketsCsv(filters: WorkOrdersFilters): Promise<{
   rows: CsvRow[];
   header: CsvHeader;
-  filename: string;
 }> {
   const rows: CsvRow[] = [];
   const pageSize = 2000;
@@ -234,6 +233,5 @@ export async function fetchTicketsCsv(filters: WorkOrdersFilters): Promise<{
   return {
     rows,
     header,
-    filename: 'tickets',
   };
 }

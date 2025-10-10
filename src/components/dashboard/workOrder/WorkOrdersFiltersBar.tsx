@@ -17,6 +17,7 @@ export default function WorkOrdersFiltersBar({ onApply }: Props) {
       onApply={onApply}
       sticky
       exportMerge={{ is_accepted: true }}
+      baseFilename="ordenes_trabajo"
     />
   );
 }

@@ -15,6 +15,7 @@ export default function WorkRequestsFiltersBar({ onApply }: Props) {
       onApply={onApply}
       sticky
       exportMerge={{ is_accepted: false }}
+      baseFilename="solicitudes"
     />
   );
 }

@@ -13,12 +13,14 @@ type Props = {
   pillBtnClassName?: string;
   /** Filtros a fusionar específicamente para la exportación (tienen prioridad) */
   exportMerge?: Record<string, unknown>;
+  baseFilename?: string;
 };
 
 export default function ExportTicketsCsvAdapter({
   filters,
   pillBtnClassName,
   exportMerge,
+  baseFilename = 'mlm_download',
 }: Props) {
   const { exportCsv, exporting } = useCsvExport<WorkOrdersFilters>({
     fetcher: async () => {
@@ -30,7 +32,7 @@ export default function ExportTicketsCsvAdapter({
       } as WorkOrdersFilters;
       return fetchTicketsCsv(merged);
     },
-    baseFilename: 'tickets',
+    baseFilename,
   });
 
   return (
