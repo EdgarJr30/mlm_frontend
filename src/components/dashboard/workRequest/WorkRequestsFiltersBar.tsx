@@ -1,13 +1,19 @@
-// import FilterBar from '../../ui/filters/FilterBar';
-// import { workRequestsFilters } from '../../../features/tickets/workRequestsFilters ';
+import FilterBar from '../../ui/filters/FilterBar';
+import {
+  WorkRequestsFilters,
+  type WorkRequestsFilterKey,
+} from '../../../features/tickets/workRequestsFilters';
 
-export default function WorkRequestsFiltersBar() {
-  // {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  //   onApply,
-  // }: {
-  //   onApply: (values: Record<string, unknown>) => void;
-  // }
-  // return <FilterBar schema={workRequestsFilters} onApply={onApply} sticky />;
-  return null;
+type Props = {
+  onApply: (values: Record<WorkRequestsFilterKey, unknown>) => void;
+};
+
+export default function WorkRequestsFiltersBar({ onApply }: Props) {
+  return (
+    <FilterBar<WorkRequestsFilterKey>
+      schema={WorkRequestsFilters}
+      onApply={onApply}
+      sticky
+    />
+  );
 }

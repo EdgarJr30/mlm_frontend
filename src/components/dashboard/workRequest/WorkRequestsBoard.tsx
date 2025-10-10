@@ -19,8 +19,7 @@ import { formatAssigneeFullName } from '../../../services/assigneeService';
 import WorkRequestsDetailModal from './WorkRequestsDetailModal';
 
 interface Props {
-  searchTerm: string;
-  selectedLocation: string;
+  filters: FilterState<WorkRequestsFilterKey>;
 }
 
 const PAGE_SIZE = 8;
@@ -67,10 +66,7 @@ function StatusChip({ value }: { value: string }) {
   );
 }
 
-export default function WorkRequestsBoard({
-  searchTerm,
-  selectedLocation,
-}: Props) {
+export default function WorkRequestsBoard({ filters }: Props) {
   const checkbox = useRef<HTMLInputElement>(null);
   const [checked, setChecked] = useState(false);
   const [indeterminate, setIndeterminate] = useState(false);
@@ -94,20 +90,6 @@ export default function WorkRequestsBoard({
   const getAssigneeFor = (id: number) => assigneesMap[id] ?? '';
   const setAssigneeFor = (id: number, assigneeId: number) =>
     setAssigneesMap((prev) => ({ ...prev, [id]: assigneeId }));
-
-  // Filtros
-  const [filters, setFilters] = useState<Record<string, unknown>>({
-    q: searchTerm || undefined,
-    location: selectedLocation || undefined,
-  });
-
-  useEffect(() => {
-    setFilters((prev) => ({
-      ...prev,
-      q: searchTerm || undefined,
-      location: selectedLocation || undefined,
-    }));
-  }, [searchTerm, selectedLocation]);
 
   const ticketsToShow = tickets;
 
@@ -205,7 +187,7 @@ export default function WorkRequestsBoard({
 
   async function reload() {
     const { data, count } = await getTicketsByFiltersPaginated(
-      filters as FilterState<WorkRequestsFilterKey>,
+      filters,
       page,
       PAGE_SIZE
     );

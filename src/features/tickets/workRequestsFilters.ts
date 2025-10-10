@@ -1,85 +1,71 @@
 import type { FilterSchema } from '../../types/filters';
+import { LOCATIONS } from '../../constants/locations';
 
 export type WorkRequestsFilterKey =
   | 'q'
-  | 'location'
-  | 'priority'
   | 'status'
-  | 'has_image'
-  | 'accepted'
-  | 'created_at';
+  | 'priority'
+  | 'location'
+  | 'created_at'
+  | 'has_image';
 
-export const workRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
-  id: 'workRequestsFilters',
-  columnMap: {
-      q: 'title',
-      location: '',
-      priority: 'priority',
-      status: '',
-      has_image: '',
-      accepted: '',
-      created_at: ''
-  },
+export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
+  id: 'work_requests',
   fields: [
-    // Titulo o solicitante
     {
       key: 'q',
       type: 'text',
       label: 'Buscar',
-      placeholder: 'ID, título o solicitante',
+      placeholder: 'Buscar por id, título, solicitante…',
+      responsive: 'bar',
       minChars: 2,
-      responsive: 'both',
+      immediate: true,
     },
-    // Ubicación
     {
-      key: 'location',
-      type: 'select',
-      label: 'Ubicación',
+      key: 'status',
+      type: 'multiselect',
+      label: 'Todos los estados',
       options: [
-        { label: 'Todas', value: '' },
-        { label: 'Operadora de Servicios Alimenticios', value: 'Operadora de Servicios Alimenticios' },
-        { label: 'Adrian Tropical 27', value: 'Adrian Tropical 27' },
-        { label: 'Adrian Tropical Malecón', value: 'Adrian Tropical Malecón' },
-        { label: 'Adrian Tropical Lincoln', value: 'Adrian Tropical Lincoln' },
-        { label: 'Adrian Tropical San Vicente', value: 'Adrian Tropical San Vicente' },
-        { label: 'Atracciones el Lago', value: 'Atracciones el Lago' },
-        { label: 'M7', value: 'M7' },
-        { label: 'E. Arturo Trading', value: 'E. Arturo Trading' },
-        { label: 'Edificio Comunitario', value: 'Edificio Comunitario' },
+        // Ajusta estos valores si tu backend usa otros textos/códigos
+        { label: 'Pendiente', value: 'Pendiente' },
+        { label: 'En Revisión', value: 'En Revisión' },
+        { label: 'Aprobada', value: 'Aprobada' },
+        { label: 'Rechazada', value: 'Rechazada' },
+        { label: 'Convertida a OT', value: 'Convertida a OT' },
       ],
-      responsive: 'both',
+      responsive: 'bar',
     },
-    // Prioridad
     {
       key: 'priority',
       type: 'multiselect',
-      label: 'Prioridad',
+      label: 'Todas las prioridades',
       options: [
         { label: 'Baja', value: 'baja' },
         { label: 'Media', value: 'media' },
         { label: 'Alta', value: 'alta' },
       ],
-      responsive: 'both',
+      responsive: 'bar',
     },
-    // Estado
     {
-      key: 'status',
-      type: 'multiselect',
-      label: 'Estado',
-      options: [
-        { label: 'Pendiente', value: 'Pendiente' },
-        { label: 'En Ejecución', value: 'En Ejecución' },
-        { label: 'Finalizadas', value: 'Finalizadas' },
-      ],
+      key: 'location',
+      type: 'select',
+      label: 'Todas las ubicaciones',
+      options: LOCATIONS.map((l) => ({ label: l, value: l })),
+      responsive: 'bar',
+      immediate: true,
+    },
+    // Secundarios (drawer)
+    {
+      key: 'created_at',
+      type: 'daterange',
+      label: 'Fecha de creación',
       responsive: 'drawer',
     },
-    // Con imagenes
-    { key: 'has_image', type: 'boolean', label: 'Con adjuntos', responsive: 'drawer' },
-    // Aceptados
-    // Filtro técnico, oculto, siempre false
-    { key: 'accepted', type: 'boolean', label: 'Aceptados', defaultValue: false, hidden: true },
-
-    // Fecha de creación
-    { key: 'created_at', type: 'daterange', label: 'Fecha de creación', responsive: 'drawer' },
+    {
+      key: 'has_image',
+      type: 'boolean',
+      label: 'Con imágenes',
+      responsive: 'drawer',
+    },
   ],
 };
