@@ -16,6 +16,7 @@ import { Checkbox } from '../../ui/checkbox';
 import { createTicket, updateTicket } from '../../../services/ticketService';
 import { uploadImageToBucket } from '../../../services/storageService';
 import { getCurrentUserProfile } from '../../../services/userService';
+import { getActiveSpecialIncidents } from '../../../services/specialIncidentsService';
 import imageCompression from 'browser-image-compression';
 import {
   validateTitle,
@@ -54,6 +55,7 @@ interface TicketFormData {
   email?: string;
   phone?: string;
   created_at: string; // ISO date string
+  special_incident_id?: number | null;
 }
 
 type UserProfile = {
@@ -81,6 +83,7 @@ const makeInitialForm = (profile?: UserProfile | null): TicketFormData => {
     email: profile?.email ?? '',
     phone: profile?.phone ?? '',
     created_at: getNowInTimezoneForStorage('America/Santo_Domingo'),
+    special_incident_id: null,
   };
 };
 
@@ -95,13 +98,18 @@ export default function TicketForm() {
   const [errors, setErrors] = useState<
     Partial<Record<keyof TicketFormData | 'image', string>>
   >({});
+  const [specialIncidentOptions, setSpecialIncidentOptions] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
+  const [loadingIncidents, setLoadingIncidents] = useState(false);
+  const [incidentsError, setIncidentsError] = useState<string | null>(null);
 
   const progress = (step / 4) * 100;
   const navigate = useNavigate();
 
   const handleChange = (
     name: keyof TicketFormData,
-    value: string | boolean
+    value: string | boolean | number | null
   ) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -235,6 +243,7 @@ export default function TicketForm() {
         priority: form.priority ?? 'baja',
         status: 'Pendiente',
         assignee: 'Sin asignar',
+        special_incident_id: form.special_incident_id ?? null,
       };
 
       const created = await createTicket(ticketToSave);
@@ -287,6 +296,24 @@ export default function TicketForm() {
       if (!active) return;
       setProfile(p ?? null);
       setForm(makeInitialForm(p ?? null));
+
+      // Cargar Special Incidents (solo activas)
+      try {
+        setLoadingIncidents(true);
+        const data = await getActiveSpecialIncidents(); // devuelve {id,name,...}
+        if (!active) return;
+        // Si usaste getActiveSpecialIncidents que trae más columnas, mapea:
+        const opts = data.map((d) => ({ id: d.id, name: d.name }));
+        setSpecialIncidentOptions(opts);
+        setIncidentsError(null);
+      } catch {
+        if (!active) return;
+        setIncidentsError(
+          'No se pudo cargar el listado de incidencias especiales.'
+        );
+      } finally {
+        if (active) setLoadingIncidents(false);
+      }
     })();
     return () => {
       active = false;
@@ -617,6 +644,51 @@ export default function TicketForm() {
                   )}
                 </div>
               </div>
+              {/* Select de Special Incident (opcional) */}
+              <div className="space-y-2">
+                <Label htmlFor="specialIncident">
+                  Incidencia especial (opcional)
+                </Label>
+                <Select
+                  value={
+                    form.special_incident_id != null
+                      ? String(form.special_incident_id)
+                      : ''
+                  } // 👈 placeholder cuando ''
+                  onValueChange={(value) =>
+                    handleChange(
+                      'special_incident_id',
+                      value === 'none' ? null : Number(value)
+                    )
+                  }
+                  disabled={loadingIncidents}
+                >
+                  <SelectTrigger
+                    id="specialIncident"
+                    className="cursor-pointer"
+                  >
+                    <SelectValue
+                      placeholder={
+                        loadingIncidents
+                          ? 'Cargando...'
+                          : 'Selecciona una incidencia (opcional)'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* 👇 ya NO uses value="" aquí */}
+                    <SelectItem value="none">— Ninguna —</SelectItem>
+                    {specialIncidentOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={String(opt.id)}>
+                        {opt.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {incidentsError && (
+                  <p className="text-sm text-red-500">{incidentsError}</p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="image">
                   Imagen del incidente, máximo 3 imágenes{' '}
@@ -712,6 +784,14 @@ export default function TicketForm() {
                   </h3>
                   <p>
                     <strong>Fecha del incidente:</strong> {form.incident_date}
+                  </p>
+                  <p>
+                    <strong>Incidencia especial:</strong>{' '}
+                    {form.special_incident_id
+                      ? specialIncidentOptions.find(
+                          (o) => o.id === form.special_incident_id
+                        )?.name ?? `ID ${form.special_incident_id}`
+                      : '— Ninguna —'}
                   </p>
                 </div>
 
