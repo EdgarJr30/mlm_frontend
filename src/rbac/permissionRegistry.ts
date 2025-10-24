@@ -23,7 +23,8 @@ export const RESOURCES = {
   users: 'users',
   assignees: 'assignees',
   rbac: 'rbac',
-  special_incidents: 'special_incidents'
+  special_incidents: 'special_incidents',
+  announcements: 'announcements',
 } as const;
 
 type Resource = typeof RESOURCES[keyof typeof RESOURCES];
@@ -74,4 +75,11 @@ export const PERMISSIONS: PermissionDef[] = [
   p(RESOURCES.special_incidents, 'full_access', 'Acceso total incidencias especiales (crear/modificar)'),
   p(RESOURCES.special_incidents, 'disable',     'Activar/Desactivar incidencias especiales'),
   p(RESOURCES.special_incidents, 'delete',      'Eliminar incidencias especiales'),
+
+  // Anuncios Globales
+  p(RESOURCES.announcements, 'read',        'Ver anuncios (panel de gestión)'),
+  p(RESOURCES.announcements, 'create',      'Crear anuncios'),
+  p(RESOURCES.announcements, 'full_access', 'Acceso total anuncios (crear/editar/eliminar)'),
+  p(RESOURCES.announcements, 'disable',     'Activar/Desactivar anuncios'),
+  p(RESOURCES.announcements, 'delete',      'Eliminar anuncios'),
 ];
