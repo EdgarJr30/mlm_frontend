@@ -58,7 +58,7 @@ export default function GlobalAnnouncementBanner() {
   const levelClass = colorMap[current.level] ?? colorMap.info;
 
   return (
-    <div className="sticky top-0 z-[60] w-full overflow-hidden">
+    <div className="w-full overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={current.id}
