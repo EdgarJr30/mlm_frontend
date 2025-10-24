@@ -1339,3 +1339,233 @@ SELECT
 FROM public.tickets t
 LEFT JOIN public.v_work_order_assignees_agg a
   ON a.work_order_id = t.id;
+
+
+-- 1️⃣ Crear tabla con campos de trazabilidad
+CREATE TABLE public.special_incidents (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,               -- Ej: “Huracán”, “Tormenta eléctrica”
+  code TEXT UNIQUE NOT NULL,               -- Ej: “huracan”, “tormenta_electrica”
+  description TEXT,                        -- Texto opcional que explica el tipo
+  is_active BOOLEAN DEFAULT TRUE,          -- Para activar/desactivar en la UI
+  created_at TIMESTAMP DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo') NOT NULL,
+  updated_at TIMESTAMP DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo') NOT NULL,
+  created_by UUID REFERENCES public.users(id) NOT NULL,
+  updated_by UUID REFERENCES public.users(id)
+);
+
+CREATE OR REPLACE FUNCTION public.set_updated_by()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at := (now() AT TIME ZONE 'America/Santo_Domingo');
+  NEW.updated_by := auth.uid();
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.set_created_by()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.created_by IS NULL THEN
+    NEW.created_by := auth.uid();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_special_incidents_updated
+BEFORE UPDATE ON public.special_incidents
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+CREATE TRIGGER trg_special_incidents_created
+BEFORE INSERT ON public.special_incidents
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+ALTER TABLE public.tickets
+  ADD COLUMN IF NOT EXISTS special_incident_id INTEGER;
+
+-- 2) Llave foránea con políticas recomendadas
+--    - ON UPDATE CASCADE: si cambia el id (raro), se propaga
+--    - ON DELETE SET NULL: si borran la incidencia, el ticket no se rompe
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_constraint
+    WHERE  conname = 'tickets_special_incident_id_fkey'
+  ) THEN
+    ALTER TABLE public.tickets
+      ADD CONSTRAINT tickets_special_incident_id_fkey
+      FOREIGN KEY (special_incident_id)
+      REFERENCES public.special_incidents(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL;
+  END IF;
+END$$;
+
+ALTER TABLE public.special_incidents ENABLE ROW LEVEL SECURITY;
+
+-- SELECT (lectura para combos en la UI): solo activas
+CREATE POLICY special_incidents_select_active
+ON public.special_incidents
+FOR SELECT
+TO authenticated
+USING (
+  is_active = TRUE
+  AND (
+    me_has_permission('special_incidents:read'::text)
+    OR me_has_permission('special_incidents:full_access'::text)
+  )
+);
+
+-- SELECT (admin/gestor: ver TODAS, activas e inactivas)
+CREATE POLICY special_incidents_select_full
+ON public.special_incidents
+FOR SELECT
+TO authenticated
+USING (
+  me_has_permission('special_incidents:full_access'::text)
+);
+
+-- INSERT (crear)
+CREATE POLICY special_incidents_insert_rbac
+ON public.special_incidents
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  me_has_permission('special_incidents:full_access'::text)
+);
+
+-- UPDATE (editar general)
+CREATE POLICY special_incidents_update_rbac
+ON public.special_incidents
+FOR UPDATE
+TO authenticated
+USING (
+  me_has_permission('special_incidents:full_access'::text)
+)
+WITH CHECK (
+  me_has_permission('special_incidents:full_access'::text)
+);
+
+-- UPDATE (solo activar/desactivar) — opcional, si quieres delegar el toggle
+-- Nota: sin trigger extra, este permiso permitiría editar cualquier columna.
+-- Si deseas que SOLO cambie is_active, añade el trigger de control (abajo).
+CREATE POLICY special_incidents_disable_rbac
+ON public.special_incidents
+FOR UPDATE
+TO authenticated
+USING (
+  me_has_permission('special_incidents:disable'::text)
+)
+WITH CHECK (
+  me_has_permission('special_incidents:disable'::text)
+);
+
+-- DELETE
+CREATE POLICY special_incidents_delete_rbac
+ON public.special_incidents
+FOR DELETE
+TO authenticated
+USING (
+  me_has_permission('special_incidents:delete'::text)
+  OR me_has_permission('special_incidents:full_access'::text)
+);
+
+CREATE OR REPLACE VIEW public.v_tickets_compat (
+  id,
+  title,
+  description,
+  is_urgent,
+  priority,
+  requester,
+  location,
+  assignee,
+  incident_date,
+  deadline_date,
+  image,
+  email,
+  phone,
+  comments,
+  created_at,
+  status,
+  is_accepted,
+  created_by,
+  assignee_id,
+  updated_at,
+  is_archived,
+  finalized_at,
+  primary_assignee_id,
+  secondary_assignee_ids,
+  effective_assignee_id,
+  updated_by,
+  created_by_name,
+  updated_by_name,
+  primary_assignee_name,
+  secondary_assignees_names,
+  special_incident_id,
+  special_incident_name,
+  special_incident_code
+) AS
+SELECT
+  -- === columnas existentes (mismo orden) ===
+  t.id,
+  t.title,
+  t.description,
+  t.is_urgent,
+  t.priority,
+  t.requester,
+  t.location,
+  t.assignee,
+  t.incident_date,
+  t.deadline_date,
+  t.image,
+  t.email,
+  t.phone,
+  t.comments,
+  t.created_at,
+  t.status,
+  t.is_accepted,
+  t.created_by,
+  t.assignee_id,
+  t.updated_at,
+  t.is_archived,
+  t.finalized_at,
+  a.primary_assignee_id,
+  a.secondary_assignee_ids,
+  COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id,
+
+  -- === nuevas columnas añadidas al final ===
+  t.updated_by,
+  CONCAT(u_created.name, ' ', COALESCE(u_created.last_name, '')) AS created_by_name,
+  CONCAT(u_updated.name, ' ', COALESCE(u_updated.last_name, '')) AS updated_by_name,
+  CONCAT(ap.name, ' ', COALESCE(ap.last_name, ''))               AS primary_assignee_name,
+  (
+    SELECT STRING_AGG(CONCAT(asg.name, ' ', COALESCE(asg.last_name, '')), ', ')
+    FROM public.work_order_assignees wa
+    JOIN public.assignees asg ON asg.id = wa.assignee_id
+    WHERE wa.work_order_id = t.id
+      AND wa.is_active = TRUE
+      AND wa.role = 'SECONDARY'
+  ) AS secondary_assignees_names,
+  t.special_incident_id,
+  si.name AS special_incident_name,
+  si.code AS special_incident_code
+
+FROM public.tickets t
+LEFT JOIN public.v_work_order_assignees_agg a
+  ON a.work_order_id = t.id
+LEFT JOIN public.users u_created
+  ON u_created.id = t.created_by
+LEFT JOIN public.users u_updated
+  ON u_updated.id = t.updated_by
+LEFT JOIN public.assignees ap
+  ON ap.id = a.primary_assignee_id
+LEFT JOIN public.special_incidents si
+  ON si.id = t.special_incident_id;
