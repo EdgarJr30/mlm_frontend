@@ -1,9 +1,14 @@
 import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react';
 import type { Ticket } from '../../../types/Ticket';
+import type { SpecialIncident } from '../../../types/SpecialIncident';
 import {
   acceptTickets,
   getTicketsByFiltersPaginated,
 } from '../../../services/ticketService';
+import {
+  getAllSpecialIncidents,
+  makeSpecialIncidentMap,
+} from '../../../services/specialIncidentsService';
 import {
   getPublicImageUrl,
   getTicketImagePaths,
@@ -76,6 +81,9 @@ export default function WorkRequestsBoard({ filters }: Props) {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [detailTicket, setDetailTicket] = useState<Ticket | null>(null);
+  const [specialIncidentsById, setSpecialIncidentsById] = useState<
+    Record<number, SpecialIncident>
+  >({});
 
   const canFullWR = useCan('work_requests:full_access');
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
@@ -207,6 +215,21 @@ export default function WorkRequestsBoard({ filters }: Props) {
     setAssigneesMap(next);
   }
 
+  type TicketWithSpecialIncident = Ticket & {
+    special_incident_id?: number | null;
+  };
+
+  function renderSpecialIncidentChip(specialIncidentId?: number | null) {
+    if (!specialIncidentId) return null;
+    const specialIncident = specialIncidentsById[Number(specialIncidentId)];
+    if (!specialIncident) return null;
+    return (
+      <span className="ml-1 inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+        {specialIncident.name}
+      </span>
+    );
+  }
+
   useEffect(() => {
     setSelectedTicket([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,6 +240,21 @@ export default function WorkRequestsBoard({ filters }: Props) {
     void reload().finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, JSON.stringify(filters)]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getAllSpecialIncidents(); // incluye activas e inactivas
+        if (!cancelled) setSpecialIncidentsById(makeSpecialIncidentMap(list));
+      } catch {
+        // opcional: console.error
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const disabledCtlCls = (cond: boolean) =>
     cond ? ' disabled:opacity-40 disabled:cursor-not-allowed' : '';
@@ -303,7 +341,29 @@ export default function WorkRequestsBoard({ filters }: Props) {
                       }
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-gray-500">#{t.id}</div>
+                      <div className="text-xs text-gray-500">
+                        <div className="flex flex-col">
+                          <span>#{t.id}</span>
+                          {(() => {
+                            const siId = (t as TicketWithSpecialIncident)
+                              .special_incident_id;
+                            const chip = renderSpecialIncidentChip(siId);
+                            return chip ? (
+                              <div className="mt-0.5 inline-flex items-center gap-1">
+                                {chip}
+                                <span
+                                  role="img"
+                                  aria-label="incidente especial"
+                                  title="Incidente especial"
+                                >
+                                  🚨
+                                </span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      </div>
+
                       <div className="mt-0.5 text-base font-semibold text-gray-900 wrap-anywhere line-clamp-1">
                         {t.title}
                       </div>
@@ -541,8 +601,29 @@ export default function WorkRequestsBoard({ filters }: Props) {
                             />
                           </td>
                           <td className="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                            #{t.id}
+                            <div className="flex flex-col">
+                              <span>#{t.id}</span>
+
+                              {(() => {
+                                const siId = (t as TicketWithSpecialIncident)
+                                  .special_incident_id;
+                                const chip = renderSpecialIncidentChip(siId);
+                                return chip ? (
+                                  <div className="mt-1 inline-flex items-center gap-1">
+                                    {chip}
+                                    <span
+                                      role="img"
+                                      aria-label="incidente especial"
+                                      title="Incidente especial"
+                                    >
+                                      🚨
+                                    </span>
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
                           </td>
+
                           <td className="px-4 py-4">
                             <div className="text-sm font-medium text-gray-900 wrap-anywhere line-clamp-1">
                               {t.title}

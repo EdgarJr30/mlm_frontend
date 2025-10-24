@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Ticket } from '../../../types/Ticket';
+import type { SpecialIncident } from '../../../types/SpecialIncident';
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import {
   getPublicImageUrl,
@@ -9,6 +10,10 @@ import { useAssignees } from '../../../context/AssigneeContext';
 import type { Assignee } from '../../../types/Assignee';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import { acceptTickets } from '../../../services/ticketService';
+import {
+  getAllSpecialIncidents,
+  makeSpecialIncidentMap,
+} from '../../../services/specialIncidentsService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 
 function cx(...classes: Array<string | false | undefined>) {
@@ -82,10 +87,17 @@ export default function WorkRequestsDetailModal({
   }, [onClose]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [specialIncidentsById, setSpecialIncidentsById] = useState<
+    Record<number, SpecialIncident>
+  >({});
   const assigneeValue = useMemo(
     () => getAssigneeFor(Number(ticket.id)),
     [getAssigneeFor, ticket.id]
   );
+
+  type TicketWithSpecialIncident = Ticket & {
+    special_incident_id?: number | null;
+  };
 
   async function handleAccept() {
     if (!canFullWR) {
@@ -114,7 +126,33 @@ export default function WorkRequestsDetailModal({
     }
   }
 
+  function renderSpecialIncidentChip(specialIncidentId?: number | null) {
+    if (!specialIncidentId) return null;
+    const si = specialIncidentsById[Number(specialIncidentId)];
+    if (!si) return null;
+    return (
+      <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+        {si.name}
+      </span>
+    );
+  }
+
   const acceptDisabled = !canFullWR || !assigneeValue || submitting;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getAllSpecialIncidents(); // activas e inactivas
+        if (!cancelled) setSpecialIncidentsById(makeSpecialIncidentMap(list));
+      } catch {
+        // opcional: console.error
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div
@@ -127,7 +165,26 @@ export default function WorkRequestsDetailModal({
       >
         <header className="flex items-center justify-between px-6 py-4 border-b">
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-semibold">Solicitud #{ticket.id}</h3>
+            <h3 className="text-xl font-semibold flex items-center gap-2">
+              <span>Solicitud #{ticket.id}</span>
+              {(() => {
+                const siId = (ticket as TicketWithSpecialIncident)
+                  .special_incident_id;
+                const chip = renderSpecialIncidentChip(siId);
+                return chip ? (
+                  <span className="inline-flex items-center gap-1">
+                    {chip}
+                    <span
+                      role="img"
+                      aria-label="incidente especial"
+                      title="Incidente especial"
+                    >
+                      🚨
+                    </span>
+                  </span>
+                ) : null;
+              })()}
+            </h3>
             <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
           </div>
 
