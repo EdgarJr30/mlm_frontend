@@ -15,6 +15,7 @@ import DashboardPage from '../../pages/DashboardPage';
 import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
 import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
+import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -278,6 +279,19 @@ export const APP_ROUTES: AppRoute[] = [
       'special_incidents:full_access',
       'special_incidents:disable',
       'special_incidents:delete',
+    ],
+    name: 'Incidencias',
+    showInSidebar: false,
+  },
+  {
+    path: '/admin/anuncios',
+    element: <AnnouncementsManagmentPage />,
+    allowPerms: [
+      'announcements:read',
+      'announcements:create',
+      'announcements:full_access',
+      'announcements:disable',
+      'announcements:delete',
     ],
     name: 'Incidencias',
     showInSidebar: false,

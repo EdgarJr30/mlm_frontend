@@ -4,14 +4,26 @@ import Sidebar from '../../components/layout/Sidebar';
 import Navbar from '../../components/navigation/Navbar';
 import { Can, useCan } from '../../rbac/PermissionsContext';
 import { cn } from '../../utils/cn';
-import { Settings, ShieldCheck, ListChecks, AlertTriangle } from 'lucide-react';
+import {
+  Settings,
+  ShieldCheck,
+  ListChecks,
+  AlertTriangle,
+  Megaphone,
+} from 'lucide-react';
 import GeneralSettings from '../../components/dashboard/admin/GeneralSettings';
 import RoleList from '../../components/dashboard/roles/RoleList';
 import PermissionsTable from '../../components/dashboard/permissions/PermissionsTable';
 import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
+import AnnouncementsTable from '../../components/dashboard/announcements/AnnouncementsTable';
 
-type TabKey = 'general' | 'roles' | 'permissions' | 'incidents';
+type TabKey =
+  | 'general'
+  | 'roles'
+  | 'permissions'
+  | 'incidents'
+  | 'announcements';
 
 function useQuery() {
   const { search } = useLocation();
@@ -24,34 +36,40 @@ function TopTabs({
   disabledPermissionsTab,
   disabledRolesTab,
   disabledIncidentsTab,
+  disabledAnnouncementsTab,
 }: {
   value: TabKey;
   onChange: (t: TabKey) => void;
   disabledPermissionsTab?: boolean;
   disabledRolesTab?: boolean;
   disabledIncidentsTab?: boolean;
+  disabledAnnouncementsTab?: boolean;
 }) {
   const Item = ({
     k,
     icon,
     label,
     disabled,
+    className,
   }: {
     k: TabKey;
     icon: JSX.Element;
     label: string;
     disabled?: boolean;
+    className?: string;
   }) => (
     <button
       type="button"
       disabled={disabled}
       onClick={() => onChange(k)}
       className={cn(
-        'inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition cursor-pointer',
+        // ancho fluido para móvil; en pantallas ≥sm el ancho se ajusta al contenido
+        'inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition cursor-pointer w-full sm:w-auto',
         value === k
           ? 'bg-indigo-600 text-white'
           : 'bg-white hover:bg-gray-50 border',
-        disabled && 'opacity-50 cursor-not-allowed'
+        disabled && 'opacity-50 cursor-not-allowed',
+        className
       )}
       title={disabled ? 'No tienes permiso' : undefined}
     >
@@ -61,31 +79,45 @@ function TopTabs({
   );
 
   return (
-    <div className="inline-flex rounded-2xl border bg-white p-1 shadow-sm">
-      <Item
-        k="roles"
-        label="Roles"
-        icon={<ShieldCheck className="h-4 w-4" />}
-        disabled={disabledRolesTab}
-      />
-      <Item
-        k="permissions"
-        label="Permisos"
-        icon={<ListChecks className="h-4 w-4" />}
-        disabled={disabledPermissionsTab}
-      />
-      {/* ⬇️ NUEVO: pestaña Incidencias */}
-      <Item
-        k="incidents"
-        label="Incidencias"
-        icon={<AlertTriangle className="h-4 w-4" />}
-        disabled={disabledIncidentsTab}
-      />
-      <Item
-        k="general"
-        label="General"
-        icon={<Settings className="h-4 w-4" />}
-      />
+    <div className="rounded-2xl border bg-white p-2 shadow-sm">
+      {/* contenedor flexible que envuelve; en móvil se apilan, y si hay espacio caben 2 por fila */}
+      <div className="flex flex-wrap gap-2">
+        <Item
+          k="roles"
+          label="Roles"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          disabled={disabledRolesTab}
+          className="sm:flex-none"
+        />
+        <Item
+          k="permissions"
+          label="Permisos"
+          icon={<ListChecks className="h-4 w-4" />}
+          disabled={disabledPermissionsTab}
+          className="sm:flex-none"
+        />
+        <Item
+          k="incidents"
+          label="Incidencias"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          disabled={disabledIncidentsTab}
+          className="sm:flex-none"
+        />
+        {/* ⬇️ NUEVO: pestaña Anuncios */}
+        <Item
+          k="announcements"
+          label="Anuncios"
+          icon={<Megaphone className="h-4 w-4" />}
+          disabled={disabledAnnouncementsTab}
+          className="sm:flex-none"
+        />
+        <Item
+          k="general"
+          label="General"
+          icon={<Settings className="h-4 w-4" />}
+          className="sm:flex-none"
+        />
+      </div>
     </div>
   );
 }
@@ -96,11 +128,23 @@ export default function AdminSettingsHubPage() {
 
   const canSeePermissions = useCan('rbac:manage_permissions');
   const canManageRoles = useCan('rbac:manage_roles');
+
   const canIncidentsFull = useCan('special_incidents:full_access');
   const canIncidentsDisable = useCan('special_incidents:disable');
   const canIncidentsDelete = useCan('special_incidents:delete');
   const canManageIncidents =
     canIncidentsFull || canIncidentsDisable || canIncidentsDelete;
+
+  // Permisos de anuncios
+  const canAnnouncementsRead = useCan('announcements:read');
+  const canAnnouncementsFull = useCan('announcements:full_access');
+  const canAnnouncementsDisable = useCan('announcements:disable');
+  const canAnnouncementsDelete = useCan('announcements:delete');
+  const canManageAnnouncements =
+    canAnnouncementsFull ||
+    canAnnouncementsDisable ||
+    canAnnouncementsDelete ||
+    canAnnouncementsRead;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
@@ -115,6 +159,8 @@ export default function AdminSettingsHubPage() {
       ? 'permissions'
       : canManageIncidents
       ? 'incidents'
+      : canManageAnnouncements
+      ? 'announcements'
       : 'general');
 
   const [tab, setTab] = useState<TabKey>(computedInitial);
@@ -134,6 +180,8 @@ export default function AdminSettingsHubPage() {
         ? 'permissions'
         : canManageIncidents
         ? 'incidents'
+        : canManageAnnouncements
+        ? 'announcements'
         : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
@@ -143,6 +191,8 @@ export default function AdminSettingsHubPage() {
         ? 'roles'
         : canManageIncidents
         ? 'incidents'
+        : canManageAnnouncements
+        ? 'announcements'
         : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
@@ -152,11 +202,31 @@ export default function AdminSettingsHubPage() {
         ? 'roles'
         : canSeePermissions
         ? 'permissions'
+        : canManageAnnouncements
+        ? 'announcements'
         : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
-  }, [tab, canManageRoles, canSeePermissions, canManageIncidents, navigate]);
+    if (tab === 'announcements' && !canManageAnnouncements) {
+      const next: TabKey = canManageRoles
+        ? 'roles'
+        : canSeePermissions
+        ? 'permissions'
+        : canManageIncidents
+        ? 'incidents'
+        : 'general';
+      setTab(next);
+      navigate(`/admin/settings?tab=${next}`, { replace: true });
+    }
+  }, [
+    tab,
+    canManageRoles,
+    canSeePermissions,
+    canManageIncidents,
+    canManageAnnouncements,
+    navigate,
+  ]);
 
   // Mantener tab en la URL
   useEffect(() => {
@@ -182,8 +252,8 @@ export default function AdminSettingsHubPage() {
             <div>
               <h1 className="text-3xl font-bold">Configuración</h1>
               <p className="text-sm text-gray-500">
-                Administra parámetros de la plataforma, roles, permisos e
-                incidencias.
+                Administra parámetros de la plataforma, roles, permisos,
+                incidencias y anuncios.
               </p>
             </div>
 
@@ -193,6 +263,7 @@ export default function AdminSettingsHubPage() {
               disabledPermissionsTab={!canSeePermissions}
               disabledRolesTab={!canManageRoles}
               disabledIncidentsTab={!canManageIncidents}
+              disabledAnnouncementsTab={!canManageAnnouncements}
             />
           </div>
         </header>
@@ -230,6 +301,19 @@ export default function AdminSettingsHubPage() {
               </p>
               <SpecialIncidentsTable searchTerm={searchTerm} />
             </div>
+          )}
+
+          {tab === 'announcements' && (
+            <Can perm="announcements:read">
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Anuncios</h2>
+                <p className="text-sm text-gray-500">
+                  Gestiona anuncios visibles para audiencias específicas por
+                  rol.
+                </p>
+                <AnnouncementsTable searchTerm={searchTerm} />
+              </div>
+            </Can>
           )}
 
           {tab === 'general' && (
