@@ -22,6 +22,7 @@ export interface Ticket {
   comments?: string;
   is_archived: boolean;
   finalized_at?: string | null;
+  special_incident_id?: number | null;
 }
 
 export type WorkOrderExtras = {
