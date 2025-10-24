@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, type JSX } from 'react';
 import type { WorkOrder } from '../../../types/Ticket';
 import { toTicketUpdate } from '../../../utils/toTicketUpdate';
 import { useAssignees } from '../../../context/AssigneeContext';
@@ -31,6 +31,7 @@ interface EditWorkOrdersModalProps {
   onSave: (patch: Partial<WorkOrder>) => void | Promise<void>;
   showFullImage: boolean;
   setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
+  getSpecialIncidentAdornment?: (t: WorkOrder) => JSX.Element | null;
 }
 
 export default function EditWorkOrdersModal({
@@ -38,6 +39,7 @@ export default function EditWorkOrdersModal({
   ticket,
   onSave,
   setShowFullImage,
+  getSpecialIncidentAdornment,
 }: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<WorkOrder>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
@@ -283,6 +285,7 @@ export default function EditWorkOrdersModal({
               readOnly
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             />
+            <div className="mt-1">{getSpecialIncidentAdornment?.(edited)}</div>
           </div>
 
           <div>

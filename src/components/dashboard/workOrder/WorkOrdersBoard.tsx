@@ -6,7 +6,12 @@ import {
   getTicketCountsRPC,
   getTicketsByWorkOrdersFiltersPaginated,
 } from '../../../services/ticketService';
+import {
+  getAllSpecialIncidents,
+  makeSpecialIncidentMap,
+} from '../../../services/specialIncidentsService';
 import type { Ticket, WorkOrder } from '../../../types/Ticket';
+import type { SpecialIncident } from '../../../types/SpecialIncident';
 import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
 import WorkOrdersColumn from './WorkOrdersColumn';
@@ -33,12 +38,19 @@ export default function WorkOrdersBoard({ filters }: Props) {
   const [lastUpdatedTicket, setLastUpdatedTicket] = useState<WorkOrder | null>(
     null
   );
+  const [specialIncidentsById, setSpecialIncidentsById] = useState<
+    Record<number, SpecialIncident>
+  >({});
   const [filteredTickets, setFilteredTickets] = useState<WorkOrder[]>([]);
   const [counts, setCounts] = useState<Record<Ticket['status'], number>>({
     Pendiente: 0,
     'En Ejecución': 0,
     Finalizadas: 0,
   });
+
+  type WorkOrderWithSpecialIncident = WorkOrder & {
+    special_incident_id?: number | null;
+  };
 
   const loadedColumns = useRef(0);
 
@@ -69,6 +81,18 @@ export default function WorkOrdersBoard({ filters }: Props) {
     }),
     [filters]
   );
+
+  // Componente/función para pintar el chip
+  function renderSpecialIncidentChip(specialIncidentId?: number | null) {
+    if (!specialIncidentId) return null;
+    const specialIncident = specialIncidentsById[Number(specialIncidentId)];
+    if (!specialIncident) return null;
+    return (
+      <span className="ml-1 inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800">
+        {specialIncident.name}
+      </span>
+    );
+  }
 
   /** Carga cuando hay filtros (una sola query y se reparte por columnas) */
   useEffect(() => {
@@ -104,6 +128,22 @@ export default function WorkOrdersBoard({ filters }: Props) {
       alive = false;
     };
   }, [JSON.stringify(countsFilters)]);
+
+  //Cargar todas (activas e inactivas) y mapear por id
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getAllSpecialIncidents(); // trae activas e inactivas
+        if (!cancelled) setSpecialIncidentsById(makeSpecialIncidentMap(list));
+      } catch {
+        // opcional: console.error('No se pudieron cargar los incidentes especiales');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** UI optimista para los badges */
   function bumpCountsLocal(oldTicket: Ticket, newTicket: Ticket) {
@@ -285,6 +325,23 @@ export default function WorkOrdersBoard({ filters }: Props) {
               : undefined
           }
           count={counts[status]}
+          getSpecialIncidentAdornment={(t) => {
+            const siId = (t as WorkOrderWithSpecialIncident)
+              .special_incident_id;
+            const chip = renderSpecialIncidentChip(siId);
+            return chip ? (
+              <span className="inline-flex items-center gap-1 ml-1">
+                {chip}
+                <span
+                  role="img"
+                  aria-label="incidente especial"
+                  title="Incidente especial"
+                >
+                  🚨
+                </span>
+              </span>
+            ) : null;
+          }}
         />
       ))}
 
@@ -297,6 +354,24 @@ export default function WorkOrdersBoard({ filters }: Props) {
             onSave={handleSave}
             showFullImage={showFullImage}
             setShowFullImage={setShowFullImage}
+            getSpecialIncidentAdornment={(t) => {
+              const siId = (
+                t as WorkOrder & { special_incident_id?: number | null }
+              ).special_incident_id;
+              const chip = renderSpecialIncidentChip(siId);
+              return chip ? (
+                <span className="inline-flex items-center gap-1 ml-1">
+                  {chip}
+                  <span
+                    role="img"
+                    aria-label="incidente especial"
+                    title="Incidente especial"
+                  >
+                    🚨
+                  </span>
+                </span>
+              ) : null;
+            }}
           />
         )}
       </Modal>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type JSX } from 'react';
 import type { Ticket, WorkOrderExtras } from '../../../types/Ticket';
 import { getTicketsByStatusPaginated } from '../../../services/ticketService';
 import {
@@ -23,6 +23,7 @@ interface Props {
   selectedLocation?: string;
   isFiltering: boolean;
   count?: number;
+  getSpecialIncidentAdornment?: (t: Ticket) => JSX.Element | null;
 }
 
 export default function WorkOrdersColumn({
@@ -40,6 +41,7 @@ export default function WorkOrdersColumn({
   selectedLocation,
   isFiltering,
   count,
+  getSpecialIncidentAdornment,
 }: Props) {
   const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
   const [page, setPage] = useState(0);
@@ -411,6 +413,7 @@ export default function WorkOrdersColumn({
                     <div className="flex items-center gap-1">
                       <strong className="text-xs shrink-0">ID:</strong>
                       <span className="truncate">{ticket.id}</span>
+                      {getSpecialIncidentAdornment?.(ticket)}
                     </div>
                   </div>
 
