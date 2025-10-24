@@ -185,7 +185,6 @@ export default function WorkOrdersBoard({ filters }: Props) {
     try {
       const prev = (selectedTicket as WorkOrder) || (patch as WorkOrder);
 
-      // 1) Persiste SOLO columnas reales de "tickets"
       await updateTicket(Number(patch.id), {
         comments: patch.comments ?? undefined,
         assignee_id: patch.assignee_id ?? undefined,
@@ -195,12 +194,16 @@ export default function WorkOrdersBoard({ filters }: Props) {
         deadline_date: patch.deadline_date ?? undefined,
       });
 
-      // 2) Actualiza estado local conservando extras
-      setLastUpdatedTicket(
-        (p) => ({ ...(p ?? {}), ...(patch as WorkOrder) } as WorkOrder)
-      );
+      // ✅ Usa el ticket base (prev) y mezcla el patch para NO perder extras como special_incident_id
+      const baseline =
+        (selectedTicket as WorkOrder) ??
+        (filteredTickets.find((r) => r.id === patch.id) as WorkOrder) ??
+        (lastUpdatedTicket as WorkOrder) ??
+        (patch as WorkOrder);
 
-      // 3) Si estás en modo filtrado, mezcla el patch en la lista filtrada
+      setLastUpdatedTicket({ ...baseline, ...(patch as WorkOrder) });
+
+      // (esto ya estaba bien: en modo filtrado mezclas contra el row existente)
       setFilteredTickets((rows) =>
         rows.map((r) =>
           r.id === patch.id
