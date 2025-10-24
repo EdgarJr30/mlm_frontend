@@ -23,6 +23,7 @@ export const RESOURCES = {
   users: 'users',
   assignees: 'assignees',
   rbac: 'rbac',
+  special_incidents: 'special_incidents'
 } as const;
 
 type Resource = typeof RESOURCES[keyof typeof RESOURCES];
@@ -67,4 +68,10 @@ export const PERMISSIONS: PermissionDef[] = [
   p(RESOURCES.assignees, 'full_access', 'Acceso total técnicos (crear/modificar)'),
   p(RESOURCES.assignees, 'cancel',      'Activar/Desactivar técnicos'),
   p(RESOURCES.assignees, 'delete',      'Eliminar técnicos'),
+
+  // Special Incidents
+  p(RESOURCES.special_incidents, 'read',        'Ver incidencias especiales'),
+  p(RESOURCES.special_incidents, 'full_access', 'Acceso total incidencias especiales (crear/modificar)'),
+  p(RESOURCES.special_incidents, 'disable',     'Activar/Desactivar incidencias especiales'),
+  p(RESOURCES.special_incidents, 'delete',      'Eliminar incidencias especiales'),
 ];
