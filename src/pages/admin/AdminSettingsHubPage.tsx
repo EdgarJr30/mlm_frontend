@@ -4,14 +4,14 @@ import Sidebar from '../../components/layout/Sidebar';
 import Navbar from '../../components/navigation/Navbar';
 import { Can, useCan } from '../../rbac/PermissionsContext';
 import { cn } from '../../utils/cn';
-import { Settings, ShieldCheck, ListChecks } from 'lucide-react';
-
+import { Settings, ShieldCheck, ListChecks, AlertTriangle } from 'lucide-react';
 import GeneralSettings from '../../components/dashboard/admin/GeneralSettings';
 import RoleList from '../../components/dashboard/roles/RoleList';
 import PermissionsTable from '../../components/dashboard/permissions/PermissionsTable';
 import RoleUsersModal from './RoleUsersModal';
+import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 
-type TabKey = 'general' | 'roles' | 'permissions';
+type TabKey = 'general' | 'roles' | 'permissions' | 'incidents';
 
 function useQuery() {
   const { search } = useLocation();
@@ -23,11 +23,13 @@ function TopTabs({
   onChange,
   disabledPermissionsTab,
   disabledRolesTab,
+  disabledIncidentsTab,
 }: {
   value: TabKey;
   onChange: (t: TabKey) => void;
   disabledPermissionsTab?: boolean;
   disabledRolesTab?: boolean;
+  disabledIncidentsTab?: boolean;
 }) {
   const Item = ({
     k,
@@ -72,6 +74,13 @@ function TopTabs({
         icon={<ListChecks className="h-4 w-4" />}
         disabled={disabledPermissionsTab}
       />
+      {/* ⬇️ NUEVO: pestaña Incidencias */}
+      <Item
+        k="incidents"
+        label="Incidencias"
+        icon={<AlertTriangle className="h-4 w-4" />}
+        disabled={disabledIncidentsTab}
+      />
       <Item
         k="general"
         label="General"
@@ -87,14 +96,26 @@ export default function AdminSettingsHubPage() {
 
   const canSeePermissions = useCan('rbac:manage_permissions');
   const canManageRoles = useCan('rbac:manage_roles');
+  const canIncidentsFull = useCan('special_incidents:full_access');
+  const canIncidentsDisable = useCan('special_incidents:disable');
+  const canIncidentsDelete = useCan('special_incidents:delete');
+  const canManageIncidents =
+    canIncidentsFull || canIncidentsDisable || canIncidentsDelete;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
 
   const rawTab = q.get('tab') as TabKey | null;
+
   const computedInitial: TabKey =
     rawTab ||
-    (canManageRoles ? 'roles' : canSeePermissions ? 'permissions' : 'general');
+    (canManageRoles
+      ? 'roles'
+      : canSeePermissions
+      ? 'permissions'
+      : canManageIncidents
+      ? 'incidents'
+      : 'general');
 
   const [tab, setTab] = useState<TabKey>(computedInitial);
 
@@ -109,16 +130,33 @@ export default function AdminSettingsHubPage() {
   // Redirecciones por permisos
   useEffect(() => {
     if (tab === 'roles' && !canManageRoles) {
-      const next: TabKey = canSeePermissions ? 'permissions' : 'general';
+      const next: TabKey = canSeePermissions
+        ? 'permissions'
+        : canManageIncidents
+        ? 'incidents'
+        : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
     if (tab === 'permissions' && !canSeePermissions) {
-      const next: TabKey = canManageRoles ? 'roles' : 'general';
+      const next: TabKey = canManageRoles
+        ? 'roles'
+        : canManageIncidents
+        ? 'incidents'
+        : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
-  }, [tab, canManageRoles, canSeePermissions, navigate]);
+    if (tab === 'incidents' && !canManageIncidents) {
+      const next: TabKey = canManageRoles
+        ? 'roles'
+        : canSeePermissions
+        ? 'permissions'
+        : 'general';
+      setTab(next);
+      navigate(`/admin/settings?tab=${next}`, { replace: true });
+    }
+  }, [tab, canManageRoles, canSeePermissions, canManageIncidents, navigate]);
 
   // Mantener tab en la URL
   useEffect(() => {
@@ -144,7 +182,8 @@ export default function AdminSettingsHubPage() {
             <div>
               <h1 className="text-3xl font-bold">Configuración</h1>
               <p className="text-sm text-gray-500">
-                Administra parámetros de la plataforma, roles y permisos.
+                Administra parámetros de la plataforma, roles, permisos e
+                incidencias.
               </p>
             </div>
 
@@ -153,6 +192,7 @@ export default function AdminSettingsHubPage() {
               onChange={(t) => setTab(t)}
               disabledPermissionsTab={!canSeePermissions}
               disabledRolesTab={!canManageRoles}
+              disabledIncidentsTab={!canManageIncidents}
             />
           </div>
         </header>
@@ -179,6 +219,17 @@ export default function AdminSettingsHubPage() {
             <Can perm="rbac:manage_permissions">
               <PermissionsTable searchTerm={searchTerm} />
             </Can>
+          )}
+
+          {tab === 'incidents' && (
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Incidencias Especiales</h2>
+              <p className="text-sm text-gray-500">
+                Tipos configurables (p. ej. huracán, tormenta eléctrica) para
+                marcar tickets.
+              </p>
+              <SpecialIncidentsTable searchTerm={searchTerm} />
+            </div>
           )}
 
           {tab === 'general' && (

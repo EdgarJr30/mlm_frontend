@@ -14,6 +14,7 @@ import RoleEditPage from '../../pages/admin/RoleEditPage';
 import DashboardPage from '../../pages/DashboardPage';
 import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
 import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
+import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -268,6 +269,18 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Informes',
     icon: IconReports,
     showInSidebar: true,
+  },
+  {
+    path: '/admin/incidencias',
+    element: <SpecialIncidentsManagementPage />,
+    allowPerms: [
+      'special_incidents:read',
+      'special_incidents:full_access',
+      'special_incidents:disable',
+      'special_incidents:delete',
+    ],
+    name: 'Incidencias',
+    showInSidebar: false,
   },
 
   // Administración de permisos y roles
