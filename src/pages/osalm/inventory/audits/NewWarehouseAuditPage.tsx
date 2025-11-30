@@ -1,5 +1,3 @@
-// src/pages/osalm/inventory/NewWarehouseAuditPage.tsx
-
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
@@ -9,6 +7,7 @@ import {
   type SelectedProductForAudit,
 } from './NewWarehouseAuditForm';
 import { getActiveWarehouses } from '../../../../services/inventoryService';
+import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 
 type LocationState =
   | {
@@ -31,6 +30,7 @@ export default function NewWarehouseAuditPage() {
   const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
   const [loadingWarehouse, setLoadingWarehouse] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const initialProduct = state?.product;
 
@@ -86,9 +86,54 @@ export default function NewWarehouseAuditPage() {
     };
   }, [warehouseId]);
 
-  const handleSubmit = (payload: NewWarehouseAuditPayload) => {
-    console.log('Nueva auditoría almacén', payload);
-    // TODO: POST a inventory_counts / inventory_count_operations
+  const handleSubmit = async (payload: NewWarehouseAuditPayload) => {
+    if (!warehouse) return;
+
+    // Validaciones mínimas
+    if (!payload.productId) {
+      alert('Debes seleccionar un producto para registrar el conteo.');
+      return;
+    }
+
+    const warehouseNumericId = Number(warehouse.id);
+    const itemNumericId = Number(payload.productId);
+
+    if (Number.isNaN(warehouseNumericId) || Number.isNaN(itemNumericId)) {
+      alert(
+        'Ocurrió un problema con los identificadores de almacén o artículo.'
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      await registerInventoryOperation({
+        warehouseId: warehouseNumericId,
+        itemId: itemNumericId,
+        quantity: payload.quantity,
+        isWeighted: payload.isWeighted === 'Y',
+        status: payload.status,
+        auditorEmail: payload.auditorEmail,
+      });
+
+      // Podrías navegar hacia atrás o mostrar un mensaje de éxito
+      // Por ahora: volvemos al listado de artículos del almacén
+      navigate(-1);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error('❌ Error registrando conteo:', err.message);
+        setError(err.message);
+        alert(`No se pudo guardar el conteo: ${err.message}`);
+      } else {
+        console.error('❌ Error desconocido registrando conteo:', err);
+        setError('Ocurrió un error al guardar el conteo.');
+        alert('Ocurrió un error al guardar el conteo.');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -135,6 +180,12 @@ export default function NewWarehouseAuditPage() {
               )}
 
               {error && <p className="mt-1 text-xs text-red-100/90">{error}</p>}
+
+              {saving && (
+                <p className="mt-1 text-xs text-blue-100/90">
+                  Guardando conteo…
+                </p>
+              )}
             </div>
           </div>
         </header>

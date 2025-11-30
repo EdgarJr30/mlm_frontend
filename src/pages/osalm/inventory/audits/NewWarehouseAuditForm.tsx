@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useUser } from '../../../../context/UserContext';
 
 export type InventoryStatus = 'counted' | 'pending' | 'recount';
 
@@ -25,7 +26,7 @@ export type NewWarehouseAuditPayload = {
   isWeighted: 'N' | 'Y';
   quantity: number;
   status: InventoryStatus;
-  auditorEmail: string;
+  auditorEmail: string; // aquí mandamos el usuario conectado (mail) y mostramos el nombre en UI
 };
 
 type NewWarehouseAuditFormProps = {
@@ -41,9 +42,11 @@ export function NewWarehouseAuditForm({
   onCancel,
   onSubmit,
 }: NewWarehouseAuditFormProps) {
-  // Fecha / hora
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [time, setTime] = useState(() => {
+  const { profile } = useUser();
+
+  // Fecha / hora (solo lectura para el usuario)
+  const [date] = useState(() => new Date().toISOString().slice(0, 10));
+  const [time] = useState(() => {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
@@ -58,9 +61,20 @@ export function NewWarehouseAuditForm({
   const [isWeighted, setIsWeighted] = useState<'N' | 'Y'>(
     initialProduct?.isWeighted ?? 'N'
   );
+
+  // Cantidad: editable + botones, 0–99999
   const [quantity, setQuantity] = useState<number>(0);
+
   const [status, setStatus] = useState<InventoryStatus>('counted');
+
+  // Auditor: se llena automáticamente con el usuario conectado
   const [auditorEmail, setAuditorEmail] = useState('');
+
+  useEffect(() => {
+    if (profile?.email && auditorEmail === '') {
+      setAuditorEmail(profile.email);
+    }
+  }, [profile?.email, auditorEmail]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,15 +97,42 @@ export function NewWarehouseAuditForm({
     onSubmit?.(payload);
   };
 
-  const increment = () => setQuantity((q) => q + 1);
-  const decrement = () => setQuantity((q) => (q > 0 ? q - 1 : 0));
+  const clampQuantity = (value: number): number => {
+    if (Number.isNaN(value)) return 0;
+    if (value < 0) return 0;
+    if (value > 99999) return 99999;
+    return value;
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+
+    if (raw === '') {
+      setQuantity(0);
+      return;
+    }
+
+    const parsed = Number(raw);
+    const clamped = clampQuantity(parsed);
+    setQuantity(clamped);
+  };
+
+  const increment = () => setQuantity((q) => clampQuantity(q + 1));
+
+  const decrement = () => setQuantity((q) => clampQuantity(q - 1));
+
+  const auditorDisplay =
+    profile?.name ??
+    // por si tu modelo de perfil usa otros nombres
+    (profile && 'name' in profile ? profile.name : undefined) ??
+    auditorEmail;
 
   return (
     <form
       onSubmit={handleSubmit}
       className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-28"
     >
-      {/* Fecha / Hora */}
+      {/* Fecha / Hora (solo lectura) */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">
           Fecha / Hora
@@ -104,8 +145,8 @@ export function NewWarehouseAuditForm({
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+              disabled
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-gray-50 text-gray-700 cursor-not-allowed"
             />
           </div>
           <div className="flex-1">
@@ -115,30 +156,24 @@ export function NewWarehouseAuditForm({
             <input
               type="time"
               value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+              disabled
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-gray-50 text-gray-700 cursor-not-allowed"
             />
           </div>
         </div>
+        <p className="mt-2 text-[11px] text-gray-400">
+          La fecha y la hora se toman automáticamente al momento del conteo.
+        </p>
       </div>
 
-      {/* Almacén */}
+      {/* Almacén (solo texto) */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Almacén *</h2>
-        <div className="relative">
-          <select
-            value={warehouse.id}
-            disabled
-            className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900 focus:outline-none"
-          >
-            <option value={warehouse.id}>{warehouse.name}</option>
-          </select>
-          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 text-lg">
-            ▾
-          </span>
+        <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900">
+          {warehouse.name}
         </div>
         <p className="mt-2 text-xs text-gray-400">
-          El almacén se toma desde la pantalla anterior.
+          El almacén se toma desde la pantalla anterior y no se puede cambiar.
         </p>
       </div>
 
@@ -249,9 +284,14 @@ export function NewWarehouseAuditForm({
           >
             –
           </button>
-          <div className="min-w-[80px] text-center text-2xl font-bold text-gray-900">
-            {quantity}
-          </div>
+          <input
+            type="number"
+            min={0}
+            max={99999}
+            value={quantity}
+            onChange={handleQuantityChange}
+            className="w-28 text-center text-2xl font-bold text-gray-900 rounded-xl border border-gray-200 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+          />
           <button
             type="button"
             onClick={increment}
@@ -260,6 +300,9 @@ export function NewWarehouseAuditForm({
             +
           </button>
         </div>
+        <p className="mt-2 text-[11px] text-gray-400 text-center">
+          Mínimo 0 · Máximo 99,999 unidades.
+        </p>
       </div>
 
       {/* Estado del Inventario */}
@@ -321,16 +364,15 @@ export function NewWarehouseAuditForm({
         </button>
       </div>
 
-      {/* Auditor */}
+      {/* Auditor (auto desde perfil) */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Auditor *</h2>
-        <input
-          type="email"
-          placeholder="correo@empresa.com"
-          value={auditorEmail}
-          onChange={(e) => setAuditorEmail(e.target.value)}
-          className="w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500/70"
-        />
+        <div className="w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm sm:text-base bg-gray-50 text-gray-900">
+          {auditorDisplay || 'Cargando usuario...'}
+        </div>
+        <p className="mt-2 text-[11px] text-gray-400">
+          El auditor se toma automáticamente del usuario conectado.
+        </p>
       </div>
 
       {/* BOTONES INFERIORES */}
