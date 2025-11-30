@@ -1,68 +1,16 @@
+// src/pages/osalm/conteos_inventario/auditoria/InventoryAuditWarehouseHistoryPage.tsx
+
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
+import {
+  getInventoryAuditSessions,
+  type AuditSession,
+  type AuditStatus,
+} from '../../../../services/inventoryCountsService';
 
-type AuditStatus = 'completed' | 'in_progress' | 'pending';
-
-type AuditSession = {
-  id: number;
-  date: string;
-  time: string;
-  warehouse: string;
-  warehouseId: string; // 👈 slug para la ruta
-  itemsAudited: number;
-  status: AuditStatus;
-};
-
-const SESSIONS: AuditSession[] = [
-  {
-    id: 1,
-    date: '27/01/2025',
-    time: '14:30',
-    warehouse: 'OC - Químicos',
-    warehouseId: 'oc-quimicos',
-    itemsAudited: 24,
-    status: 'completed',
-  },
-  {
-    id: 2,
-    date: '27/01/2025',
-    time: '10:15',
-    warehouse: 'OC - Vegetales',
-    warehouseId: 'oc-vegetales',
-    itemsAudited: 18,
-    status: 'completed',
-  },
-  {
-    id: 3,
-    date: '26/01/2025',
-    time: '16:45',
-    warehouse: 'Cuarto Frío',
-    warehouseId: 'cuarto-frio',
-    itemsAudited: 12,
-    status: 'pending',
-  },
-  {
-    id: 4,
-    date: '26/01/2025',
-    time: '09:00',
-    warehouse: 'Pasillo A',
-    warehouseId: 'pasillo-a',
-    itemsAudited: 35,
-    status: 'in_progress',
-  },
-  {
-    id: 5,
-    date: '25/01/2025',
-    time: '11:30',
-    warehouse: 'Pasillo B',
-    warehouseId: 'pasillo-b',
-    itemsAudited: 28,
-    status: 'completed',
-  },
-];
-
-export default function InventoryAuditWarehouseHistoryPage() {
+export default function InventoryAuditWarehousePage() {
   const navigate = useNavigate();
 
   // ✅ Solo auditores ven esta pantalla
@@ -71,8 +19,44 @@ export default function InventoryAuditWarehouseHistoryPage() {
     'inventory_adjustments:read',
   ]);
 
+  const [sessions, setSessions] = useState<AuditSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getInventoryAuditSessions();
+        if (!isMounted) return;
+        setSessions(data);
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Error cargando el historial de auditorías');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    if (canManageAudit) {
+      void load();
+    } else {
+      setLoading(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canManageAudit]);
+
   if (!canManageAudit) {
-    // Puedes cambiar esto por un redirect a /403 si tienes una página de error
     return (
       <div className="h-screen flex bg-gray-100">
         <Sidebar />
@@ -160,12 +144,31 @@ export default function InventoryAuditWarehouseHistoryPage() {
               </h3>
             </div>
 
+            {/* Estados de carga / error */}
+            {loading && (
+              <div className="mt-4 text-sm text-gray-500">
+                Cargando auditorías...
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="mt-4 text-sm text-red-500">{error}</div>
+            )}
+
             {/* Sessions list */}
-            <div className="mt-3 flex flex-col gap-3 sm:gap-4 pb-16">
-              {SESSIONS.map((session) => (
-                <AuditSessionCard key={session.id} session={session} />
-              ))}
-            </div>
+            {!loading && !error && (
+              <div className="mt-3 flex flex-col gap-3 sm:gap-4 pb-16">
+                {sessions.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    No hay jornadas de auditoría registradas todavía.
+                  </p>
+                )}
+
+                {sessions.map((session) => (
+                  <AuditSessionCard key={session.id} session={session} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -178,24 +181,21 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
 
   const statusConfig: Record<
     AuditStatus,
-    { label: string; textColor: string; iconAccent: string; iconRing: string }
+    { label: string; textColor: string; iconRing: string }
   > = {
     completed: {
       label: 'Completado',
       textColor: 'text-green-600',
-      iconAccent: 'bg-green-500',
       iconRing: 'border-green-500',
     },
     in_progress: {
       label: 'En Progreso',
       textColor: 'text-blue-600',
-      iconAccent: 'border-b-2 border-blue-500',
       iconRing: 'border-blue-500',
     },
     pending: {
       label: 'Pendiente',
       textColor: 'text-amber-500',
-      iconAccent: 'bg-amber-400',
       iconRing: 'border-amber-400',
     },
   };
@@ -203,8 +203,9 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
   const cfg = statusConfig[session.status];
 
   const handleClick = () => {
+    // Usamos warehouseCode como param de ruta (ej: "OC-QUIM")
     navigate(
-      `/osalm/conteos_inventario/auditoria/almacenes/${session.warehouseId}/revision`
+      `/osalm/conteos_inventario/auditoria/almacenes/${session.warehouseCode}/revision`
     );
   };
 

@@ -13,9 +13,10 @@ import {
   getWarehouseItemBySku,
   type WarehouseStockItem,
 } from '../../../../services/inventoryService';
+import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 
 type RouteParams = {
-  warehouseId: string; // aquí usas el code: "OC-QUIM", etc.
+  warehouseId: string; // aquí usas el code desde BD: "OC-QUIM", etc.
   itemId: string; // SKU: "A000001"
 };
 
@@ -36,6 +37,7 @@ export default function WarehouseItemCountPage() {
   const [loadingWarehouse, setLoadingWarehouse] = useState(true);
   const [loadingItem, setLoadingItem] = useState(true);
   const [, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // 1) Cargar almacén desde DB (getActiveWarehouses)
   useEffect(() => {
@@ -142,9 +144,43 @@ export default function WarehouseItemCountPage() {
     };
   }, [warehouseId, itemId]);
 
-  const handleSubmit = (payload: NewWarehouseAuditPayload) => {
-    console.log('Conteo de artículo en almacén', payload);
-    // TODO: POST a la API (inventory_count_operations)
+  const handleSubmit = async (payload: NewWarehouseAuditPayload) => {
+    if (!warehouse || !initialProduct) return;
+
+    const warehouseNumericId = Number(warehouse.id);
+    const itemNumericId = Number(initialProduct.id);
+
+    if (Number.isNaN(warehouseNumericId) || Number.isNaN(itemNumericId)) {
+      alert(
+        'Ocurrió un problema con los identificadores de almacén o artículo.'
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await registerInventoryOperation({
+        warehouseId: warehouseNumericId,
+        itemId: itemNumericId,
+        quantity: payload.quantity,
+        isWeighted: payload.isWeighted === 'Y',
+        status: payload.status,
+        auditorEmail: payload.auditorEmail,
+      });
+
+      navigate(-1);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('❌ Error registrando conteo:', error.message);
+        alert(`No se pudo guardar el conteo: ${error.message}`);
+      } else {
+        console.error('❌ Error desconocido registrando conteo:', error);
+        alert('Ocurrió un error al guardar el conteo.');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const loading = loadingWarehouse || loadingItem;
@@ -244,6 +280,12 @@ export default function WarehouseItemCountPage() {
                     {initialProduct.code} · {initialProduct.name} (
                     {initialProduct.uomCode})
                   </span>
+                </p>
+              )}
+
+              {saving && (
+                <p className="mt-1 text-xs text-blue-100/90">
+                  Guardando conteo…
                 </p>
               )}
             </div>

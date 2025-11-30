@@ -1,86 +1,23 @@
 // src/pages/osalm/conteos_inventario/auditoria/WarehouseAuditReviewPage.tsx
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
-
-type AuditStatus = 'completed' | 'in_progress' | 'pending';
-
-type ItemStatus = 'pending' | 'counted' | 'recount';
-
-type AuditItem = {
-  id: number;
-  sku: string;
-  name: string;
-  uom: string;
-  countedQty: number;
-  systemQty: number;
-  status: ItemStatus;
-  comment?: string;
-};
-
-type WarehouseInfo = {
-  id: string; // warehouseId (slug)
-  name: string;
-};
-
-// 🔹 Mock de almacenes (puedes sustituir luego por datos reales)
-const MOCK_WAREHOUSES: WarehouseInfo[] = [
-  { id: 'oc-quimicos', name: 'OC - Químicos' },
-  { id: 'oc-vegetales', name: 'OC - Vegetales' },
-  { id: 'cuarto-frio', name: 'Cuarto Frío' },
-  { id: 'pasillo-a', name: 'Pasillo A' },
-  { id: 'pasillo-b', name: 'Pasillo B' },
-];
-
-// 🔹 Mock de items auditados (por ahora no se filtra por almacén)
-const MOCK_ITEMS: AuditItem[] = [
-  {
-    id: 1,
-    sku: 'A000001',
-    name: 'Harina 25 LB',
-    uom: 'ENV. 25 LB.',
-    countedQty: 120,
-    systemQty: 120,
-    status: 'counted',
-  },
-  {
-    id: 2,
-    sku: 'A000002',
-    name: 'Azúcar Granel',
-    uom: 'LIBRAS',
-    countedQty: 180,
-    systemQty: 200,
-    status: 'recount',
-    comment: 'Diferencia de 20 lb, pendiente reconteo.',
-  },
-  {
-    id: 3,
-    sku: 'A000003',
-    name: 'Aceite Vegetal 1L',
-    uom: 'UND',
-    countedQty: 0,
-    systemQty: 12,
-    status: 'pending',
-    comment: 'Producto no localizado en el pasillo.',
-  },
-  {
-    id: 4,
-    sku: 'A000004',
-    name: 'Sal Refinada',
-    uom: 'SACO 50 LB',
-    countedQty: 24,
-    systemQty: 24,
-    status: 'counted',
-  },
-];
+import {
+  getWarehouseAuditForReview,
+  saveWarehouseAuditChanges,
+  type AuditStatus,
+  type ItemStatus,
+  type AuditItem,
+  type WarehouseInfo,
+} from '../../../../services/inventoryCountsService';
 
 type FilterTab = 'all' | ItemStatus;
 
 export default function WarehouseAuditReviewPage() {
   const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>();
+  const { warehouseId } = useParams<{ warehouseId: string }>(); // aquí recibimos el code (OC-QUIM)
 
   // ✅ Solo auditores ven esta pantalla
   const canManageAudit = useCan([
@@ -88,19 +25,57 @@ export default function WarehouseAuditReviewPage() {
     'inventory_adjustments:read',
   ]);
 
-  const warehouse = useMemo<WarehouseInfo | undefined>(
-    () => MOCK_WAREHOUSES.find((w) => w.id === warehouseId),
-    [warehouseId]
-  );
-
-  // Estado del almacén (estatus general de la auditoría)
+  const [warehouse, setWarehouse] = useState<WarehouseInfo | null>(null);
   const [auditStatus, setAuditStatus] = useState<AuditStatus>('in_progress');
+  const [items, setItems] = useState<AuditItem[]>([]);
+  const [inventoryCountId, setInventoryCountId] = useState<number | null>(null);
 
-  // Estado de items (en producción los traerías de la API)
-  const [items, setItems] = useState<AuditItem[]>(MOCK_ITEMS);
-
-  // Filtro de vista (todos / pendientes / contados / recontar)
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canManageAudit) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    async function load() {
+      if (!warehouseId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await getWarehouseAuditForReview(warehouseId);
+
+        if (!isMounted) return;
+
+        setWarehouse(data.warehouse);
+        setAuditStatus(data.auditStatus);
+        setItems(data.items);
+        setInventoryCountId(data.inventoryCountId);
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Error cargando la auditoría del almacén');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canManageAudit, warehouseId]);
 
   const filteredItems = useMemo(() => {
     if (activeFilter === 'all') return items;
@@ -129,16 +104,39 @@ export default function WarehouseAuditReviewPage() {
     );
   };
 
-  const handleSaveChanges = () => {
-    // Aquí luego conectarás con Supabase / API
-    // Por ahora solo mostramos en consola
-    // eslint-disable-next-line no-console
-    console.log('Guardar auditoría:', {
-      warehouseId,
-      auditStatus,
-      items,
-    });
-    // Podrías mostrar un toast o SweetAlert en el futuro
+  const handleSaveChanges = async () => {
+    if (!inventoryCountId) {
+      // eslint-disable-next-line no-alert
+      alert(
+        'No hay una jornada de inventario asociada a este almacén. No se pueden guardar cambios.'
+      );
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await saveWarehouseAuditChanges({
+        inventoryCountId,
+        auditStatus,
+        items,
+      });
+
+      // eslint-disable-next-line no-alert
+      alert('Cambios guardados correctamente.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+        // eslint-disable-next-line no-alert
+        alert(`Error al guardar cambios: ${err.message}`);
+      } else {
+        setError('Error al guardar cambios');
+        // eslint-disable-next-line no-alert
+        alert('Error al guardar cambios');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!canManageAudit) {
@@ -215,110 +213,131 @@ export default function WarehouseAuditReviewPage() {
         {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl">
-            {/* Resumen y filtros */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              {/* Resumen */}
-              <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
-                <SummaryPill label="Total" value={stats.total} />
-                <SummaryPill
-                  label="Pendientes"
-                  value={stats.pending}
-                  tone="warning"
-                />
-                <SummaryPill
-                  label="Contados"
-                  value={stats.counted}
-                  tone="success"
-                />
-                <SummaryPill
-                  label="Recontar"
-                  value={stats.recount}
-                  tone="info"
-                />
-              </div>
+            {loading && (
+              <p className="text-sm text-gray-500">Cargando auditoría...</p>
+            )}
 
-              {/* Filtros por estado de item */}
-              <div className="inline-flex rounded-full bg-gray-100 p-1 text-xs sm:text-sm font-medium">
-                <FilterChip
-                  label="Todos"
-                  active={activeFilter === 'all'}
-                  onClick={() => setActiveFilter('all')}
-                />
-                <FilterChip
-                  label="Pendientes"
-                  active={activeFilter === 'pending'}
-                  tone="warning"
-                  onClick={() => setActiveFilter('pending')}
-                />
-                <FilterChip
-                  label="Contados"
-                  active={activeFilter === 'counted'}
-                  tone="success"
-                  onClick={() => setActiveFilter('counted')}
-                />
-                <FilterChip
-                  label="Recontar"
-                  active={activeFilter === 'recount'}
-                  tone="info"
-                  onClick={() => setActiveFilter('recount')}
-                />
-              </div>
-            </div>
+            {error && !loading && (
+              <p className="text-sm text-red-500 mb-4">{error}</p>
+            )}
 
-            {/* Listado de items */}
-            <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="border-b border-gray-100 px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-500 flex">
-                <div className="w-24 sm:w-28">SKU</div>
-                <div className="flex-1">Artículo</div>
-                <div className="w-20 sm:w-24 text-right">Sistema</div>
-                <div className="w-20 sm:w-24 text-right">Contado</div>
-                <div className="w-24 sm:w-28 text-center">Estado</div>
-                <div className="hidden sm:block w-56">Comentario</div>
-              </div>
-
-              <div className="divide-y divide-gray-100">
-                {filteredItems.length === 0 && (
-                  <div className="px-4 sm:px-6 py-6 text-center text-sm text-gray-500">
-                    No hay artículos para este filtro.
-                  </div>
-                )}
-
-                {filteredItems.map((item) => (
-                  <AuditItemRow
-                    key={item.id}
-                    item={item}
-                    onChangeStatus={handleChangeItemStatus}
-                    onChangeComment={handleChangeItemComment}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Footer de acciones */}
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-xs sm:text-sm text-gray-500">
-                Revisa los artículos y actualiza su estado. Luego marca el
-                almacén como <span className="font-semibold">Completado</span>{' '}
-                cuando la auditoría esté cerrada.
+            {!loading && !error && inventoryCountId == null && (
+              <p className="text-sm text-gray-500 mb-4">
+                No existe ninguna jornada de inventario registrada para este
+                almacén.
               </p>
+            )}
 
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="px-4 py-2 rounded-full border border-gray-200 text-xs sm:text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveChanges}
-                  className="px-5 py-2 rounded-full bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-blue-700"
-                >
-                  Guardar cambios
-                </button>
-              </div>
-            </div>
+            {!loading && !error && inventoryCountId != null && (
+              <>
+                {/* Resumen y filtros */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Resumen */}
+                  <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
+                    <SummaryPill label="Total" value={stats.total} />
+                    <SummaryPill
+                      label="Pendientes"
+                      value={stats.pending}
+                      tone="warning"
+                    />
+                    <SummaryPill
+                      label="Contados"
+                      value={stats.counted}
+                      tone="success"
+                    />
+                    <SummaryPill
+                      label="Recontar"
+                      value={stats.recount}
+                      tone="info"
+                    />
+                  </div>
+
+                  {/* Filtros por estado de item */}
+                  <div className="inline-flex rounded-full bg-gray-100 p-1 text-xs sm:text-sm font-medium">
+                    <FilterChip
+                      label="Todos"
+                      active={activeFilter === 'all'}
+                      onClick={() => setActiveFilter('all')}
+                    />
+                    <FilterChip
+                      label="Pendientes"
+                      active={activeFilter === 'pending'}
+                      tone="warning"
+                      onClick={() => setActiveFilter('pending')}
+                    />
+                    <FilterChip
+                      label="Contados"
+                      active={activeFilter === 'counted'}
+                      tone="success"
+                      onClick={() => setActiveFilter('counted')}
+                    />
+                    <FilterChip
+                      label="Recontar"
+                      active={activeFilter === 'recount'}
+                      tone="info"
+                      onClick={() => setActiveFilter('recount')}
+                    />
+                  </div>
+                </div>
+
+                {/* Listado de items */}
+                <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="border-b border-gray-100 px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-500 flex">
+                    <div className="w-24 sm:w-28">SKU</div>
+                    <div className="flex-1">Artículo</div>
+                    <div className="w-20 sm:w-24 text-right">Sistema</div>
+                    <div className="w-20 sm:w-24 text-right">Contado</div>
+                    <div className="w-24 sm:w-28 text-center">Estado</div>
+                    <div className="hidden sm:block w-56">Comentario</div>
+                  </div>
+
+                  <div className="divide-y divide-gray-100">
+                    {filteredItems.length === 0 && (
+                      <div className="px-4 sm:px-6 py-6 text-center text-sm text-gray-500">
+                        No hay artículos para este filtro.
+                      </div>
+                    )}
+
+                    {filteredItems.map((item) => (
+                      <AuditItemRow
+                        key={item.id}
+                        item={item}
+                        onChangeStatus={handleChangeItemStatus}
+                        onChangeComment={handleChangeItemComment}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer de acciones */}
+                <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Revisa los artículos y actualiza su estado. Luego marca el
+                    almacén como{' '}
+                    <span className="font-semibold">Completado</span> cuando la
+                    auditoría esté cerrada.
+                  </p>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => navigate(-1)}
+                      className="px-4 py-2 rounded-full border border-gray-200 text-xs sm:text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveChanges}
+                      disabled={saving}
+                      className="px-5 py-2 rounded-full bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Guardando...' : 'Guardar cambios'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </section>
       </main>
@@ -550,7 +569,7 @@ function AuditItemRow(props: {
           </select>
         </div>
 
-        {/* Comentario (en móvil ocupa ancho completo) */}
+        {/* Comentario */}
         <div className="w-full sm:w-56">
           <textarea
             value={item.comment ?? ''}
