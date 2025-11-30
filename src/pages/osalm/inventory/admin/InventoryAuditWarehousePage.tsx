@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../../../components/layout/Sidebar';
-import { useCan } from '../../../rbac/PermissionsContext';
+import Sidebar from '../../../../components/layout/Sidebar';
+import { useCan } from '../../../../rbac/PermissionsContext';
 
 type AuditStatus = 'completed' | 'in_progress' | 'pending';
 
 type AuditSession = {
   id: number;
-  date: string; // 27/01/2025
-  time: string; // 14:30
+  date: string;
+  time: string;
   warehouse: string;
   itemsAudited: number;
   status: AuditStatus;
@@ -57,8 +57,8 @@ const SESSIONS: AuditSession[] = [
 ];
 
 type WarehouseChip = {
-  id: string; // va en la URL
-  label: string; // se muestra en el pill
+  id: string;
+  label: string;
 };
 
 const warehouses: WarehouseChip[] = [
@@ -69,14 +69,42 @@ const warehouses: WarehouseChip[] = [
   { id: 'pasillo-b', label: 'Pasillo B' },
 ];
 
-export default function InventoryCountsPage() {
+export default function InventoryAuditWarehouseHistoryPage() {
   const navigate = useNavigate();
 
-  // ✅ Solo usuarios con alguno de estos permisos verán el botón
-  const canSeeAuditAdmin = useCan([
+  // ✅ Solo auditores ven esta pantalla
+  const canManageAudit = useCan([
     'inventory_adjustments:full_access',
     'inventory_adjustments:read',
   ]);
+
+  if (!canManageAudit) {
+    // Puedes cambiar esto por un redirect a /403 si tienes una página de error
+    return (
+      <div className="h-screen flex bg-gray-100">
+        <Sidebar />
+        <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
+          <header className="bg-blue-600 text-white shadow-sm">
+            <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+                  Inventario Auditoría
+                </h1>
+                <p className="text-sm sm:text-base mt-1 opacity-90">
+                  Acceso restringido
+                </p>
+              </div>
+            </div>
+          </header>
+          <section className="flex-1 flex items-center justify-center">
+            <p className="text-gray-600 text-sm sm:text-base">
+              No tienes permisos para administrar las auditorías de almacenes.
+            </p>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -91,22 +119,21 @@ export default function InventoryCountsPage() {
                 Inventario Auditoría
               </h1>
               <p className="text-sm sm:text-base mt-1 opacity-90">
-                Sesiones Recientes
+                Administración de auditorías de almacenes
               </p>
             </div>
 
-            {canSeeAuditAdmin && (
-              <button
-                type="button"
-                onClick={() => navigate('/osalm/conteos_inventario/auditoria')}
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
-              >
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
-                  ⚙️
-                </span>
-                <span>Administración de auditoría</span>
-              </button>
-            )}
+            {/* Botón para volver a la vista general de conteos */}
+            <button
+              type="button"
+              onClick={() => navigate('/osalm/conteos_inventario')}
+              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+            >
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                ←
+              </span>
+              <span>Volver a conteos</span>
+            </button>
           </div>
         </header>
 
@@ -130,7 +157,6 @@ export default function InventoryCountsPage() {
                         : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400',
                     ].join(' ')}
                   >
-                    {/* Mini “warehouse” icon */}
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-gray-300">
                       <span className="block h-3 w-4 border-b-2 border-gray-400" />
                     </span>
@@ -144,9 +170,7 @@ export default function InventoryCountsPage() {
             {/* Tabs */}
             <div className="mt-4 border-b border-gray-200">
               <div className="flex gap-8 text-sm font-medium">
-                {/* Tab Sesiones (activo) */}
                 <button className="relative py-3 flex items-center gap-2 text-blue-600">
-                  {/* Icono “sesiones” */}
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-blue-100">
                     <span className="h-3 w-3 rounded-sm border border-blue-500" />
                   </span>
@@ -154,9 +178,7 @@ export default function InventoryCountsPage() {
                   <span className="absolute left-0 right-0 -bottom-px h-[3px] rounded-full bg-blue-600" />
                 </button>
 
-                {/* Tab Productos (inactivo) */}
                 <button className="py-3 flex items-center gap-2 text-gray-400 hover:text-gray-600">
-                  {/* Icono “productos” */}
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200">
                     <span className="h-3 w-3 rounded-sm border border-gray-300" />
                   </span>
@@ -180,7 +202,7 @@ export default function InventoryCountsPage() {
             </div>
           </div>
 
-          {/* Floating Action Button */}
+          {/* Floating Action Button (para crear nueva sesión de auditoría) */}
           <div className="pointer-events-none relative">
             <button
               className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
@@ -224,7 +246,6 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
 
   return (
     <article className="bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4">
-      {/* Left side: date + info */}
       <div className="flex flex-col gap-1">
         <p className="text-xs sm:text-sm text-gray-500 tracking-wide">
           <span className="font-medium">{session.date}</span>
@@ -239,7 +260,6 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
         </p>
       </div>
 
-      {/* Right side: status */}
       <div className="flex flex-col items-end gap-1 min-w-[110px]">
         <div
           className={[
@@ -247,7 +267,6 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
             cfg.iconRing,
           ].join(' ')}
         >
-          {/* Simple status icon depending on state */}
           {session.status === 'completed' && (
             <span className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white text-xl leading-none">
               ✓

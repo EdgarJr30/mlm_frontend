@@ -16,9 +16,10 @@ import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
 import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
-import InventoryCountsPage from '../../pages/osalm/inventory/InventoryCountsPage';
+import InventoryCountsPage from '../../pages/osalm/inventory/home/InventoryCountsPage';
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
 import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
+import InventoryAuditWarehouseHistoryPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -391,6 +392,36 @@ export const APP_ROUTES: AppRoute[] = [
       'inventory_operations:full_access',
     ],
     name: 'Nuevo Conteo',
+    showInSidebar: false,
+  },
+
+  // Historial de auditorías por almacén
+  {
+    path: '/osalm/conteos_inventario/auditoria/almacenes',
+    element: <InventoryAuditWarehouseHistoryPage />,
+    allowPerms: [
+      'inventory_adjustments:read',
+      'inventory_adjustments:create',
+      'inventory_adjustments:export',
+      'inventory_adjustments:approve',
+      'inventory_adjustments:full_access',
+    ],
+    name: 'Historial de Auditorías por Almacén',
+    showInSidebar: false,
+  },
+
+  // Ajustes de inventario por almacén
+  {
+    path: '/osalm/almacenes/:warehouseId/adjustments',
+    element: <InventoryWarehousePage />,
+    allowPerms: [
+      'inventory_adjustments:read',
+      'inventory_adjustments:create',
+      'inventory_adjustments:export',
+      'inventory_adjustments:approve',
+      'inventory_adjustments:full_access',
+    ],
+    name: 'Ajustes de Inventario',
     showInSidebar: false,
   },
 ];
