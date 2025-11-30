@@ -18,6 +18,7 @@ import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPa
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
 import InventoryCountsPage from '../../pages/osalm/inventory/InventoryCountsPage';
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
+import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -346,7 +347,7 @@ export const APP_ROUTES: AppRoute[] = [
     showInSidebar: false,
   },
 
-  // Inventario
+  // Inventario - Conteos de inventario HOME
   {
     path: '/osalm/conteos_inventario',
     element: <InventoryCountsPage />,
@@ -376,7 +377,20 @@ export const APP_ROUTES: AppRoute[] = [
       'inventory_warehouses:full_access',
     ],
     name: 'Almacenes',
-    icon: IconInventory,
+    showInSidebar: false,
+  },
+
+  // Nuevo conteo de inventario en almacén
+  {
+    path: '/osalm/conteos_inventario/:warehouseId/audits/new',
+    element: <NewWarehouseAuditPage />,
+    allowPerms: [
+      'inventory_operations:read',
+      'inventory_operations:work',
+      'inventory_operations:delete',
+      'inventory_operations:full_access',
+    ],
+    name: 'Nuevo Conteo',
     showInSidebar: false,
   },
 ];

@@ -134,6 +134,9 @@ export default function InventoryWarehousePage() {
             <button
               className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
               aria-label="Agregar producto"
+              onClick={() =>
+                navigate(`/osalm/conteos_inventario/${warehouse.id}/audits/new`)
+              }
             >
               +
             </button>
