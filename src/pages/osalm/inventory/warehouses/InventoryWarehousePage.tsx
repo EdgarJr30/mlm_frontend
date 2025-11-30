@@ -1,91 +1,175 @@
 // src/pages/inventory/warehouses/InventoryWarehousePage.tsx
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
+import {
+  getActiveWarehouses,
+  getWarehouseItemsByCode,
+  type WarehouseStockItem,
+} from '../../../../services/inventoryService';
+
+type WarehouseHeader = {
+  id: number;
+  code: string;
+  name: string;
+};
 
 type WarehouseProduct = {
-  id: string; // id interno (no lo usamos para la ruta)
+  itemId: number;
   name: string;
-  code: string; // <-- usaremos el CODE como :itemId
+  code: string; // sku → lo usamos en la ruta
   uom: string;
   quantity: number;
 };
 
-type WarehouseDetail = {
-  id: string;
-  name: string;
-  products: WarehouseProduct[];
-};
-
-// Mock de almacenes → en tu app lo reemplazas por fetch/API.
-const MOCK_WAREHOUSES: WarehouseDetail[] = [
-  {
-    id: 'oc-quimicos',
-    name: 'OC - Químicos',
-    products: [
-      {
-        id: '1',
-        name: 'Aceite Vegetal',
-        code: 'A000068',
-        uom: 'LIBRAS',
-        quantity: 150,
-      },
-      {
-        id: '2',
-        name: 'Sal Industrial',
-        code: 'A000102',
-        uom: 'KG',
-        quantity: 200,
-      },
-      {
-        id: '3',
-        name: 'Cloro Concentrado',
-        code: 'A000045',
-        uom: 'LITROS',
-        quantity: 75,
-      },
-    ],
-  },
-  // agrega más almacenes aquí si quieres...
-];
-
 export default function InventoryWarehousePage() {
   const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>();
+  const { warehouseId } = useParams<{ warehouseId: string }>(); // slug, ej: "oc-quimicos"
+
+  const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
+  const [products, setProducts] = useState<WarehouseProduct[]>([]);
   const [search, setSearch] = useState('');
 
-  const warehouse =
-    useMemo(
-      () =>
-        MOCK_WAREHOUSES.find((w) => w.id === warehouseId) ?? MOCK_WAREHOUSES[0],
-      [warehouseId]
-    ) ?? MOCK_WAREHOUSES[0];
+  const [loadingWarehouse, setLoadingWarehouse] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // 1) Cargar datos del almacén (usando getActiveWarehouses y filtrando por code)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchWarehouse() {
+      if (!warehouseId) {
+        setError('No se encontró el código de almacén en la URL.');
+        setLoadingWarehouse(false);
+        return;
+      }
+
+      try {
+        setLoadingWarehouse(true);
+        setError(null);
+
+        const list = await getActiveWarehouses();
+        if (!isMounted) return;
+
+        const found = (
+          list as Array<{ id: number; code: string; name: string }>
+        ).find((w) => w.code === warehouseId);
+
+        if (!found) {
+          setError(`No se encontró el almacén con código "${warehouseId}".`);
+          setWarehouse(null);
+        } else {
+          setWarehouse({
+            id: found.id,
+            code: found.code,
+            name: found.name,
+          });
+        }
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        if (err instanceof Error) {
+          console.error('❌ Error al cargar almacén:', err.message);
+          setError(err.message);
+        } else {
+          console.error('❌ Error desconocido al cargar almacén:', err);
+          setError('Ocurrió un error al cargar el almacén.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingWarehouse(false);
+        }
+      }
+    }
+
+    fetchWarehouse();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [warehouseId]);
+
+  // 2) Cargar productos del almacén desde Supabase cuando ya tenemos el código
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchProducts() {
+      if (!warehouseId) return;
+      try {
+        setLoadingProducts(true);
+        setError((prev) => prev); // no pisar errores previos si los hay
+
+        const rows: WarehouseStockItem[] = await getWarehouseItemsByCode(
+          warehouseId
+        );
+        if (!isMounted) return;
+
+        const mapped: WarehouseProduct[] = rows.map((r) => ({
+          itemId: r.item_id,
+          name: r.item_name,
+          code: r.item_sku,
+          uom: r.uom_code,
+          quantity: Number(r.quantity ?? 0), // 👈 aquí convertimos a number
+        }));
+
+        setProducts(mapped);
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        if (err instanceof Error) {
+          console.error(
+            `❌ Error al cargar items del almacén "${warehouseId}":`,
+            err.message
+          );
+          setError(err.message);
+        } else {
+          console.error('❌ Error desconocido al cargar items:', err);
+          setError('Ocurrió un error al cargar los productos del almacén.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingProducts(false);
+        }
+      }
+    }
+
+    fetchProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [warehouseId]);
+
+  // 3) Filtro por búsqueda
   const filteredProducts = useMemo(() => {
     const term = search.toLowerCase().trim();
-    if (!term) return warehouse.products;
+    if (!term) return products;
 
-    return warehouse.products.filter((p) => {
+    return products.filter((p) => {
       return (
         p.name.toLowerCase().includes(term) ||
         p.code.toLowerCase().includes(term)
       );
     });
-  }, [warehouse.products, search]);
+  }, [products, search]);
 
   // 👉 clic en cada producto: ir al conteo de ese artículo
   const handleOpenProduct = (product: WarehouseProduct) => {
+    if (!warehouse) return;
     navigate(
-      `/osalm/conteos_inventario/almacenes/${warehouse.id}/articulos/${product.code}/conteo`
+      `/osalm/conteos_inventario/almacenes/${warehouse.code}/articulos/${product.code}/conteo`
     );
-    // Nota: usamos product.code como :itemId
+    // Nota: usamos product.code (sku) como :itemId
   };
 
   // 👉 clic en el botón +
   const handleNewManualCount = () => {
-    navigate(`/osalm/conteos_inventario/${warehouse.id}/audits/new`);
+    if (!warehouse) return;
+    navigate(`/osalm/conteos_inventario/${warehouse.code}/audits/new`);
   };
+
+  const totalProducts = products.length;
+  const loading = loadingWarehouse || loadingProducts;
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -105,10 +189,14 @@ export default function InventoryWarehousePage() {
             </button>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
-                {warehouse.name}
+                {loadingWarehouse
+                  ? 'Cargando almacén…'
+                  : warehouse
+                  ? warehouse.name
+                  : 'Almacén no encontrado'}
               </h1>
               <p className="text-sm sm:text-base mt-1 opacity-90">
-                {warehouse.products.length} productos
+                {loading ? 'Cargando productos…' : `${totalProducts} productos`}
               </p>
             </div>
           </div>
@@ -123,6 +211,7 @@ export default function InventoryWarehousePage() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar producto o código..."
                 className="w-full bg-transparent outline-none text-sm sm:text-base placeholder:text-gray-400"
+                disabled={loading || !!error || !warehouse}
               />
             </div>
           </div>
@@ -131,33 +220,66 @@ export default function InventoryWarehousePage() {
         {/* LISTA DE PRODUCTOS */}
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-5xl">
-            <div className="flex flex-col gap-3 sm:gap-4 pb-20">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onOpen={() => handleOpenProduct(product)}
-                />
-              ))}
+            {/* Mensaje de error */}
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs sm:text-sm text-red-700">
+                {error}
+              </div>
+            )}
 
-              {filteredProducts.length === 0 && (
-                <p className="text-sm text-gray-500 mt-4">
-                  No se encontraron productos para “{search}”.
-                </p>
-              )}
+            <div className="flex flex-col gap-3 sm:gap-4 pb-20">
+              {/* Skeletons mientras carga */}
+              {loading &&
+                !error &&
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="animate-pulse w-full bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4"
+                  >
+                    <div className="flex flex-col gap-2 w-2/3">
+                      <div className="h-4 w-3/4 rounded bg-gray-200" />
+                      <div className="h-3 w-1/2 rounded bg-gray-200" />
+                    </div>
+                    <div className="flex flex-col items-end gap-2 w-1/4">
+                      <div className="h-6 w-12 rounded bg-gray-200" />
+                      <div className="h-3 w-10 rounded bg-gray-200" />
+                    </div>
+                  </div>
+                ))}
+
+              {!loading &&
+                !error &&
+                filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.itemId}
+                    product={product}
+                    onOpen={() => handleOpenProduct(product)}
+                  />
+                ))}
+
+              {!loading &&
+                !error &&
+                filteredProducts.length === 0 &&
+                warehouse && (
+                  <p className="text-sm text-gray-500 mt-4">
+                    No se encontraron productos para “{search}” en este almacén.
+                  </p>
+                )}
             </div>
           </div>
 
           {/* FAB (+) */}
-          <div className="pointer-events-none relative">
-            <button
-              className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
-              aria-label="Agregar producto"
-              onClick={handleNewManualCount}
-            >
-              +
-            </button>
-          </div>
+          {warehouse && (
+            <div className="pointer-events-none relative">
+              <button
+                className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
+                aria-label="Agregar producto"
+                onClick={handleNewManualCount}
+              >
+                +
+              </button>
+            </div>
+          )}
         </section>
       </main>
     </div>

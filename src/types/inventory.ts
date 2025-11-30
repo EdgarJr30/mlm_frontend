@@ -210,3 +210,31 @@ export type InventoryAdjustmentInsert = {
   difference_qty: number;
   adjustment_reason?: string;
 };
+
+export type WarehouseStockItem = {
+  warehouse_item_id: number;
+  quantity: string; // o number si castea
+  is_active: boolean;
+
+  warehouse_id: number;
+  warehouse_code: string;
+  warehouse_name: string;
+
+  item_id: number;
+  item_sku: string;
+  item_name: string;
+  item_is_weightable: boolean;
+
+  uom_id: number;
+  uom_code: string;
+  uom_name: string;
+
+  base_uom_id: number | null;
+  base_uom_code: string | null;
+  base_uom_name: string | null;
+
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};

@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+// src/pages/osalm/inventory/NewWarehouseAuditPage.tsx
+
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import {
@@ -6,12 +8,7 @@ import {
   type NewWarehouseAuditPayload,
   type SelectedProductForAudit,
 } from './NewWarehouseAuditForm';
-
-// En producción lo ideal es importar esto de un archivo compartido
-const MOCK_WAREHOUSES = [
-  { id: 'oc-quimicos', name: 'OC - Químicos' },
-  // agrega más si hace falta
-];
+import { getActiveWarehouses } from '../../../../services/inventoryService';
 
 type LocationState =
   | {
@@ -19,24 +16,79 @@ type LocationState =
     }
   | undefined;
 
+type WarehouseHeader = {
+  id: string;
+  code: string;
+  name: string;
+};
+
 export default function NewWarehouseAuditPage() {
   const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>();
+  const { warehouseId } = useParams<{ warehouseId: string }>(); // code
   const location = useLocation();
   const state = location.state as LocationState;
 
-  const warehouse =
-    useMemo(
-      () =>
-        MOCK_WAREHOUSES.find((w) => w.id === warehouseId) ?? MOCK_WAREHOUSES[0],
-      [warehouseId]
-    ) ?? MOCK_WAREHOUSES[0];
+  const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
+  const [loadingWarehouse, setLoadingWarehouse] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const initialProduct = state?.product;
 
+  // Cargar almacén desde DB
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchWarehouse() {
+      if (!warehouseId) {
+        setError('No se encontró el código de almacén en la URL.');
+        setLoadingWarehouse(false);
+        return;
+      }
+
+      try {
+        setLoadingWarehouse(true);
+        setError(null);
+
+        const list = await getActiveWarehouses();
+        if (!isMounted) return;
+
+        const found = (
+          list as Array<{ id: number; code: string; name: string }>
+        ).find((w) => w.code === warehouseId);
+
+        if (!found) {
+          setWarehouse(null);
+          setError(`No se encontró el almacén con código "${warehouseId}".`);
+        } else {
+          setWarehouse({
+            id: String(found.id),
+            code: found.code,
+            name: found.name,
+          });
+        }
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        if (err instanceof Error) {
+          console.error('❌ Error al cargar almacén:', err.message);
+          setError(err.message);
+        } else {
+          console.error('❌ Error desconocido al cargar almacén:', err);
+          setError('Ocurrió un error al cargar el almacén.');
+        }
+      } finally {
+        if (isMounted) setLoadingWarehouse(false);
+      }
+    }
+
+    fetchWarehouse();
+    return () => {
+      isMounted = false;
+    };
+  }, [warehouseId]);
+
   const handleSubmit = (payload: NewWarehouseAuditPayload) => {
-    console.log('Nueva auditoría almacen', payload);
-    // Más adelante aquí harás el POST a la API
+    console.log('Nueva auditoría almacén', payload);
+    // TODO: POST a inventory_counts / inventory_count_operations
   };
 
   return (
@@ -58,12 +110,19 @@ export default function NewWarehouseAuditPage() {
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
                 Nueva Auditoría
               </h1>
-              {warehouse && (
-                <p className="text-sm sm:text-base mt-1 opacity-90">
-                  Almacén:{' '}
-                  <span className="font-semibold">{warehouse.name}</span>
-                </p>
-              )}
+
+              <p className="text-sm sm:text-base mt-1 opacity-90">
+                {loadingWarehouse ? (
+                  'Cargando almacén…'
+                ) : warehouse ? (
+                  <>
+                    Almacén:{' '}
+                    <span className="font-semibold">{warehouse.name}</span>
+                  </>
+                ) : (
+                  'Almacén no encontrado'
+                )}
+              </p>
 
               {initialProduct && (
                 <p className="text-xs sm:text-sm mt-1 text-blue-100/90">
@@ -74,18 +133,22 @@ export default function NewWarehouseAuditPage() {
                   </span>
                 </p>
               )}
+
+              {error && <p className="mt-1 text-xs text-red-100/90">{error}</p>}
             </div>
           </div>
         </header>
 
         {/* CONTENIDO */}
         <section className="flex-1 overflow-y-auto">
-          <NewWarehouseAuditForm
-            warehouse={warehouse}
-            initialProduct={initialProduct}
-            onCancel={() => navigate(-1)}
-            onSubmit={handleSubmit}
-          />
+          {warehouse && (
+            <NewWarehouseAuditForm
+              warehouse={{ id: warehouse.id, name: warehouse.name }}
+              initialProduct={initialProduct}
+              onCancel={() => navigate(-1)}
+              onSubmit={handleSubmit}
+            />
+          )}
         </section>
       </main>
     </div>

@@ -504,3 +504,84 @@ export async function markAdjustmentAsPosted(
     );
   }
 }
+
+// =========================
+// X) Items por almacén
+// =========================
+
+export type WarehouseStockItem = {
+  warehouse_item_id: number;
+  quantity: string; // numeric → string
+  is_active: boolean;
+
+  warehouse_id: number;
+  warehouse_code: string;
+  warehouse_name: string;
+
+  item_id: number;
+  item_sku: string;
+  item_name: string;
+  item_is_weightable: boolean;
+
+  uom_id: number;
+  uom_code: string;
+  uom_name: string;
+
+  base_uom_id: number | null;
+  base_uom_code: string | null;
+  base_uom_name: string | null;
+
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+};
+
+/**
+ * Obtiene el listado de artículos que pertenecen a un almacén
+ * identificado por su código (slug), ej: 'oc-quimicos'.
+ *
+ * Esta función asume una vista/tabla `inventory_warehouse_items`
+ * en la BD con las columnas usadas abajo.
+ */
+export async function getWarehouseItemsByCode(
+  warehouseCode: string
+): Promise<WarehouseStockItem[]> {
+  const { data, error } = await supabase
+    .from('vw_warehouse_stock')
+    .select('*')
+    .eq('warehouse_code', warehouseCode)
+    .order('item_name', { ascending: true });
+
+  if (error) {
+    console.error(
+      `❌ Error al obtener items de almacén "${warehouseCode}":`,
+      error.message
+    );
+    return [];
+  }
+
+  return (data ?? []) as WarehouseStockItem[];
+}
+
+export async function getWarehouseItemBySku(
+  warehouseCode: string,
+  sku: string
+): Promise<WarehouseStockItem | null> {
+  const { data, error } = await supabase
+    .from('vw_warehouse_stock')
+    .select('*')
+    .eq('warehouse_code', warehouseCode)
+    .eq('item_sku', sku)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      `❌ Error al buscar item "${sku}" en almacén "${warehouseCode}":`,
+      error.message
+    );
+    return null;
+  }
+
+  return (data as WarehouseStockItem) ?? null;
+}
