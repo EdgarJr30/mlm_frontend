@@ -17,6 +17,7 @@ import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
 import InventoryCountsPage from '../../pages/osalm/inventory/InventoryCountsPage';
+import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -360,6 +361,23 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'OSALM',
     icon: IconInventory,
     showInSidebar: true,
+  },
+
+  // Almacenes
+  {
+    path: '/osalm/almacenes/:warehouseId',
+    element: <InventoryWarehousePage />,
+    allowPerms: [
+      'inventory_warehouses:read',
+      'inventory_warehouses:create',
+      'inventory_warehouses:update',
+      'inventory_warehouses:cancel',
+      'inventory_warehouses:delete',
+      'inventory_warehouses:full_access',
+    ],
+    name: 'Almacenes',
+    icon: IconInventory,
+    showInSidebar: false,
   },
 ];
 

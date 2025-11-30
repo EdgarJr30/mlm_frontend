@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/layout/Sidebar';
 
 type AuditStatus = 'completed' | 'in_progress' | 'pending';
@@ -54,15 +55,22 @@ const SESSIONS: AuditSession[] = [
   },
 ];
 
-const warehouses = [
-  'OC - Químicos',
-  'OC - Vegetales',
-  'Cuarto Frío',
-  'Pasillo A',
-  'Pasillo B',
+type WarehouseChip = {
+  id: string; // va en la URL
+  label: string; // se muestra en el pill
+};
+
+const warehouses: WarehouseChip[] = [
+  { id: 'oc-quimicos', label: 'OC - Químicos' },
+  { id: 'oc-vegetales', label: 'OC - Vegetales' },
+  { id: 'cuarto-frio', label: 'Cuarto Frío' },
+  { id: 'pasillo-a', label: 'Pasillo A' },
+  { id: 'pasillo-b', label: 'Pasillo B' },
 ];
 
 export default function InventoryCountsPage() {
+  const navigate = useNavigate();
+
   return (
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
@@ -91,7 +99,8 @@ export default function InventoryCountsPage() {
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {warehouses.map((w, idx) => (
                   <button
-                    key={w}
+                    key={w.id}
+                    onClick={() => navigate(`/osalm/almacenes/${w.id}`)}
                     className={[
                       'flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm whitespace-nowrap transition-colors',
                       idx === 0
@@ -103,7 +112,7 @@ export default function InventoryCountsPage() {
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-gray-300">
                       <span className="block h-3 w-4 border-b-2 border-gray-400" />
                     </span>
-                    <span className="font-medium">{w}</span>
+                    <span className="font-medium">{w.label}</span>
                     <span className="ml-1 text-gray-400 text-base">›</span>
                   </button>
                 ))}
