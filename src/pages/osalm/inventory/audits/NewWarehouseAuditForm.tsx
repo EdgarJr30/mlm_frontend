@@ -1,12 +1,27 @@
 import { useState } from 'react';
 
-type InventoryStatus = 'counted' | 'pending' | 'recount';
+export type InventoryStatus = 'counted' | 'pending' | 'recount';
+
+export type SelectedProductForAudit = {
+  id: string;
+  code: string;
+  name: string;
+  uomCode: string;
+  isWeighted: 'N' | 'Y';
+};
 
 export type NewWarehouseAuditPayload = {
   warehouseId: string;
   date: string;
   time: string;
-  productSearch: string;
+
+  // Producto
+  productSearch: string; // lo puedes seguir usando cuando entras con el botón +
+  productId?: string;
+  productCode?: string;
+  productName?: string;
+  uomCode?: string;
+
   isWeighted: 'N' | 'Y';
   quantity: number;
   status: InventoryStatus;
@@ -15,16 +30,18 @@ export type NewWarehouseAuditPayload = {
 
 type NewWarehouseAuditFormProps = {
   warehouse: { id: string; name: string };
+  initialProduct?: SelectedProductForAudit;
   onCancel: () => void;
   onSubmit?: (payload: NewWarehouseAuditPayload) => void;
 };
 
 export function NewWarehouseAuditForm({
   warehouse,
+  initialProduct,
   onCancel,
   onSubmit,
 }: NewWarehouseAuditFormProps) {
-  // Estado del formulario (solo UI por ahora)
+  // Fecha / hora
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState(() => {
     const now = new Date();
@@ -33,8 +50,14 @@ export function NewWarehouseAuditForm({
     return `${hh}:${mm}`;
   });
 
-  const [productSearch, setProductSearch] = useState('');
-  const [isWeighted, setIsWeighted] = useState<'N' | 'Y'>('N');
+  // Producto
+  const [productSearch, setProductSearch] = useState(() =>
+    initialProduct ? `${initialProduct.code} - ${initialProduct.name}` : ''
+  );
+
+  const [isWeighted, setIsWeighted] = useState<'N' | 'Y'>(
+    initialProduct?.isWeighted ?? 'N'
+  );
   const [quantity, setQuantity] = useState<number>(0);
   const [status, setStatus] = useState<InventoryStatus>('counted');
   const [auditorEmail, setAuditorEmail] = useState('');
@@ -47,6 +70,10 @@ export function NewWarehouseAuditForm({
       date,
       time,
       productSearch,
+      productId: initialProduct?.id,
+      productCode: initialProduct?.code,
+      productName: initialProduct?.name,
+      uomCode: initialProduct?.uomCode,
       isWeighted,
       quantity,
       status,
@@ -127,24 +154,55 @@ export function NewWarehouseAuditForm({
           </button>
         </div>
 
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-3">
-            <input
-              type="text"
-              placeholder="Buscar producto..."
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              className="w-full bg-transparent outline-none text-sm sm:text-base py-2"
-            />
+        {initialProduct ? (
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-3 py-3 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-gray-900">
+                  {initialProduct.code} · {initialProduct.name}
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  Unidad de medida:{' '}
+                  <span className="font-semibold">
+                    {initialProduct.uomCode}
+                  </span>
+                </p>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-blue-700 shadow-sm">
+                Seleccionado desde el listado
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] text-gray-500">
+              Si este no es el producto correcto, cierre esta pantalla y
+              seleccione el artículo adecuado en el listado.
+            </p>
           </div>
-          <button
-            type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 text-gray-500 text-xl"
-            aria-label="Escanear código"
-          >
-            ⌗
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center bg-gray-50 rounded-2xl border border-gray-200 px-3">
+                <input
+                  type="text"
+                  placeholder="Buscar producto..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="w-full bg-transparent outline-none text-sm sm:text-base py-2"
+                />
+              </div>
+              <button
+                type="button"
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 text-gray-500 text-xl"
+                aria-label="Escanear código"
+              >
+                ⌗
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400">
+              Este modo se usa cuando el artículo no aparece en el listado del
+              almacén.
+            </p>
+          </>
+        )}
       </div>
 
       {/* ¿Es pesado? */}

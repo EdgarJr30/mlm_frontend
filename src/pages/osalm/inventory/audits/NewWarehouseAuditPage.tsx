@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import {
   NewWarehouseAuditForm,
   type NewWarehouseAuditPayload,
+  type SelectedProductForAudit,
 } from './NewWarehouseAuditForm';
 
 // En producción lo ideal es importar esto de un archivo compartido
@@ -12,9 +13,17 @@ const MOCK_WAREHOUSES = [
   // agrega más si hace falta
 ];
 
+type LocationState =
+  | {
+      product?: SelectedProductForAudit;
+    }
+  | undefined;
+
 export default function NewWarehouseAuditPage() {
   const navigate = useNavigate();
   const { warehouseId } = useParams<{ warehouseId: string }>();
+  const location = useLocation();
+  const state = location.state as LocationState;
 
   const warehouse =
     useMemo(
@@ -22,6 +31,8 @@ export default function NewWarehouseAuditPage() {
         MOCK_WAREHOUSES.find((w) => w.id === warehouseId) ?? MOCK_WAREHOUSES[0],
       [warehouseId]
     ) ?? MOCK_WAREHOUSES[0];
+
+  const initialProduct = state?.product;
 
   const handleSubmit = (payload: NewWarehouseAuditPayload) => {
     console.log('Nueva auditoría almacen', payload);
@@ -53,6 +64,16 @@ export default function NewWarehouseAuditPage() {
                   <span className="font-semibold">{warehouse.name}</span>
                 </p>
               )}
+
+              {initialProduct && (
+                <p className="text-xs sm:text-sm mt-1 text-blue-100/90">
+                  Producto seleccionado:{' '}
+                  <span className="font-semibold">
+                    {initialProduct.code} · {initialProduct.name} (
+                    {initialProduct.uomCode})
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </header>
@@ -61,6 +82,7 @@ export default function NewWarehouseAuditPage() {
         <section className="flex-1 overflow-y-auto">
           <NewWarehouseAuditForm
             warehouse={warehouse}
+            initialProduct={initialProduct}
             onCancel={() => navigate(-1)}
             onSubmit={handleSubmit}
           />

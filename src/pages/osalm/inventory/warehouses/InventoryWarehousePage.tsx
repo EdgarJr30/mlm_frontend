@@ -5,9 +5,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 
 type WarehouseProduct = {
-  id: string;
+  id: string; // id interno (no lo usamos para la ruta)
   name: string;
-  code: string;
+  code: string; // <-- usaremos el CODE como :itemId
   uom: string;
   quantity: number;
 };
@@ -55,23 +55,37 @@ export default function InventoryWarehousePage() {
   const { warehouseId } = useParams<{ warehouseId: string }>();
   const [search, setSearch] = useState('');
 
-  const warehouse = useMemo(
-    () =>
-      MOCK_WAREHOUSES.find((w) => w.id === warehouseId) ?? MOCK_WAREHOUSES[0],
-    [warehouseId]
-  );
+  const warehouse =
+    useMemo(
+      () =>
+        MOCK_WAREHOUSES.find((w) => w.id === warehouseId) ?? MOCK_WAREHOUSES[0],
+      [warehouseId]
+    ) ?? MOCK_WAREHOUSES[0];
 
-  const filteredProducts = useMemo(
-    () =>
-      warehouse.products.filter((p) => {
-        const term = search.toLowerCase();
-        return (
-          p.name.toLowerCase().includes(term) ||
-          p.code.toLowerCase().includes(term)
-        );
-      }),
-    [warehouse.products, search]
-  );
+  const filteredProducts = useMemo(() => {
+    const term = search.toLowerCase().trim();
+    if (!term) return warehouse.products;
+
+    return warehouse.products.filter((p) => {
+      return (
+        p.name.toLowerCase().includes(term) ||
+        p.code.toLowerCase().includes(term)
+      );
+    });
+  }, [warehouse.products, search]);
+
+  // 👉 clic en cada producto: ir al conteo de ese artículo
+  const handleOpenProduct = (product: WarehouseProduct) => {
+    navigate(
+      `/osalm/conteos_inventario/almacenes/${warehouse.id}/articulos/${product.code}/conteo`
+    );
+    // Nota: usamos product.code como :itemId
+  };
+
+  // 👉 clic en el botón +
+  const handleNewManualCount = () => {
+    navigate(`/osalm/conteos_inventario/${warehouse.id}/audits/new`);
+  };
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -119,8 +133,13 @@ export default function InventoryWarehousePage() {
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-5xl">
             <div className="flex flex-col gap-3 sm:gap-4 pb-20">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onOpen={() => handleOpenProduct(product)}
+                />
               ))}
+
               {filteredProducts.length === 0 && (
                 <p className="text-sm text-gray-500 mt-4">
                   No se encontraron productos para “{search}”.
@@ -134,9 +153,7 @@ export default function InventoryWarehousePage() {
             <button
               className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
               aria-label="Agregar producto"
-              onClick={() =>
-                navigate(`/osalm/conteos_inventario/${warehouse.id}/audits/new`)
-              }
+              onClick={handleNewManualCount}
             >
               +
             </button>
@@ -147,9 +164,19 @@ export default function InventoryWarehousePage() {
   );
 }
 
-function ProductCard({ product }: { product: WarehouseProduct }) {
+function ProductCard({
+  product,
+  onOpen,
+}: {
+  product: WarehouseProduct;
+  onOpen: () => void;
+}) {
   return (
-    <article className="bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer"
+    >
       {/* IZQUIERDA: nombre, código, uom */}
       <div className="flex flex-col gap-1">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
@@ -172,13 +199,13 @@ function ProductCard({ product }: { product: WarehouseProduct }) {
             {product.uom}
           </span>
         </div>
-        <button
+        <span
           className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 text-lg"
-          aria-label="Ver detalle del producto"
+          aria-hidden="true"
         >
           ›
-        </button>
+        </span>
       </div>
-    </article>
+    </button>
   );
 }

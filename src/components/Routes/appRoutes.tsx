@@ -21,6 +21,7 @@ import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/Inven
 import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
 import InventoryAuditWarehouseHistoryPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
 import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
+import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -421,6 +422,21 @@ export const APP_ROUTES: AppRoute[] = [
       'inventory_adjustments:export',
       'inventory_adjustments:approve',
       'inventory_adjustments:full_access',
+    ],
+    name: 'Ajustes de Inventario',
+    showInSidebar: false,
+  },
+
+  {
+    path: '/osalm/conteos_inventario/almacenes/:warehouseId/articulos/:itemId/conteo',
+    element: <WarehouseItemCountPage />,
+    allowPerms: [
+      'inventory_counts:read',
+      'inventory_counts:create',
+      'inventory_counts:delete',
+      'inventory_counts:update',
+      'inventory_counts:cancel',
+      'inventory_counts:full_access',
     ],
     name: 'Ajustes de Inventario',
     showInSidebar: false,
