@@ -198,7 +198,9 @@ export default function WarehouseAuditReviewPage() {
               {/* Volver */}
               <button
                 type="button"
-                onClick={() => navigate('/osalm/conteos_inventario/auditoria')}
+                onClick={() =>
+                  navigate('/osalm/conteos_inventario/auditoria/almacenes')
+                }
                 className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
