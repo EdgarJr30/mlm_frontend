@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/layout/Sidebar';
+import { useCan } from '../../../rbac/PermissionsContext';
 
 type AuditStatus = 'completed' | 'in_progress' | 'pending';
 
@@ -71,6 +72,12 @@ const warehouses: WarehouseChip[] = [
 export default function InventoryCountsPage() {
   const navigate = useNavigate();
 
+  // ✅ Solo usuarios con alguno de estos permisos verán el botón
+  const canSeeAuditAdmin = useCan([
+    'inventory_adjustments:full_access',
+    'inventory_adjustments:read',
+  ]);
+
   return (
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
@@ -78,13 +85,28 @@ export default function InventoryCountsPage() {
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
         <header className="bg-blue-600 text-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5">
-            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
-              Inventario Auditoría
-            </h1>
-            <p className="text-sm sm:text-base mt-1 opacity-90">
-              Sesiones Recientes
-            </p>
+          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+                Inventario Auditoría
+              </h1>
+              <p className="text-sm sm:text-base mt-1 opacity-90">
+                Sesiones Recientes
+              </p>
+            </div>
+
+            {canSeeAuditAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/osalm/conteos_inventario/auditoria')}
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                  ⚙️
+                </span>
+                <span>Administración de auditoría</span>
+              </button>
+            )}
           </div>
         </header>
 
