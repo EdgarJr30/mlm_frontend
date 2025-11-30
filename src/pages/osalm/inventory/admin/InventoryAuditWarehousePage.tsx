@@ -9,6 +9,7 @@ type AuditSession = {
   date: string;
   time: string;
   warehouse: string;
+  warehouseId: string; // 👈 slug para la ruta
   itemsAudited: number;
   status: AuditStatus;
 };
@@ -19,6 +20,7 @@ const SESSIONS: AuditSession[] = [
     date: '27/01/2025',
     time: '14:30',
     warehouse: 'OC - Químicos',
+    warehouseId: 'oc-quimicos',
     itemsAudited: 24,
     status: 'completed',
   },
@@ -27,6 +29,7 @@ const SESSIONS: AuditSession[] = [
     date: '27/01/2025',
     time: '10:15',
     warehouse: 'OC - Vegetales',
+    warehouseId: 'oc-vegetales',
     itemsAudited: 18,
     status: 'completed',
   },
@@ -35,6 +38,7 @@ const SESSIONS: AuditSession[] = [
     date: '26/01/2025',
     time: '16:45',
     warehouse: 'Cuarto Frío',
+    warehouseId: 'cuarto-frio',
     itemsAudited: 12,
     status: 'pending',
   },
@@ -43,6 +47,7 @@ const SESSIONS: AuditSession[] = [
     date: '26/01/2025',
     time: '09:00',
     warehouse: 'Pasillo A',
+    warehouseId: 'pasillo-a',
     itemsAudited: 35,
     status: 'in_progress',
   },
@@ -51,22 +56,10 @@ const SESSIONS: AuditSession[] = [
     date: '25/01/2025',
     time: '11:30',
     warehouse: 'Pasillo B',
+    warehouseId: 'pasillo-b',
     itemsAudited: 28,
     status: 'completed',
   },
-];
-
-type WarehouseChip = {
-  id: string;
-  label: string;
-};
-
-const warehouses: WarehouseChip[] = [
-  { id: 'oc-quimicos', label: 'OC - Químicos' },
-  { id: 'oc-vegetales', label: 'OC - Vegetales' },
-  { id: 'cuarto-frio', label: 'Cuarto Frío' },
-  { id: 'pasillo-a', label: 'Pasillo A' },
-  { id: 'pasillo-b', label: 'Pasillo B' },
 ];
 
 export default function InventoryAuditWarehouseHistoryPage() {
@@ -140,35 +133,8 @@ export default function InventoryAuditWarehouseHistoryPage() {
         {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl">
-            {/* Warehouses pills */}
-            <div>
-              <h2 className="text-xs font-semibold tracking-[0.12em] text-gray-500 mb-2">
-                ALMACENES
-              </h2>
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {warehouses.map((w, idx) => (
-                  <button
-                    key={w.id}
-                    onClick={() => navigate(`/osalm/almacenes/${w.id}`)}
-                    className={[
-                      'flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm whitespace-nowrap transition-colors',
-                      idx === 0
-                        ? 'bg-white border-blue-500 text-blue-700 shadow-sm'
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400',
-                    ].join(' ')}
-                  >
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-gray-300">
-                      <span className="block h-3 w-4 border-b-2 border-gray-400" />
-                    </span>
-                    <span className="font-medium">{w.label}</span>
-                    <span className="ml-1 text-gray-400 text-base">›</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Tabs */}
-            <div className="mt-4 border-b border-gray-200">
+            <div className="mt-1 border-b border-gray-200">
               <div className="flex gap-8 text-sm font-medium">
                 <button className="relative py-3 flex items-center gap-2 text-blue-600">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-blue-100">
@@ -201,16 +167,6 @@ export default function InventoryAuditWarehouseHistoryPage() {
               ))}
             </div>
           </div>
-
-          {/* Floating Action Button (para crear nueva sesión de auditoría) */}
-          <div className="pointer-events-none relative">
-            <button
-              className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
-              aria-label="Nueva sesión de auditoría"
-            >
-              +
-            </button>
-          </div>
         </section>
       </main>
     </div>
@@ -218,6 +174,8 @@ export default function InventoryAuditWarehouseHistoryPage() {
 }
 
 function AuditSessionCard({ session }: { session: AuditSession }) {
+  const navigate = useNavigate();
+
   const statusConfig: Record<
     AuditStatus,
     { label: string; textColor: string; iconAccent: string; iconRing: string }
@@ -244,8 +202,27 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
 
   const cfg = statusConfig[session.status];
 
+  const handleClick = () => {
+    navigate(
+      `/osalm/conteos_inventario/auditoria/almacenes/${session.warehouseId}/revision`
+    );
+  };
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLElement> = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
-    <article className="bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4">
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className="bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
+    >
       <div className="flex flex-col gap-1">
         <p className="text-xs sm:text-sm text-gray-500 tracking-wide">
           <span className="font-medium">{session.date}</span>

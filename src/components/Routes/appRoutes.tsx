@@ -20,6 +20,7 @@ import InventoryCountsPage from '../../pages/osalm/inventory/home/InventoryCount
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
 import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
 import InventoryAuditWarehouseHistoryPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
+import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -412,8 +413,8 @@ export const APP_ROUTES: AppRoute[] = [
 
   // Ajustes de inventario por almacén
   {
-    path: '/osalm/almacenes/:warehouseId/adjustments',
-    element: <InventoryWarehousePage />,
+    path: '/osalm/conteos_inventario/auditoria/almacenes/:warehouseId/revision',
+    element: <InventoryAuditWarehouseReviewPage />,
     allowPerms: [
       'inventory_adjustments:read',
       'inventory_adjustments:create',
@@ -424,6 +425,21 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Ajustes de Inventario',
     showInSidebar: false,
   },
+
+  // Ajustes de inventario por almacén
+  // {
+  //   path: '/osalm/almacenes/:warehouseId/adjustments',
+  //   element: <InventoryWarehousePage />,
+  //   allowPerms: [
+  //     'inventory_adjustments:read',
+  //     'inventory_adjustments:create',
+  //     'inventory_adjustments:export',
+  //     'inventory_adjustments:approve',
+  //     'inventory_adjustments:full_access',
+  //   ],
+  //   name: 'Ajustes de Inventario',
+  //   showInSidebar: false,
+  // },
 ];
 
 // Rutas públicas / especiales que no usan RequireRole
