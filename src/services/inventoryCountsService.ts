@@ -176,6 +176,7 @@ export type RegisterInventoryOperationInput = {
 /**
  * Registra un conteo:
  * - Garantiza jornada abierta (inventory_counts)
+ * - Obtiene la UoM configurada para el item en ese almacén (warehouse_items.uom_id)
  * - Inserta operación cruda (inventory_count_operations)
  * - Actualiza/resume línea (inventory_count_lines)
  */
@@ -190,22 +191,26 @@ export async function registerInventoryOperation(
     warehouseId
   );
 
-  // 2) Obtener UoM base del ítem (base_uom_id)
-  const { data: item, error: itemError } = await supabase
-    .from('items')
-    .select('id, base_uom_id')
-    .eq('id', itemId)
+  // 2) Obtener la UoM configurada para el ítem en este almacén
+  const { data: whItem, error: whItemError } = await supabase
+    .from('warehouse_items')
+    .select('uom_id')
+    .eq('warehouse_id', warehouseId)
+    .eq('item_id', itemId)
     .maybeSingle();
 
-  if (itemError || !item) {
+  if (whItemError || !whItem) {
     // eslint-disable-next-line no-console
-    console.error('[registerInventoryOperation] item error:', itemError);
+    console.error(
+      '[registerInventoryOperation] warehouse_items error:',
+      whItemError
+    );
     throw new Error(
-      itemError?.message ?? 'No se pudo obtener la unidad base del artículo'
+      'No existe configuración de stock para este artículo en este almacén'
     );
   }
 
-  const uomId = item.base_uom_id as number;
+  const uomId = whItem.uom_id as number;
   const netQty = quantity; // en esta versión usamos net_qty = cantidad digitada
 
   // 3) Insertar operación cruda

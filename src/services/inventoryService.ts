@@ -527,10 +527,6 @@ export type WarehouseStockItem = {
   uom_code: string;
   uom_name: string;
 
-  base_uom_id: number | null;
-  base_uom_code: string | null;
-  base_uom_name: string | null;
-
   created_at: string;
   updated_at: string;
   created_by: string | null;
