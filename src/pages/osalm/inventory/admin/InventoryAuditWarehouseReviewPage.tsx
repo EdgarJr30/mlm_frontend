@@ -15,7 +15,7 @@ import {
 
 type FilterTab = 'all' | ItemStatus;
 
-export default function WarehouseAuditReviewPage() {
+export default function InventoryWarehouseAuditReviewPage() {
   const navigate = useNavigate();
   const { warehouseId } = useParams<{ warehouseId: string }>(); // aquí recibimos el code (OC-QUIM)
 
@@ -285,7 +285,6 @@ export default function WarehouseAuditReviewPage() {
                   <div className="border-b border-gray-100 px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-500 flex">
                     <div className="w-24 sm:w-28">SKU</div>
                     <div className="flex-1">Artículo</div>
-                    <div className="w-20 sm:w-24 text-right">Sistema</div>
                     <div className="w-20 sm:w-24 text-right">Contado</div>
                     <div className="w-24 sm:w-28 text-center">Estado</div>
                     <div className="hidden sm:block w-56">Comentario</div>
@@ -504,9 +503,6 @@ function AuditItemRow(props: {
     recount: 'bg-blue-50 text-blue-700 border-blue-200',
   };
 
-  const diff = item.countedQty - item.systemQty;
-  const hasDiff = diff !== 0;
-
   return (
     <div className="px-4 sm:px-6 py-3 text-xs sm:text-sm flex flex-col gap-3 sm:flex-row sm:items-center">
       {/* Info principal */}
@@ -517,31 +513,12 @@ function AuditItemRow(props: {
           <p className="text-[11px] sm:text-xs text-gray-500">
             UoM: {item.uom}
           </p>
-          <p
-            className={[
-              'text-[11px] sm:text-xs mt-1',
-              hasDiff ? 'text-amber-600' : 'text-gray-400',
-            ].join(' ')}
-          >
-            Diferencia:{' '}
-            <span className="font-semibold">
-              {diff > 0 ? `+${diff}` : diff}
-            </span>
-          </p>
         </div>
       </div>
 
-      {/* Cantidades & estado */}
+      {/* Cantidad & estado */}
       <div className="flex flex-wrap gap-3 sm:gap-4 items-center justify-between sm:justify-end flex-1">
-        <div className="text-right">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
-            Sistema
-          </p>
-          <p className="font-semibold text-gray-800">
-            {item.systemQty.toLocaleString('es-DO')}
-          </p>
-        </div>
-
+        {/* Solo cantidad contada */}
         <div className="text-right">
           <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
             Contado

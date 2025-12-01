@@ -44,7 +44,6 @@ export type AuditItem = {
   name: string;
   uom: string;
   countedQty: number;
-  systemQty: number;
   status: ItemStatus;
   comment?: string;
 };
@@ -521,7 +520,7 @@ export async function getWarehouseAuditForReview(
     };
   }
 
-  // 3) Traer SOLO las líneas de conteo (sin joins a items/uoms)
+  // 3) Traer SOLO las líneas de conteo
   const { data: lines, error: linesErr } = await supabase
     .from('inventory_count_lines')
     .select(
@@ -546,35 +545,7 @@ export async function getWarehouseAuditForReview(
   const itemIds = (lines ?? []).map((l) => l.item_id as number);
   const uomIds = (lines ?? []).map((l) => l.uom_id as number);
 
-  // 4) Traer stock del almacén para esos artículos/UoM desde warehouse_items
-  let stockByKey = new Map<string, number>();
-
-  if (itemIds.length > 0) {
-    const { data: stock, error: stockErr } = await supabase
-      .from('warehouse_items')
-      .select('item_id, uom_id, quantity')
-      .eq('warehouse_id', warehouse.id)
-      .in('item_id', itemIds)
-      .in('uom_id', uomIds);
-
-    if (stockErr) {
-      // eslint-disable-next-line no-console
-      console.error(
-        'Error fetching warehouse_items for audit review',
-        stockErr
-      );
-      throw stockErr;
-    }
-
-    stockByKey = new Map(
-      (stock ?? []).map((s) => [
-        `${s.item_id}-${s.uom_id}`,
-        Number(s.quantity ?? 0),
-      ])
-    );
-  }
-
-  // 5) Traer descripción (SKU, nombre, UoM) desde la vista vw_warehouse_stock
+  // 4) Traer descripción (SKU, nombre, UoM) desde la vista vw_warehouse_stock
   let descByKey = new Map<
     string,
     { sku: string; name: string; uomCode: string }
@@ -609,20 +580,18 @@ export async function getWarehouseAuditForReview(
     );
   }
 
-  // 6) Armar items finales para la UI
+  // 5) Armar items finales para la UI (solo cantidad contada)
   const items: AuditItem[] =
     lines?.map((l) => {
       const key = `${l.item_id}-${l.uom_id}`;
-      const systemQty = stockByKey.get(key) ?? 0;
       const desc = descByKey.get(key);
 
       return {
         id: l.id as number,
-        sku: desc?.sku ?? '', // 👈 ahora sí SKU
-        name: desc?.name ?? '', // 👈 ahora sí nombre
-        uom: desc?.uomCode ?? '', // 👈 ahora sí UoM
+        sku: desc?.sku ?? '',
+        name: desc?.name ?? '',
+        uom: desc?.uomCode ?? '',
         countedQty: Number(l.counted_qty ?? 0),
-        systemQty,
         status: mapDbItemStatusToUi(
           (l.status ?? 'counted') as 'pending' | 'counted' | 'ignored'
         ),
