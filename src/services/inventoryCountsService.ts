@@ -169,7 +169,7 @@ export type RegisterInventoryOperationInput = {
   itemId: number;
   quantity: number;
   isWeighted: boolean;
-  status: InventoryStatus;
+  status: InventoryStatus; // 'counted' | 'pending' | 'recount'
   auditorEmail?: string;
 };
 
@@ -178,7 +178,7 @@ export type RegisterInventoryOperationInput = {
  * - Garantiza jornada abierta (inventory_counts)
  * - Obtiene la UoM configurada para el item en ese almacén (warehouse_items.uom_id)
  * - Inserta operación cruda (inventory_count_operations)
- * - Actualiza/resume línea (inventory_count_lines)
+ * - Actualiza/resume línea (inventory_count_lines) ACUMULANDO la cantidad
  */
 export async function registerInventoryOperation(
   input: RegisterInventoryOperationInput
@@ -194,7 +194,7 @@ export async function registerInventoryOperation(
   // 2) Obtener la UoM configurada para el ítem en este almacén
   const { data: whItem, error: whItemError } = await supabase
     .from('warehouse_items')
-    .select('uom_id')
+    .select('id, uom_id, quantity')
     .eq('warehouse_id', warehouseId)
     .eq('item_id', itemId)
     .maybeSingle();
@@ -211,6 +211,7 @@ export async function registerInventoryOperation(
   }
 
   const uomId = whItem.uom_id as number;
+  const currentStockQty = Number(whItem.quantity ?? 0);
   const netQty = quantity; // en esta versión usamos net_qty = cantidad digitada
 
   // 3) Insertar operación cruda
@@ -251,19 +252,48 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 4) Upsert en inventory_count_lines (estado resumido por ítem/UoM)
-  // Mapeo de estado de UI -> estado permitido en DB
-  const dbStatus: 'counted' | 'pending' | 'ignored' =
-    status === 'pending' ? 'pending' : 'counted';
+  // 4) Leer la línea existente (si hay) para acumular cantidad
+  const { data: existingLine, error: lineSelectError } = await supabase
+    .from('inventory_count_lines')
+    .select('id, counted_qty, status')
+    .eq('inventory_count_id', inventoryCountId)
+    .eq('item_id', itemId)
+    .eq('uom_id', uomId)
+    .maybeSingle();
 
+  if (lineSelectError && lineSelectError.code !== 'PGRST116') {
+    // eslint-disable-next-line no-console
+    console.error(
+      '[registerInventoryOperation] line select error:',
+      lineSelectError
+    );
+    throw new Error(
+      lineSelectError.message ??
+        'No se pudo leer la línea de conteo para este artículo'
+    );
+  }
+
+  const previousQty = existingLine?.counted_qty ?? 0;
+
+  // Si el conteo está marcado como "pending", no sumamos al total definitivo
+  const increment = isPending ? 0 : netQty;
+  const newQty = previousQty + increment;
+
+  // Mapeo de estado de UI -> estado permitido en DB
+  const dbStatus: 'counted' | 'pending' | 'ignored' = isPending
+    ? 'pending'
+    : 'counted';
+
+  // 5) Upsert en inventory_count_lines (estado resumido por ítem/UoM)
   const { error: lineError } = await supabase
     .from('inventory_count_lines')
     .upsert(
       {
+        // 👇 OJO: ya NO mandamos "id"
         inventory_count_id: inventoryCountId,
         item_id: itemId,
         uom_id: uomId,
-        counted_qty: netQty,
+        counted_qty: newQty,
         last_counted_at: new Date().toISOString(),
         status: dbStatus,
         status_comment:
@@ -283,6 +313,25 @@ export async function registerInventoryOperation(
       lineError.message ??
         'No se pudo actualizar la línea de conteo para este artículo'
     );
+  }
+
+  // 6) Actualizar la cantidad "visible" en warehouse_items
+  //    Esta es la que ve la pantalla de stock (vw_warehouse_stock → quantity).
+  const newStockQty = currentStockQty + increment;
+
+  const { error: whUpdateError } = await supabase
+    .from('warehouse_items')
+    .update({ quantity: newStockQty })
+    .eq('id', whItem.id);
+
+  if (whUpdateError) {
+    // Aquí solo logueamos para no romper el flujo de conteo
+    // eslint-disable-next-line no-console
+    console.error(
+      '[registerInventoryOperation] warehouse_items update error:',
+      whUpdateError
+    );
+    // Si prefieres ser estricto, puedes hacer throw aquí.
   }
 }
 
@@ -472,7 +521,7 @@ export async function getWarehouseAuditForReview(
     };
   }
 
-  // 3) Traer líneas de conteo + info de artículo y uom
+  // 3) Traer SOLO las líneas de conteo (sin joins a items/uoms)
   const { data: lines, error: linesErr } = await supabase
     .from('inventory_count_lines')
     .select(
@@ -482,15 +531,7 @@ export async function getWarehouseAuditForReview(
         uom_id,
         counted_qty,
         status,
-        status_comment,
-        items:item_id (
-          sku,
-          name
-        ),
-        uoms:uom_id (
-          code,
-          name
-        )
+        status_comment
       `
     )
     .eq('inventory_count_id', inventoryCount.id)
@@ -505,12 +546,12 @@ export async function getWarehouseAuditForReview(
   const itemIds = (lines ?? []).map((l) => l.item_id as number);
   const uomIds = (lines ?? []).map((l) => l.uom_id as number);
 
-  // 4) Traer stock del almacén para esos artículos/UoM desde la vista
+  // 4) Traer stock del almacén para esos artículos/UoM desde warehouse_items
   let stockByKey = new Map<string, number>();
 
   if (itemIds.length > 0) {
     const { data: stock, error: stockErr } = await supabase
-      .from('vw_warehouse_stock')
+      .from('warehouse_items')
       .select('item_id, uom_id, quantity')
       .eq('warehouse_id', warehouse.id)
       .in('item_id', itemIds)
@@ -518,25 +559,68 @@ export async function getWarehouseAuditForReview(
 
     if (stockErr) {
       // eslint-disable-next-line no-console
-      console.error('Error fetching vw_warehouse_stock', stockErr);
+      console.error(
+        'Error fetching warehouse_items for audit review',
+        stockErr
+      );
       throw stockErr;
     }
 
     stockByKey = new Map(
-      (stock ?? []).map((s) => [`${s.item_id}-${s.uom_id}`, Number(s.quantity)])
+      (stock ?? []).map((s) => [
+        `${s.item_id}-${s.uom_id}`,
+        Number(s.quantity ?? 0),
+      ])
     );
   }
 
+  // 5) Traer descripción (SKU, nombre, UoM) desde la vista vw_warehouse_stock
+  let descByKey = new Map<
+    string,
+    { sku: string; name: string; uomCode: string }
+  >();
+
+  if (itemIds.length > 0) {
+    const { data: descRows, error: descErr } = await supabase
+      .from('vw_warehouse_stock')
+      .select('item_id, uom_id, item_sku, item_name, uom_code')
+      .eq('warehouse_id', warehouse.id)
+      .in('item_id', itemIds)
+      .in('uom_id', uomIds);
+
+    if (descErr) {
+      // eslint-disable-next-line no-console
+      console.error(
+        'Error fetching vw_warehouse_stock for audit descriptions',
+        descErr
+      );
+      throw descErr;
+    }
+
+    descByKey = new Map(
+      (descRows ?? []).map((r) => [
+        `${r.item_id}-${r.uom_id}`,
+        {
+          sku: (r.item_sku as string) ?? '',
+          name: (r.item_name as string) ?? '',
+          uomCode: (r.uom_code as string) ?? '',
+        },
+      ])
+    );
+  }
+
+  // 6) Armar items finales para la UI
   const items: AuditItem[] =
     lines?.map((l) => {
       const key = `${l.item_id}-${l.uom_id}`;
       const systemQty = stockByKey.get(key) ?? 0;
+      const desc = descByKey.get(key);
 
       return {
         id: l.id as number,
-        sku: (l as any).items?.sku ?? '',
-        name: (l as any).items?.name ?? '',
-        uom: (l as any).uoms?.code ?? '',
+        sku: desc?.sku ?? '', // 👈 ahora sí SKU
+        name: desc?.name ?? '', // 👈 ahora sí nombre
+        uom: desc?.uomCode ?? '', // 👈 ahora sí UoM
         countedQty: Number(l.counted_qty ?? 0),
         systemQty,
         status: mapDbItemStatusToUi(
@@ -575,12 +659,12 @@ export async function saveWarehouseAuditChanges(params: {
   const uiToDbStatus: Record<AuditStatus, DbInventoryCountStatus> = {
     in_progress: 'open',
     completed: 'closed',
-    pending: 'open', // podrías cambiarlo a otro flujo si quieres
+    pending: 'open',
   };
 
   const dbStatus = uiToDbStatus[auditStatus];
 
-  // 1) Actualizar inventario_counts
+  // 1) Actualizar inventory_counts (solo el status)
   const { error: countErr } = await supabase
     .from('inventory_counts')
     .update({ status: dbStatus })
@@ -594,21 +678,23 @@ export async function saveWarehouseAuditChanges(params: {
 
   if (items.length === 0) return;
 
-  // 2) Actualizar líneas
-  const payload = items.map((it) => ({
-    id: it.id,
-    status: mapUiItemStatusToDb(it.status),
-    status_comment: it.comment ?? null,
-    counted_qty: it.countedQty,
-  }));
+  // 2) Actualizar SOLO estado y comentario de cada línea (NO tocamos counted_qty)
+  const updates = items.map((it) =>
+    supabase
+      .from('inventory_count_lines')
+      .update({
+        status: mapUiItemStatusToDb(it.status),
+        status_comment: it.comment ?? null,
+      })
+      .eq('id', it.id)
+  );
 
-  const { error: linesErr } = await supabase
-    .from('inventory_count_lines')
-    .upsert(payload, { onConflict: 'id' });
+  const results = await Promise.all(updates);
 
-  if (linesErr) {
+  const failed = results.find((r) => r.error);
+  if (failed && failed.error) {
     // eslint-disable-next-line no-console
-    console.error('Error updating inventory_count_lines', linesErr);
-    throw linesErr;
+    console.error('Error updating inventory_count_lines', failed.error);
+    throw failed.error;
   }
 }
