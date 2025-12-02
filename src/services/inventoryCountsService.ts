@@ -121,7 +121,6 @@ export async function ensureOpenInventoryCountForWarehouse(
 
   if (selectError && selectError.code !== 'PGRST116') {
     // PGRST116 = no rows found
-    // eslint-disable-next-line no-console
     console.error(
       '[ensureOpenInventoryCountForWarehouse] select error:',
       selectError
@@ -150,7 +149,6 @@ export async function ensureOpenInventoryCountForWarehouse(
     .single();
 
   if (insertError || !inserted) {
-    // eslint-disable-next-line no-console
     console.error(
       '[ensureOpenInventoryCountForWarehouse] insert error:',
       insertError
@@ -323,7 +321,6 @@ export async function getOpenInventoryCountForWarehouse(
     .maybeSingle();
 
   if (error) {
-    // eslint-disable-next-line no-console
     console.error('❌ Error al obtener jornada abierta:', error.message);
     return null;
   }
@@ -360,7 +357,6 @@ export async function getInventoryAuditSessions(): Promise<AuditSession[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    // eslint-disable-next-line no-console
     console.error('Error fetching inventory_counts', error);
     throw error;
   }
@@ -378,7 +374,6 @@ export async function getInventoryAuditSessions(): Promise<AuditSession[]> {
     .in('inventory_count_id', countIds);
 
   if (linesError) {
-    // eslint-disable-next-line no-console
     console.error('Error fetching inventory_count_lines', linesError);
     throw linesError;
   }
@@ -433,7 +428,6 @@ export async function getWarehouseAuditForReview(
     .maybeSingle();
 
   if (whError) {
-    // eslint-disable-next-line no-console
     console.error('Error fetching warehouse', whError);
     throw whError;
   }
@@ -458,7 +452,6 @@ export async function getWarehouseAuditForReview(
     .maybeSingle();
 
   if (openErr) {
-    // eslint-disable-next-line no-console
     console.error('Error fetching open inventory_count', openErr);
     throw openErr;
   }
@@ -475,7 +468,6 @@ export async function getWarehouseAuditForReview(
       .maybeSingle();
 
     if (lastErr) {
-      // eslint-disable-next-line no-console
       console.error('Error fetching last inventory_count', lastErr);
       throw lastErr;
     }
@@ -515,7 +507,6 @@ export async function getWarehouseAuditForReview(
     .order('id', { ascending: true });
 
   if (linesErr) {
-    // eslint-disable-next-line no-console
     console.error('Error fetching inventory_count_lines', linesErr);
     throw linesErr;
   }
@@ -538,7 +529,6 @@ export async function getWarehouseAuditForReview(
       .in('uom_id', uomIds);
 
     if (descErr) {
-      // eslint-disable-next-line no-console
       console.error(
         'Error fetching vw_warehouse_stock for audit descriptions',
         descErr
@@ -620,7 +610,6 @@ export async function saveWarehouseAuditChanges(params: {
     .eq('id', inventoryCountId);
 
   if (countErr) {
-    // eslint-disable-next-line no-console
     console.error('Error updating inventory_counts', countErr);
     throw countErr;
   }
@@ -645,7 +634,6 @@ export async function saveWarehouseAuditChanges(params: {
 
   const failed = results.find((r) => r.error);
   if (failed && failed.error) {
-    // eslint-disable-next-line no-console
     console.error('Error updating inventory_count_lines', failed.error);
     throw failed.error;
   }
