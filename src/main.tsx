@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { APP_ROUTES, PUBLIC_ROUTES } from './components/Routes/appRoutes';
-// import RequireRole from './components/Routes/RequireRole';
 import RequirePerm from './components/Routes/RequirePerm';
 import ProtectedRoute from './components/Routes/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -12,8 +11,9 @@ import { UserProvider } from './context/UserContext';
 import { AssigneeProvider } from './context/AssigneeContext';
 import { PermissionsProvider } from './rbac/PermissionsContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { setupInventoryOfflineSync } from './offline/inventoryOfflineStore';
 
-// Vacía todos los logs en desarrollo
+// Vacía todos los logs en producción
 if (process.env.NODE_ENV !== 'development') {
   console.log = function () {};
   console.warn = function () {};
@@ -23,8 +23,35 @@ if (process.env.NODE_ENV !== 'development') {
 
 console.log('🚀 Aplicación iniciada en modo:', process.env.NODE_ENV);
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+// Opcional: helper para generar deviceId
+function ensureDeviceId() {
+  if (typeof window === 'undefined') return;
+
+  const KEY = 'mlm:deviceId';
+  const existing = window.localStorage.getItem(KEY);
+  if (existing) return;
+
+  let newId: string;
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    newId = crypto.randomUUID();
+  } else {
+    newId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  window.localStorage.setItem(KEY, newId);
+}
+
+// Componente raíz para poder usar hooks
+function AppRoot() {
+  useEffect(() => {
+    // 1) Aseguramos un deviceId para trazabilidad offline
+    ensureDeviceId();
+
+    // 2) Enganchamos la sincronización offline de inventario
+    setupInventoryOfflineSync();
+  }, []);
+
+  return (
     <AuthProvider>
       <UserProvider>
         <AssigneeProvider>
@@ -48,7 +75,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                     <Route key={r.path} path={r.path} element={r.element} />
                   ))}
 
-                  {/* Protegidas dinamicamente */}
+                  {/* Protegidas dinámicamente */}
                   {APP_ROUTES.map((r) => (
                     <Route
                       key={r.path}
@@ -72,5 +99,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </AssigneeProvider>
       </UserProvider>
     </AuthProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AppRoot />
   </React.StrictMode>
 );

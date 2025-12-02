@@ -22,6 +22,7 @@ import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehou
 import InventoryAuditWarehouseHistoryPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
 import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
 import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
+import InventoryOfflineStatusPage from '../../offline/InventoryOfflineStatusPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -442,20 +443,16 @@ export const APP_ROUTES: AppRoute[] = [
     showInSidebar: false,
   },
 
-  // Ajustes de inventario por almacén
-  // {
-  //   path: '/osalm/almacenes/:warehouseId/adjustments',
-  //   element: <InventoryWarehousePage />,
-  //   allowPerms: [
-  //     'inventory_adjustments:read',
-  //     'inventory_adjustments:create',
-  //     'inventory_adjustments:export',
-  //     'inventory_adjustments:approve',
-  //     'inventory_adjustments:full_access',
-  //   ],
-  //   name: 'Ajustes de Inventario',
-  //   showInSidebar: false,
-  // },
+  // Pantalla de conteo offline
+  {
+    path: '/osalm/inventory/offline-status',
+    element: <InventoryOfflineStatusPage />,
+    allowPerms: [
+      'inventory_operations:read',
+      'inventory_operations:full_access',
+    ],
+    showInSidebar: false,
+  },
 ];
 
 // Rutas públicas / especiales que no usan RequireRole
