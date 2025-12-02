@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/inventoryCountsService.ts
 import { supabase } from '../lib/supabaseClient';
-import type { InventoryCount } from '../types/inventory';
+import type { InventoryCount, PendingReasonCode } from '../types/inventory';
 
 // =======================
 // Tipos base existentes
@@ -46,6 +46,7 @@ export type AuditItem = {
   countedQty: number;
   status: ItemStatus;
   comment?: string;
+  pendingReasonCode?: PendingReasonCode;
 };
 
 type DbInventoryCountStatus = 'open' | 'closed' | 'cancelled';
@@ -171,6 +172,7 @@ export type RegisterInventoryOperationInput = {
   status: InventoryStatus; // 'counted' | 'pending' | 'recount'
   auditorEmail?: string;
   statusComment?: string;
+  pendingReasonCode?: PendingReasonCode;
 };
 
 /**
@@ -190,7 +192,8 @@ export async function registerInventoryOperation(
     isWeighted,
     status,
     auditorEmail,
-    statusComment, // 👈 NUEVO
+    statusComment,
+    pendingReasonCode, // 👈 NUEVO
   } = input;
 
   // 1) Garantizar jornada abierta
@@ -228,12 +231,15 @@ export async function registerInventoryOperation(
 
   const isPending = status === 'pending';
 
-  // 🆕 Comentario final que se guardará cuando está pendiente
   const finalPendingComment = isPending
     ? statusComment?.trim() ||
       `Marcado como pendiente desde la app web${
         auditorEmail ? ` por ${auditorEmail}` : ''
       }`
+    : null;
+
+  const dbPendingReasonCode: PendingReasonCode | null = isPending
+    ? pendingReasonCode ?? null
     : null;
 
   const { error: opError } = await supabase
@@ -248,7 +254,8 @@ export async function registerInventoryOperation(
       gross_qty: null,
       net_qty: netQty,
       is_pending: isPending,
-      pending_comment: finalPendingComment, // 👈 usa el comentario del form
+      pending_comment: finalPendingComment,
+      pending_reason_code: dbPendingReasonCode, // 👈 NUEVO
       device_id: 'web',
     });
 
@@ -299,7 +306,9 @@ export async function registerInventoryOperation(
         counted_qty: newQty,
         last_counted_at: new Date().toISOString(),
         status: dbStatus,
-        status_comment: dbStatus === 'pending' ? finalPendingComment : null, // 👈 aquí también
+        status_comment: dbStatus === 'pending' ? finalPendingComment : null,
+        pending_reason_code:
+          dbStatus === 'pending' ? dbPendingReasonCode : null, // 👈 NUEVO
       },
       {
         onConflict: 'inventory_count_id,item_id,uom_id',
@@ -526,7 +535,8 @@ export async function getWarehouseAuditForReview(
         uom_id,
         counted_qty,
         status,
-        status_comment
+        status_comment,
+        pending_reason_code
       `
     )
     .eq('inventory_count_id', inventoryCount.id)
@@ -592,6 +602,8 @@ export async function getWarehouseAuditForReview(
           (l.status ?? 'counted') as 'pending' | 'counted' | 'ignored'
         ),
         comment: (l.status_comment as string | null) ?? undefined,
+        pendingReasonCode:
+          (l.pending_reason_code as PendingReasonCode | null) ?? undefined,
       };
     }) ?? [];
 
@@ -643,16 +655,19 @@ export async function saveWarehouseAuditChanges(params: {
 
   if (items.length === 0) return;
 
-  // 2) Actualizar SOLO estado y comentario de cada línea (NO tocamos counted_qty)
-  const updates = items.map((it) =>
-    supabase
+  // 2) Actualizar SOLO estado, motivo y comentario de cada línea (NO tocamos counted_qty)
+  const updates = items.map((it) => {
+    const isPending = it.status === 'pending';
+
+    return supabase
       .from('inventory_count_lines')
       .update({
         status: mapUiItemStatusToDb(it.status),
-        status_comment: it.comment ?? null,
+        status_comment: isPending ? it.comment ?? null : null,
+        pending_reason_code: isPending ? it.pendingReasonCode ?? null : null,
       })
-      .eq('id', it.id)
-  );
+      .eq('id', it.id);
+  });
 
   const results = await Promise.all(updates);
 

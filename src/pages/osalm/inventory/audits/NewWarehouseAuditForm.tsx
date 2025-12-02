@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUser } from '../../../../context/UserContext';
 
 export type InventoryStatus = 'counted' | 'pending' | 'recount';
+export type PendingReasonCode = 'UOM_DIFFERENT' | 'REVIEW';
 
 export type SelectedProductForAudit = {
   id: string;
@@ -17,19 +18,20 @@ export type NewWarehouseAuditPayload = {
   time: string;
 
   // Producto
-  productSearch: string; // lo puedes seguir usando cuando entras con el botón +
+  productSearch: string;
   productId?: string;
   productCode?: string;
   productName?: string;
   uomCode?: string;
-
   isWeighted: 'N' | 'Y';
-  quantity: number;
-  status: InventoryStatus;
-  auditorEmail: string; // aquí mandamos el usuario conectado (mail) y mostramos el nombre en UI
 
-  // NUEVO: comentario cuando queda pendiente
+  quantity: number;
+
+  // 👇 Se envía “por detrás”
+  status: InventoryStatus; // counted por defecto, pending si hay motivo
+  auditorEmail: string;
   statusComment?: string;
+  pendingReasonCode?: PendingReasonCode;
 };
 
 type NewWarehouseAuditFormProps = {
@@ -47,7 +49,6 @@ export function NewWarehouseAuditForm({
 }: NewWarehouseAuditFormProps) {
   const { profile } = useUser();
 
-  // Fecha / hora (solo lectura para el usuario)
   const [date] = useState(() => new Date().toISOString().slice(0, 10));
   const [time] = useState(() => {
     const now = new Date();
@@ -65,40 +66,63 @@ export function NewWarehouseAuditForm({
     initialProduct?.isWeighted ?? 'N'
   );
 
-  // Cantidad: editable + botones, 0–99999
+  // Cantidad
   const [quantity, setQuantity] = useState<number>(0);
 
-  const [status, setStatus] = useState<InventoryStatus>('counted');
+  // 🔁 Ya NO se muestra el status en la UI.
+  // Se calcula en el submit: counted si no hay motivo, pending si hay motivo.
+  const [pendingReasonCode, setPendingReasonCode] = useState<
+    PendingReasonCode | ''
+  >('');
 
-  // NUEVO: comentario cuando el status es pendiente
   const [statusComment, setStatusComment] = useState<string>('');
 
-  // Auditor: se llena automáticamente con el usuario conectado
+  // Auditor
   const [auditorEmail, setAuditorEmail] = useState('');
-
   useEffect(() => {
     if (profile?.email && auditorEmail === '') {
       setAuditorEmail(profile.email);
     }
   }, [profile?.email, auditorEmail]);
 
-  // NUEVO: si el usuario cambia el estado y deja de ser "pending", limpiamos el comentario
+  // Si quitan el motivo, limpiamos el comentario porque ya no es pendiente
   useEffect(() => {
-    if (status !== 'pending' && statusComment !== '') {
+    if (pendingReasonCode === '' && statusComment !== '') {
       setStatusComment('');
     }
-  }, [status, statusComment]);
+  }, [pendingReasonCode, statusComment]);
+
+  const clampQuantity = (value: number): number => {
+    if (Number.isNaN(value)) return 0;
+    if (value < 0) return 0;
+    if (value > 99999) return 99999;
+    return value;
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (raw === '') {
+      setQuantity(0);
+      return;
+    }
+    const parsed = Number(raw);
+    setQuantity(clampQuantity(parsed));
+  };
+
+  const increment = () => setQuantity((q) => clampQuantity(q + 1));
+  const decrement = () => setQuantity((q) => clampQuantity(q - 1));
+
+  const auditorDisplay =
+    profile?.name ??
+    (profile && 'name' in profile ? profile.name : undefined) ??
+    auditorEmail;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validación sencilla: si está pendiente, debe tener comentario
-    if (status === 'pending' && !statusComment.trim()) {
-      window.alert(
-        'Por favor, indique el motivo por el cual este artículo queda pendiente.'
-      );
-      return;
-    }
+    const isPending = pendingReasonCode !== '';
+    const derivedStatus: InventoryStatus = isPending ? 'pending' : 'counted';
+    const trimmedComment = statusComment.trim();
 
     const payload: NewWarehouseAuditPayload = {
       warehouseId: warehouse.id,
@@ -111,83 +135,22 @@ export function NewWarehouseAuditForm({
       uomCode: initialProduct?.uomCode,
       isWeighted,
       quantity,
-      status,
+      status: derivedStatus, // 👈 aquí va counted o pending según el motivo
       auditorEmail,
-      statusComment: status === 'pending' ? statusComment.trim() : undefined,
+      pendingReasonCode: isPending ? pendingReasonCode : undefined,
+      statusComment:
+        isPending && trimmedComment !== '' ? trimmedComment : undefined,
     };
 
     onSubmit?.(payload);
   };
-
-  const clampQuantity = (value: number): number => {
-    if (Number.isNaN(value)) return 0;
-    if (value < 0) return 0;
-    if (value > 99999) return 99999;
-    return value;
-  };
-
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-
-    if (raw === '') {
-      setQuantity(0);
-      return;
-    }
-
-    const parsed = Number(raw);
-    const clamped = clampQuantity(parsed);
-    setQuantity(clamped);
-  };
-
-  const increment = () => setQuantity((q) => clampQuantity(q + 1));
-  const decrement = () => setQuantity((q) => clampQuantity(q - 1));
-
-  const auditorDisplay =
-    profile?.name ??
-    // por si tu modelo de perfil usa otros nombres
-    (profile && 'name' in profile ? profile.name : undefined) ??
-    auditorEmail;
 
   return (
     <form
       onSubmit={handleSubmit}
       className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-28"
     >
-      {/* Fecha / Hora (solo lectura) */}
-      <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          Fecha / Hora
-        </h2>
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              Fecha
-            </label>
-            <input
-              type="date"
-              value={date}
-              disabled
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-gray-50 text-gray-700 cursor-not-allowed"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              Hora
-            </label>
-            <input
-              type="time"
-              value={time}
-              disabled
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-gray-50 text-gray-700 cursor-not-allowed"
-            />
-          </div>
-        </div>
-        <p className="mt-2 text-[11px] text-gray-400">
-          La fecha y la hora se toman automáticamente al momento del conteo.
-        </p>
-      </div>
-
-      {/* Almacén (solo texto) */}
+      {/* Almacén */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Almacén *</h2>
         <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900">
@@ -326,86 +289,95 @@ export function NewWarehouseAuditForm({
         </p>
       </div>
 
-      {/* Estado del Inventario */}
+      {/* Estado del Inventario – solo motivos tipo “bolitas” */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">
           Estado del Inventario
         </h2>
-        <div className="grid grid-cols-3 gap-3">
+        <p className="text-[11px] text-gray-500 mb-3">
+          Si no seleccionas ningún motivo, el artículo se registrará como{' '}
+          <span className="font-semibold">CONTADO</span>. Si seleccionas un
+          motivo, se marcará automáticamente como{' '}
+          <span className="font-semibold">PENDIENTE</span>.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {/* Opción 1 */}
           <button
             type="button"
-            onClick={() => setStatus('counted')}
-            className={`h-11 rounded-2xl text-xs sm:text-sm font-semibold transition
+            onClick={() =>
+              setPendingReasonCode((current) =>
+                current === 'UOM_DIFFERENT' ? '' : 'UOM_DIFFERENT'
+              )
+            }
+            className={`flex-1 inline-flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
               ${
-                status === 'counted'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
+                pendingReasonCode === 'UOM_DIFFERENT'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700'
               }`}
           >
-            Contado
+            <span
+              className={`h-3 w-3 rounded-full border flex-shrink-0
+                ${
+                  pendingReasonCode === 'UOM_DIFFERENT'
+                    ? 'border-blue-600 bg-blue-600'
+                    : 'border-gray-400 bg-white'
+                }`}
+            />
+            <span className="font-semibold">
+              Unidad de medida diferente / revisar configuración
+            </span>
           </button>
+
+          {/* Opción 2 */}
           <button
             type="button"
-            onClick={() => setStatus('pending')}
-            className={`h-11 rounded-2xl text-xs sm:text-sm font-semibold transition
+            onClick={() =>
+              setPendingReasonCode((current) =>
+                current === 'REVIEW' ? '' : 'REVIEW'
+              )
+            }
+            className={`flex-1 inline-flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
               ${
-                status === 'pending'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
+                pendingReasonCode === 'REVIEW'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700'
               }`}
           >
-            Pendiente
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatus('recount')}
-            className={`h-11 rounded-2xl text-xs sm:text-sm font-semibold transition
-              ${
-                status === 'recount'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-          >
-            Reconteo
+            <span
+              className={`h-3 w-3 rounded-full border flex-shrink-0
+                ${
+                  pendingReasonCode === 'REVIEW'
+                    ? 'border-blue-600 bg-blue-600'
+                    : 'border-gray-400 bg-white'
+                }`}
+            />
+            <span className="font-semibold">
+              Revisión posterior (duda / incidencia)
+            </span>
           </button>
         </div>
 
-        {/* NUEVO: campo comentario cuando el estado es pendiente */}
-        {status === 'pending' && (
-          <div className="mt-4">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              Motivo de pendiente *
-            </label>
-            <textarea
-              value={statusComment}
-              onChange={(e) => setStatusComment(e.target.value)}
-              rows={3}
-              placeholder="Ej.: Falta validar con SAP, diferencia visual en estantería, producto en revisión, etc."
-              className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
-            />
-            <p className="mt-1 text-[11px] text-gray-400">
-              Explica brevemente por qué este artículo queda en estado
-              <span className="font-semibold"> pendiente</span>.
-            </p>
-          </div>
-        )}
+        <div className="mt-4">
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            Comentario adicional (opcional)
+          </label>
+          <textarea
+            value={statusComment}
+            onChange={(e) => setStatusComment(e.target.value)}
+            rows={3}
+            placeholder="Ej.: Falta validar con SAP, producto en otra ubicación, etc."
+            className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+            disabled={pendingReasonCode === ''}
+          />
+          <p className="mt-1 text-[11px] text-gray-400">
+            Solo aplica si el artículo queda pendiente. Puedes dejarlo vacío.
+          </p>
+        </div>
       </div>
 
-      {/* Foto / Imagen */}
-      <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          Foto / Imagen
-        </h2>
-        <button
-          type="button"
-          className="w-full border-2 border-dashed border-gray-300 rounded-2xl py-8 flex flex-col items-center justify-center text-gray-400 text-sm"
-        >
-          <span className="text-3xl mb-2">📷</span>
-          <span>Tomar foto o seleccionar imagen</span>
-        </button>
-      </div>
-
-      {/* Auditor (auto desde perfil) */}
+      {/* Auditor */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Auditor *</h2>
         <div className="w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm sm:text-base bg-gray-50 text-gray-900">
@@ -416,7 +388,7 @@ export function NewWarehouseAuditForm({
         </p>
       </div>
 
-      {/* BOTONES INFERIORES */}
+      {/* Botones inferiores */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 lg:px-10 py-3 flex gap-3">
         <button
           type="button"

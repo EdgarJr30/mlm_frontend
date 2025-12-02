@@ -1,4 +1,3 @@
-// src/services/inventoryService.ts
 import { supabase } from '../lib/supabaseClient';
 import type {
   Uom,
@@ -345,6 +344,7 @@ export async function upsertInventoryCountLine(
           counted_qty: input.counted_qty ?? null,
           status: input.status ?? 'counted',
           status_comment: input.status_comment ?? null,
+          pending_reason_code: input.pendingReasonCode ?? null,
           last_counted_at: new Date().toISOString(),
         },
       ],
@@ -384,6 +384,7 @@ export async function recordInventoryOperation(
     net_qty,
     is_pending = false,
     pending_comment,
+    pendingReasonCode,
   } = input;
 
   const { data, error } = await supabase
@@ -402,6 +403,7 @@ export async function recordInventoryOperation(
         net_qty: net_qty ?? null,
         is_pending,
         pending_comment: pending_comment ?? null,
+        pending_reason_code: pendingReasonCode ?? null,
       },
     ])
     .select('*')

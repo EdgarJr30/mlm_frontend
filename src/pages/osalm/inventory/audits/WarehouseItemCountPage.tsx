@@ -168,6 +168,7 @@ export default function WarehouseItemCountPage() {
         status: payload.status,
         auditorEmail: payload.auditorEmail,
         statusComment: payload.statusComment,
+        pendingReasonCode: payload.pendingReasonCode,
       });
 
       navigate(-1);

@@ -65,6 +65,7 @@ export interface Basket {
 // ===== Jornadas de conteo =====
 
 export type InventoryCountStatus = 'open' | 'closed' | 'cancelled';
+export type PendingReasonCode = 'UOM_DIFFERENT' | 'REVIEW';
 
 export interface InventoryCount {
   id: number;
@@ -186,6 +187,7 @@ export type InventoryCountLineUpsertInput = {
   counted_qty?: number | null;
   status?: InventoryLineStatus;
   status_comment?: string | null;
+  pendingReasonCode?: PendingReasonCode;
 };
 
 export type InventoryOperationInsert = {
@@ -201,6 +203,7 @@ export type InventoryOperationInsert = {
   net_qty?: number | null;
   is_pending?: boolean;
   pending_comment?: string | null;
+  pendingReasonCode?: PendingReasonCode;
 };
 
 export type InventoryAdjustmentInsert = {

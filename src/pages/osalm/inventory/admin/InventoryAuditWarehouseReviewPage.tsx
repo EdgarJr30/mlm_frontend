@@ -1,5 +1,3 @@
-// src/pages/osalm/conteos_inventario/auditoria/WarehouseAuditReviewPage.tsx
-
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
@@ -12,12 +10,13 @@ import {
   type AuditItem,
   type WarehouseInfo,
 } from '../../../../services/inventoryCountsService';
+import type { PendingReasonCode } from '../../../../types/inventory';
 
 type FilterTab = 'all' | ItemStatus;
 
 export default function InventoryWarehouseAuditReviewPage() {
   const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>(); // aquí recibimos el code (OC-QUIM)
+  const { warehouseId } = useParams<{ warehouseId: string }>();
 
   // ✅ Solo auditores ven esta pantalla
   const canManageAudit = useCan([
@@ -287,6 +286,9 @@ export default function InventoryWarehouseAuditReviewPage() {
                     <div className="flex-1">Artículo</div>
                     <div className="w-20 sm:w-24 text-right">Contado</div>
                     <div className="w-24 sm:w-28 text-center">Estado</div>
+                    <div className="hidden sm:block w-40 text-center">
+                      Motivo
+                    </div>
                     <div className="hidden sm:block w-56">Comentario</div>
                   </div>
 
@@ -503,6 +505,21 @@ function AuditItemRow(props: {
     recount: 'bg-blue-50 text-blue-700 border-blue-200',
   };
 
+  const pendingReasonLabel: Record<PendingReasonCode, string> = {
+    UOM_DIFFERENT: 'UoM diferente / revisar',
+    REVIEW: 'Revisión posterior',
+  };
+
+  const motiveInfo = item.pendingReasonCode
+    ? {
+        label: pendingReasonLabel[item.pendingReasonCode],
+        toneClasses:
+          item.status === 'pending'
+            ? 'bg-amber-50 text-amber-700 border-amber-200'
+            : 'bg-gray-50 text-gray-500 border-gray-200',
+      }
+    : null;
+
   return (
     <div className="px-4 sm:px-6 py-3 text-xs sm:text-sm flex flex-col gap-3 sm:flex-row sm:items-center">
       {/* Info principal */}
@@ -513,12 +530,20 @@ function AuditItemRow(props: {
           <p className="text-[11px] sm:text-xs text-gray-500">
             UoM: {item.uom}
           </p>
+
+          {/* En móviles mostramos el motivo debajo del nombre */}
+          {motiveInfo && (
+            <div className="mt-1 inline-flex sm:hidden items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] text-gray-600 bg-gray-50">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" />
+              <span>{motiveInfo.label}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Cantidad & estado */}
+      {/* Cantidad, estado, motivo, comentario */}
       <div className="flex flex-wrap gap-3 sm:gap-4 items-center justify-between sm:justify-end flex-1">
-        {/* Solo cantidad contada */}
+        {/* Cantidad contada */}
         <div className="text-right">
           <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
             Contado
@@ -544,6 +569,23 @@ function AuditItemRow(props: {
             <option value="counted">{statusLabel.counted}</option>
             <option value="recount">{statusLabel.recount}</option>
           </select>
+        </div>
+
+        {/* Motivo pendiente (solo en desktop en su propia columna) */}
+        <div className="hidden sm:block w-40 text-center">
+          {motiveInfo ? (
+            <div
+              className={[
+                'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px]',
+                motiveInfo.toneClasses,
+              ].join(' ')}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-current" />
+              <span className="font-medium">{motiveInfo.label}</span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-gray-400">—</span>
+          )}
         </div>
 
         {/* Comentario */}
