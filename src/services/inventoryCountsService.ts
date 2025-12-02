@@ -650,3 +650,135 @@ export async function saveWarehouseAuditChanges(params: {
     throw failed.error;
   }
 }
+
+export async function getInventoryAuditById(inventoryCountId: number): Promise<{
+  warehouse: WarehouseInfo | null;
+  auditStatus: AuditStatus;
+  items: AuditItem[];
+  inventoryCountId: number | null;
+}> {
+  // 1) Traer la jornada + almacén
+  const { data: count, error: countErr } = await supabase
+    .from('inventory_counts')
+    .select(
+      `
+        id,
+        status,
+        warehouse_id,
+        warehouses:warehouse_id (
+          id,
+          code,
+          name
+        )
+      `
+    )
+    .eq('id', inventoryCountId)
+    .maybeSingle();
+
+  if (countErr) {
+    console.error('Error fetching inventory_count by id', countErr);
+    throw countErr;
+  }
+
+  if (!count) {
+    return {
+      warehouse: null,
+      auditStatus: 'pending',
+      items: [],
+      inventoryCountId: null,
+    };
+  }
+
+  const wh = (count as any).warehouses as {
+    id: number;
+    code: string;
+    name: string;
+  } | null;
+
+  // 2) Traer líneas de esa jornada (igual que en getWarehouseAuditForReview)
+  const { data: lines, error: linesErr } = await supabase
+    .from('inventory_count_lines')
+    .select(
+      `
+        id,
+        item_id,
+        uom_id,
+        counted_qty,
+        status,
+        status_comment,
+        pending_reason_code
+      `
+    )
+    .eq('inventory_count_id', count.id)
+    .order('id', { ascending: true });
+
+  if (linesErr) {
+    console.error('Error fetching inventory_count_lines by id', linesErr);
+    throw linesErr;
+  }
+
+  const itemIds = (lines ?? []).map((l) => l.item_id as number);
+  const uomIds = (lines ?? []).map((l) => l.uom_id as number);
+
+  let descByKey = new Map<
+    string,
+    { sku: string; name: string; uomCode: string }
+  >();
+
+  if (itemIds.length > 0) {
+    const { data: descRows, error: descErr } = await supabase
+      .from('vw_warehouse_stock')
+      .select('item_id, uom_id, item_sku, item_name, uom_code')
+      .eq('warehouse_id', wh?.id)
+      .in('item_id', itemIds)
+      .in('uom_id', uomIds);
+
+    if (descErr) {
+      console.error(
+        'Error fetching vw_warehouse_stock for audit by id',
+        descErr
+      );
+      throw descErr;
+    }
+
+    descByKey = new Map(
+      (descRows ?? []).map((r) => [
+        `${r.item_id}-${r.uom_id}`,
+        {
+          sku: (r.item_sku as string) ?? '',
+          name: (r.item_name as string) ?? '',
+          uomCode: (r.uom_code as string) ?? '',
+        },
+      ])
+    );
+  }
+
+  const items: AuditItem[] =
+    lines?.map((l) => {
+      const key = `${l.item_id}-${l.uom_id}`;
+      const desc = descByKey.get(key);
+
+      return {
+        id: l.id as number,
+        sku: desc?.sku ?? '',
+        name: desc?.name ?? '',
+        uom: desc?.uomCode ?? '',
+        countedQty: Number(l.counted_qty ?? 0),
+        status: mapDbItemStatusToUi(
+          (l.status ?? 'counted') as 'pending' | 'counted' | 'ignored'
+        ),
+        comment: (l.status_comment as string | null) ?? undefined,
+        pendingReasonCode:
+          (l.pending_reason_code as PendingReasonCode | null) ?? undefined,
+      };
+    }) ?? [];
+
+  return {
+    warehouse: wh ? { id: wh.id, code: wh.code, name: wh.name } : null,
+    auditStatus: mapDbStatusToUi(
+      (count.status ?? 'open') as DbInventoryCountStatus
+    ),
+    items,
+    inventoryCountId: count.id as number,
+  };
+}

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
 import {
-  getWarehouseAuditForReview,
+  getInventoryAuditById,
+  // getWarehouseAuditForReview,
   saveWarehouseAuditChanges,
   type AuditStatus,
   type ItemStatus,
@@ -16,7 +17,7 @@ type FilterTab = 'all' | ItemStatus;
 
 export default function InventoryWarehouseAuditReviewPage() {
   const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>();
+  const { inventoryCountId } = useParams<{ inventoryCountId: string }>();
 
   // ✅ Solo auditores ven esta pantalla
   const canManageAudit = useCan([
@@ -27,7 +28,10 @@ export default function InventoryWarehouseAuditReviewPage() {
   const [warehouse, setWarehouse] = useState<WarehouseInfo | null>(null);
   const [auditStatus, setAuditStatus] = useState<AuditStatus>('in_progress');
   const [items, setItems] = useState<AuditItem[]>([]);
-  const [inventoryCountId, setInventoryCountId] = useState<number | null>(null);
+  const [inventoryCountIdState, setInventoryCountIdState] = useState<
+    number | null
+  >(null);
+  const [isClosedFromDb, setIsClosedFromDb] = useState(false);
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [loading, setLoading] = useState(true);
@@ -43,20 +47,32 @@ export default function InventoryWarehouseAuditReviewPage() {
     let isMounted = true;
 
     async function load() {
-      if (!warehouseId) return;
+      if (!inventoryCountId) {
+        setError('No se encontró el id de la jornada en la URL.');
+        setLoading(false);
+        return;
+      }
+
+      const numericId = Number(inventoryCountId);
+      if (Number.isNaN(numericId)) {
+        setError('El id de la jornada no es válido.');
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
       setError(null);
 
       try {
-        const data = await getWarehouseAuditForReview(warehouseId);
+        const data = await getInventoryAuditById(numericId);
 
         if (!isMounted) return;
 
         setWarehouse(data.warehouse);
         setAuditStatus(data.auditStatus);
         setItems(data.items);
-        setInventoryCountId(data.inventoryCountId);
+        setInventoryCountIdState(data.inventoryCountId);
+        setIsClosedFromDb(data.auditStatus === 'completed');
       } catch (err: unknown) {
         if (!isMounted) return;
         if (err instanceof Error) {
@@ -74,7 +90,7 @@ export default function InventoryWarehouseAuditReviewPage() {
     return () => {
       isMounted = false;
     };
-  }, [canManageAudit, warehouseId]);
+  }, [canManageAudit, inventoryCountId]);
 
   const filteredItems = useMemo(() => {
     if (activeFilter === 'all') return items;
@@ -91,6 +107,8 @@ export default function InventoryWarehouseAuditReviewPage() {
     [items]
   );
 
+  const isReadOnly = isClosedFromDb;
+
   const handleChangeItemStatus = (id: number, status: ItemStatus) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
@@ -104,8 +122,9 @@ export default function InventoryWarehouseAuditReviewPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!inventoryCountId) {
-      // eslint-disable-next-line no-alert
+    if (isReadOnly) return;
+
+    if (!inventoryCountIdState) {
       alert(
         'No hay una jornada de inventario asociada a este almacén. No se pueden guardar cambios.'
       );
@@ -116,21 +135,18 @@ export default function InventoryWarehouseAuditReviewPage() {
     setError(null);
     try {
       await saveWarehouseAuditChanges({
-        inventoryCountId,
+        inventoryCountId: inventoryCountIdState,
         auditStatus,
         items,
       });
 
-      // eslint-disable-next-line no-alert
       alert('Cambios guardados correctamente.');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
-        // eslint-disable-next-line no-alert
         alert(`Error al guardar cambios: ${err.message}`);
       } else {
         setError('Error al guardar cambios');
-        // eslint-disable-next-line no-alert
         alert('Error al guardar cambios');
       }
     } finally {
@@ -190,6 +206,7 @@ export default function InventoryWarehouseAuditReviewPage() {
               <AuditStatusSelector
                 status={auditStatus}
                 onChange={setAuditStatus}
+                readOnly={isReadOnly}
               />
 
               {/* Volver */}
@@ -220,14 +237,14 @@ export default function InventoryWarehouseAuditReviewPage() {
               <p className="text-sm text-red-500 mb-4">{error}</p>
             )}
 
-            {!loading && !error && inventoryCountId == null && (
+            {!loading && !error && inventoryCountIdState == null && (
               <p className="text-sm text-gray-500 mb-4">
                 No existe ninguna jornada de inventario registrada para este
                 almacén.
               </p>
             )}
 
-            {!loading && !error && inventoryCountId != null && (
+            {!loading && !error && inventoryCountIdState != null && (
               <>
                 {/* Resumen y filtros */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -305,6 +322,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                         item={item}
                         onChangeStatus={handleChangeItemStatus}
                         onChangeComment={handleChangeItemComment}
+                        readOnly={isReadOnly}
                       />
                     ))}
                   </div>
@@ -330,10 +348,16 @@ export default function InventoryWarehouseAuditReviewPage() {
                     <button
                       type="button"
                       onClick={handleSaveChanges}
-                      disabled={saving}
+                      disabled={saving || isReadOnly}
                       className="px-5 py-2 rounded-full bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      {saving ? 'Guardando...' : 'Guardar cambios'}
+                      {isReadOnly
+                        ? 'Conteo cerrado'
+                        : saving
+                        ? 'Guardando...'
+                        : auditStatus === 'completed'
+                        ? 'Guardar y cerrar'
+                        : 'Guardar cambios'}
                     </button>
                   </div>
                 </div>
@@ -353,8 +377,9 @@ export default function InventoryWarehouseAuditReviewPage() {
 function AuditStatusSelector(props: {
   status: AuditStatus;
   onChange: (status: AuditStatus) => void;
+  readOnly?: boolean;
 }) {
-  const { status, onChange } = props;
+  const { status, onChange, readOnly } = props;
 
   const buttonBase =
     'px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold border transition flex items-center gap-1.5';
@@ -363,7 +388,7 @@ function AuditStatusSelector(props: {
     <div className="inline-flex rounded-full bg-blue-500/20 p-1 backdrop-blur text-xs sm:text-sm">
       <button
         type="button"
-        onClick={() => onChange('pending')}
+        onClick={() => !readOnly && onChange('pending')}
         className={[
           buttonBase,
           status === 'pending'
@@ -376,7 +401,7 @@ function AuditStatusSelector(props: {
       </button>
       <button
         type="button"
-        onClick={() => onChange('in_progress')}
+        onClick={() => !readOnly && onChange('in_progress')}
         className={[
           buttonBase,
           status === 'in_progress'
@@ -389,7 +414,7 @@ function AuditStatusSelector(props: {
       </button>
       <button
         type="button"
-        onClick={() => onChange('completed')}
+        onClick={() => !readOnly && onChange('completed')}
         className={[
           buttonBase,
           status === 'completed'
@@ -490,8 +515,9 @@ function AuditItemRow(props: {
   item: AuditItem;
   onChangeStatus: (id: number, status: ItemStatus) => void;
   onChangeComment: (id: number, comment: string) => void;
+  readOnly?: boolean;
 }) {
-  const { item, onChangeStatus, onChangeComment } = props;
+  const { item, onChangeStatus, onChangeComment, readOnly } = props;
 
   const statusLabel: Record<ItemStatus, string> = {
     pending: 'Pendiente',
@@ -560,6 +586,7 @@ function AuditItemRow(props: {
             onChange={(e) =>
               onChangeStatus(item.id, e.target.value as ItemStatus)
             }
+            disabled={readOnly}
             className={[
               'w-full rounded-full border px-2 py-1 text-xs sm:text-sm font-medium',
               statusClass[item.status],
@@ -593,6 +620,7 @@ function AuditItemRow(props: {
           <textarea
             value={item.comment ?? ''}
             onChange={(e) => onChangeComment(item.id, e.target.value)}
+            disabled={readOnly}
             rows={2}
             className="w-full rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 resize-none"
             placeholder="Comentario del auditor (opcional)…"

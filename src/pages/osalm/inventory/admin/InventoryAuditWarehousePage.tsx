@@ -204,9 +204,7 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
 
   const handleClick = () => {
     // Usamos warehouseCode como param de ruta (ej: "OC-QUIM")
-    navigate(
-      `/osalm/conteos_inventario/auditoria/almacenes/${session.warehouseCode}/revision`
-    );
+    navigate(`/osalm/conteos_inventario/auditoria/almacenes/${session.id}`);
   };
 
   const handleKeyDown: React.KeyboardEventHandler<HTMLElement> = (event) => {

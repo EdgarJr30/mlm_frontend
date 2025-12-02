@@ -414,7 +414,7 @@ export const APP_ROUTES: AppRoute[] = [
 
   // Ajustes de inventario por almacén
   {
-    path: '/osalm/conteos_inventario/auditoria/almacenes/:warehouseId/revision',
+    path: '/osalm/conteos_inventario/auditoria/almacenes/:inventoryCountId',
     element: <InventoryAuditWarehouseReviewPage />,
     allowPerms: [
       'inventory_adjustments:read',
