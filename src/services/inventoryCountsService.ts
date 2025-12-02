@@ -170,6 +170,7 @@ export type RegisterInventoryOperationInput = {
   isWeighted: boolean;
   status: InventoryStatus; // 'counted' | 'pending' | 'recount'
   auditorEmail?: string;
+  statusComment?: string;
 };
 
 /**
@@ -182,8 +183,15 @@ export type RegisterInventoryOperationInput = {
 export async function registerInventoryOperation(
   input: RegisterInventoryOperationInput
 ): Promise<void> {
-  const { warehouseId, itemId, quantity, isWeighted, status, auditorEmail } =
-    input;
+  const {
+    warehouseId,
+    itemId,
+    quantity,
+    isWeighted,
+    status,
+    auditorEmail,
+    statusComment, // 👈 NUEVO
+  } = input;
 
   // 1) Garantizar jornada abierta
   const { id: inventoryCountId } = await ensureOpenInventoryCountForWarehouse(
@@ -199,7 +207,6 @@ export async function registerInventoryOperation(
     .maybeSingle();
 
   if (whItemError || !whItem) {
-    // eslint-disable-next-line no-console
     console.error(
       '[registerInventoryOperation] warehouse_items error:',
       whItemError
@@ -211,7 +218,7 @@ export async function registerInventoryOperation(
 
   const uomId = whItem.uom_id as number;
   const currentStockQty = Number(whItem.quantity ?? 0);
-  const netQty = quantity; // en esta versión usamos net_qty = cantidad digitada
+  const netQty = quantity;
 
   // 3) Insertar operación cruda
   const clientOpId =
@@ -220,8 +227,11 @@ export async function registerInventoryOperation(
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const isPending = status === 'pending';
-  const pendingComment = isPending
-    ? `Marcado como pendiente desde la app web${
+
+  // 🆕 Comentario final que se guardará cuando está pendiente
+  const finalPendingComment = isPending
+    ? statusComment?.trim() ||
+      `Marcado como pendiente desde la app web${
         auditorEmail ? ` por ${auditorEmail}` : ''
       }`
     : null;
@@ -238,12 +248,11 @@ export async function registerInventoryOperation(
       gross_qty: null,
       net_qty: netQty,
       is_pending: isPending,
-      pending_comment: pendingComment,
-      device_id: 'web', // etiqueta simple para identificar origen
+      pending_comment: finalPendingComment, // 👈 usa el comentario del form
+      device_id: 'web',
     });
 
   if (opError) {
-    // eslint-disable-next-line no-console
     console.error('[registerInventoryOperation] op insert error:', opError);
     throw new Error(
       opError.message ??
@@ -261,7 +270,6 @@ export async function registerInventoryOperation(
     .maybeSingle();
 
   if (lineSelectError && lineSelectError.code !== 'PGRST116') {
-    // eslint-disable-next-line no-console
     console.error(
       '[registerInventoryOperation] line select error:',
       lineSelectError
@@ -273,32 +281,25 @@ export async function registerInventoryOperation(
   }
 
   const previousQty = existingLine?.counted_qty ?? 0;
-
-  // Si el conteo está marcado como "pending", no sumamos al total definitivo
-  const increment = isPending ? 0 : netQty;
+  const increment = netQty;
   const newQty = previousQty + increment;
 
-  // Mapeo de estado de UI -> estado permitido en DB
   const dbStatus: 'counted' | 'pending' | 'ignored' = isPending
     ? 'pending'
     : 'counted';
 
-  // 5) Upsert en inventory_count_lines (estado resumido por ítem/UoM)
+  // 5) Upsert en inventory_count_lines
   const { error: lineError } = await supabase
     .from('inventory_count_lines')
     .upsert(
       {
-        // 👇 OJO: ya NO mandamos "id"
         inventory_count_id: inventoryCountId,
         item_id: itemId,
         uom_id: uomId,
         counted_qty: newQty,
         last_counted_at: new Date().toISOString(),
         status: dbStatus,
-        status_comment:
-          dbStatus === 'pending'
-            ? 'Conteo marcado como pendiente desde app web'
-            : null,
+        status_comment: dbStatus === 'pending' ? finalPendingComment : null, // 👈 aquí también
       },
       {
         onConflict: 'inventory_count_id,item_id,uom_id',
@@ -306,7 +307,6 @@ export async function registerInventoryOperation(
     );
 
   if (lineError) {
-    // eslint-disable-next-line no-console
     console.error('[registerInventoryOperation] line upsert error:', lineError);
     throw new Error(
       lineError.message ??
@@ -314,8 +314,7 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 6) Actualizar la cantidad "visible" en warehouse_items
-  //    Esta es la que ve la pantalla de stock (vw_warehouse_stock → quantity).
+  // 6) Actualizar warehouse_items.quantity
   const newStockQty = currentStockQty + increment;
 
   const { error: whUpdateError } = await supabase
@@ -324,13 +323,10 @@ export async function registerInventoryOperation(
     .eq('id', whItem.id);
 
   if (whUpdateError) {
-    // Aquí solo logueamos para no romper el flujo de conteo
-    // eslint-disable-next-line no-console
     console.error(
       '[registerInventoryOperation] warehouse_items update error:',
       whUpdateError
     );
-    // Si prefieres ser estricto, puedes hacer throw aquí.
   }
 }
 

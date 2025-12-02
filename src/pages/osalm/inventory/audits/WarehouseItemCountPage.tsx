@@ -167,6 +167,7 @@ export default function WarehouseItemCountPage() {
         isWeighted: payload.isWeighted === 'Y',
         status: payload.status,
         auditorEmail: payload.auditorEmail,
+        statusComment: payload.statusComment,
       });
 
       navigate(-1);

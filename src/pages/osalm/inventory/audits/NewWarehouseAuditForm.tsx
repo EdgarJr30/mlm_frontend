@@ -27,6 +27,9 @@ export type NewWarehouseAuditPayload = {
   quantity: number;
   status: InventoryStatus;
   auditorEmail: string; // aquí mandamos el usuario conectado (mail) y mostramos el nombre en UI
+
+  // NUEVO: comentario cuando queda pendiente
+  statusComment?: string;
 };
 
 type NewWarehouseAuditFormProps = {
@@ -67,6 +70,9 @@ export function NewWarehouseAuditForm({
 
   const [status, setStatus] = useState<InventoryStatus>('counted');
 
+  // NUEVO: comentario cuando el status es pendiente
+  const [statusComment, setStatusComment] = useState<string>('');
+
   // Auditor: se llena automáticamente con el usuario conectado
   const [auditorEmail, setAuditorEmail] = useState('');
 
@@ -76,8 +82,23 @@ export function NewWarehouseAuditForm({
     }
   }, [profile?.email, auditorEmail]);
 
+  // NUEVO: si el usuario cambia el estado y deja de ser "pending", limpiamos el comentario
+  useEffect(() => {
+    if (status !== 'pending' && statusComment !== '') {
+      setStatusComment('');
+    }
+  }, [status, statusComment]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validación sencilla: si está pendiente, debe tener comentario
+    if (status === 'pending' && !statusComment.trim()) {
+      window.alert(
+        'Por favor, indique el motivo por el cual este artículo queda pendiente.'
+      );
+      return;
+    }
 
     const payload: NewWarehouseAuditPayload = {
       warehouseId: warehouse.id,
@@ -92,6 +113,7 @@ export function NewWarehouseAuditForm({
       quantity,
       status,
       auditorEmail,
+      statusComment: status === 'pending' ? statusComment.trim() : undefined,
     };
 
     onSubmit?.(payload);
@@ -118,7 +140,6 @@ export function NewWarehouseAuditForm({
   };
 
   const increment = () => setQuantity((q) => clampQuantity(q + 1));
-
   const decrement = () => setQuantity((q) => clampQuantity(q - 1));
 
   const auditorDisplay =
@@ -348,6 +369,26 @@ export function NewWarehouseAuditForm({
             Reconteo
           </button>
         </div>
+
+        {/* NUEVO: campo comentario cuando el estado es pendiente */}
+        {status === 'pending' && (
+          <div className="mt-4">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Motivo de pendiente *
+            </label>
+            <textarea
+              value={statusComment}
+              onChange={(e) => setStatusComment(e.target.value)}
+              rows={3}
+              placeholder="Ej.: Falta validar con SAP, diferencia visual en estantería, producto en revisión, etc."
+              className="w-full rounded-2xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+            />
+            <p className="mt-1 text-[11px] text-gray-400">
+              Explica brevemente por qué este artículo queda en estado
+              <span className="font-semibold"> pendiente</span>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Foto / Imagen */}

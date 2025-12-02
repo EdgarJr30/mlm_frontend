@@ -116,6 +116,7 @@ export default function NewWarehouseAuditPage() {
         isWeighted: payload.isWeighted === 'Y',
         status: payload.status,
         auditorEmail: payload.auditorEmail,
+        statusComment: payload.statusComment,
       });
 
       // Podrías navegar hacia atrás o mostrar un mensaje de éxito
