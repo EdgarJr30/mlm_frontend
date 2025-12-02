@@ -19,6 +19,8 @@ export default function InventoryCountsPage() {
     'inventory_adjustments:read',
   ]);
 
+  const canSeeOfflineStatus = useCan(['rbac:manage_permissions']);
+
   const [warehouses, setWarehouses] = useState<WarehouseCard[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,20 +97,36 @@ export default function InventoryCountsPage() {
               </p>
             </div>
 
-            {canSeeAuditAdmin && (
-              <button
-                type="button"
-                onClick={() =>
-                  navigate('/osalm/conteos_inventario/auditoria/almacenes')
-                }
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
-              >
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
-                  ⚙️
-                </span>
-                <span>Administración de auditoría</span>
-              </button>
-            )}
+            {/* Botones de acciones (solo admin / permisos altos) */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              {canSeeOfflineStatus && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/osalm/inventory/offline-status')}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                    📡
+                  </span>
+                  <span>Ver conteos offline</span>
+                </button>
+              )}
+
+              {canSeeAuditAdmin && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate('/osalm/conteos_inventario/auditoria/almacenes')
+                  }
+                  className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                    ⚙️
+                  </span>
+                  <span>Administración de auditoría</span>
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
