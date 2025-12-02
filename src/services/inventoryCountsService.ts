@@ -193,7 +193,7 @@ export async function registerInventoryOperation(
     status,
     auditorEmail,
     statusComment,
-    pendingReasonCode, // 👈 NUEVO
+    pendingReasonCode,
   } = input;
 
   // 1) Garantizar jornada abierta
@@ -255,7 +255,7 @@ export async function registerInventoryOperation(
       net_qty: netQty,
       is_pending: isPending,
       pending_comment: finalPendingComment,
-      pending_reason_code: dbPendingReasonCode, // 👈 NUEVO
+      pending_reason_code: dbPendingReasonCode,
       device_id: 'web',
     });
 
@@ -267,64 +267,34 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 4) Leer la línea existente (si hay) para acumular cantidad
-  const { data: existingLine, error: lineSelectError } = await supabase
-    .from('inventory_count_lines')
-    .select('id, counted_qty, status')
-    .eq('inventory_count_id', inventoryCountId)
-    .eq('item_id', itemId)
-    .eq('uom_id', uomId)
-    .maybeSingle();
-
-  if (lineSelectError && lineSelectError.code !== 'PGRST116') {
-    console.error(
-      '[registerInventoryOperation] line select error:',
-      lineSelectError
-    );
-    throw new Error(
-      lineSelectError.message ??
-        'No se pudo leer la línea de conteo para este artículo'
-    );
-  }
-
-  const previousQty = existingLine?.counted_qty ?? 0;
-  const increment = netQty;
-  const newQty = previousQty + increment;
-
+  // 4) NUEVA LÓGICA: insertar SIEMPRE una línea nueva en inventory_count_lines
   const dbStatus: 'counted' | 'pending' | 'ignored' = isPending
     ? 'pending'
     : 'counted';
 
-  // 5) Upsert en inventory_count_lines
   const { error: lineError } = await supabase
     .from('inventory_count_lines')
-    .upsert(
-      {
-        inventory_count_id: inventoryCountId,
-        item_id: itemId,
-        uom_id: uomId,
-        counted_qty: newQty,
-        last_counted_at: new Date().toISOString(),
-        status: dbStatus,
-        status_comment: dbStatus === 'pending' ? finalPendingComment : null,
-        pending_reason_code:
-          dbStatus === 'pending' ? dbPendingReasonCode : null, // 👈 NUEVO
-      },
-      {
-        onConflict: 'inventory_count_id,item_id,uom_id',
-      }
-    );
+    .insert({
+      inventory_count_id: inventoryCountId,
+      item_id: itemId,
+      uom_id: uomId,
+      counted_qty: netQty,
+      last_counted_at: new Date().toISOString(),
+      status: dbStatus,
+      status_comment: dbStatus === 'pending' ? finalPendingComment : null,
+      pending_reason_code: dbStatus === 'pending' ? dbPendingReasonCode : null,
+    });
 
   if (lineError) {
-    console.error('[registerInventoryOperation] line upsert error:', lineError);
+    console.error('[registerInventoryOperation] line insert error:', lineError);
     throw new Error(
       lineError.message ??
-        'No se pudo actualizar la línea de conteo para este artículo'
+        'No se pudo crear la línea de conteo para este artículo'
     );
   }
 
-  // 6) Actualizar warehouse_items.quantity
-  const newStockQty = currentStockQty + increment;
+  // 5) Actualizar warehouse_items.quantity (sigue igual)
+  const newStockQty = currentStockQty + netQty;
 
   const { error: whUpdateError } = await supabase
     .from('warehouse_items')
@@ -336,6 +306,8 @@ export async function registerInventoryOperation(
       '[registerInventoryOperation] warehouse_items update error:',
       whUpdateError
     );
+    // aquí podrías decidir si lanzar error o solo loguear;
+    // por ahora lo dejamos como log (como ya tenías).
   }
 }
 

@@ -335,23 +335,16 @@ export async function upsertInventoryCountLine(
 ): Promise<InventoryCountLine> {
   const { data, error } = await supabase
     .from('inventory_count_lines')
-    .upsert(
-      [
-        {
-          inventory_count_id: input.inventory_count_id,
-          item_id: input.item_id,
-          uom_id: input.uom_id,
-          counted_qty: input.counted_qty ?? null,
-          status: input.status ?? 'counted',
-          status_comment: input.status_comment ?? null,
-          pending_reason_code: input.pendingReasonCode ?? null,
-          last_counted_at: new Date().toISOString(),
-        },
-      ],
-      {
-        onConflict: 'inventory_count_id,item_id,uom_id',
-      }
-    )
+    .insert({
+      inventory_count_id: input.inventory_count_id,
+      item_id: input.item_id,
+      uom_id: input.uom_id,
+      counted_qty: input.counted_qty ?? null,
+      status: input.status ?? 'counted',
+      status_comment: input.status_comment ?? null,
+      pending_reason_code: input.pendingReasonCode ?? null,
+      last_counted_at: new Date().toISOString(),
+    })
     .select('*')
     .single();
 
