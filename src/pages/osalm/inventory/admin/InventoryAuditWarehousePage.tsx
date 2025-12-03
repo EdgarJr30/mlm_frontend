@@ -89,10 +89,11 @@ export default function InventoryAuditWarehousePage() {
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
-        <header className="bg-blue-600 text-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+        <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 flex items-center justify-between gap-4">
+            {/* Títulos */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
                 Inventario Auditoría
               </h1>
               <p className="text-sm sm:text-base mt-1 opacity-90">
@@ -100,11 +101,11 @@ export default function InventoryAuditWarehousePage() {
               </p>
             </div>
 
-            {/* Botón para volver a la vista general de conteos */}
+            {/* Botón Volver */}
             <button
               type="button"
               onClick={() => navigate('/osalm/conteos_inventario')}
-              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
             >
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                 ←
