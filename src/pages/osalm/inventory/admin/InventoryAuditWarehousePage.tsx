@@ -110,7 +110,7 @@ export default function InventoryAuditWarehousePage() {
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                 ←
               </span>
-              <span>Volver a conteos</span>
+              <span>Volver</span>
             </button>
           </div>
         </header>
