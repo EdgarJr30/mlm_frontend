@@ -248,17 +248,11 @@ export default function WarehouseItemCountPage() {
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* HEADER AZUL */}
-        <header className="bg-blue-600 text-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 flex items-start gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="mt-1 mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-white/70"
-              aria-label="Volver"
-            >
-              <span className="text-2xl leading-none">‹</span>
-            </button>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+        <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 flex items-center justify-between gap-4">
+            {/* Texto del header */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
                 Conteo de Inventario
               </h1>
 
@@ -276,7 +270,7 @@ export default function WarehouseItemCountPage() {
               </p>
 
               {initialProduct && (
-                <p className="text-xs sm:text-sm mt-1 text-blue-100/90">
+                <p className="text-xs sm:text-sm mt-1 text-blue-100/90 break-words">
                   Producto seleccionado:{' '}
                   <span className="font-semibold">
                     {initialProduct.code} · {initialProduct.name} (
@@ -291,6 +285,15 @@ export default function WarehouseItemCountPage() {
                 </p>
               )}
             </div>
+
+            {/* Flecha a la derecha */}
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-white/70 shrink-0"
+              aria-label="Volver"
+            >
+              <span className="text-2xl leading-none">‹</span>
+            </button>
           </div>
         </header>
 
