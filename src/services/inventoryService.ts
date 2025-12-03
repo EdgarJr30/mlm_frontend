@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 import type {
   Uom,
   Warehouse,
+  WarehouseArea,
   Item,
   ItemInsert,
   ItemUpdate,
@@ -53,6 +54,48 @@ export async function getActiveWarehouses(): Promise<Warehouse[]> {
   }
 
   return (data ?? []) as Warehouse[];
+}
+
+export async function getWarehouseAreasByWarehouseId(
+  warehouseId: number
+): Promise<WarehouseArea[]> {
+  const { data, error } = await supabase
+    .from('warehouse_areas')
+    .select('*')
+    .eq('warehouse_id', warehouseId)
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error(
+      `❌ Error al obtener áreas del almacén #${warehouseId}:`,
+      error.message
+    );
+    return [];
+  }
+
+  return (data ?? []) as WarehouseArea[];
+}
+
+export async function getWarehouseAreasByWarehouseCode(
+  warehouseCode: string
+): Promise<WarehouseArea[]> {
+  // Útil si en el front trabajas con el código 'OC', 'OC-QUIM', etc.
+  const { data: wh, error: whError } = await supabase
+    .from('warehouses')
+    .select('id')
+    .eq('code', warehouseCode)
+    .maybeSingle();
+
+  if (whError || !wh) {
+    console.error(
+      `❌ Error al obtener almacén por código "${warehouseCode}":`,
+      whError?.message
+    );
+    return [];
+  }
+
+  return getWarehouseAreasByWarehouseId(wh.id as number);
 }
 
 export async function getActiveBaskets(): Promise<Basket[]> {
@@ -123,6 +166,24 @@ export async function getItemById(id: number): Promise<Item | null> {
   }
 
   return data as Item;
+}
+
+export async function getItemIdsByAreaId(areaId: number): Promise<number[]> {
+  const { data, error } = await supabase
+    .from('warehouse_area_items')
+    .select('item_id')
+    .eq('area_id', areaId)
+    .eq('is_active', true);
+
+  if (error) {
+    console.error(
+      `❌ Error al obtener items del área #${areaId}:`,
+      error.message
+    );
+    return [];
+  }
+
+  return (data ?? []).map((row) => row.item_id as number);
 }
 
 export async function createItem(input: ItemInsert): Promise<Item> {

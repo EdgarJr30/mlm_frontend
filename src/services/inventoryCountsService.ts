@@ -30,6 +30,9 @@ export type AuditSession = {
   warehouseCode: string; // code de warehouses (OC-QUIM)
   itemsAudited: number;
   status: AuditStatus;
+  areaName: string | null;
+  areaCode: string | null;
+  isArea: boolean;
 };
 
 export type WarehouseInfo = {
@@ -107,17 +110,26 @@ function formatDateTime(isoString: string | null): {
  * Si no existe, crea una nueva.
  */
 export async function ensureOpenInventoryCountForWarehouse(
-  warehouseId: number
+  warehouseId: number,
+  areaId?: number
 ): Promise<EnsureOpenCountResult> {
   // 1) Intentar buscar una jornada abierta existente
-  const { data: existing, error: selectError } = await supabase
+  let q = supabase
     .from('inventory_counts')
     .select('id, status')
     .eq('warehouse_id', warehouseId)
     .eq('status', 'open')
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (typeof areaId === 'number') {
+    q = q.eq('area_id', areaId);
+  } else {
+    // Conteos generales de almacén (sin área)
+    q = q.is('area_id', null);
+  }
+
+  const { data: existing, error: selectError } = await q.maybeSingle();
 
   if (selectError && selectError.code !== 'PGRST116') {
     // PGRST116 = no rows found
@@ -139,6 +151,7 @@ export async function ensureOpenInventoryCountForWarehouse(
     .from('inventory_counts')
     .insert({
       warehouse_id: warehouseId,
+      area_id: typeof areaId === 'number' ? areaId : null,
       name: `Conteo físico ${fecha}`,
       description: `Jornada creada desde app web el ${fecha}`,
       // status usa default 'open'
@@ -164,6 +177,7 @@ export async function ensureOpenInventoryCountForWarehouse(
 
 export type RegisterInventoryOperationInput = {
   warehouseId: number;
+  areaId?: number;
   itemId: number;
   quantity: number;
   isWeighted: boolean;
@@ -185,6 +199,7 @@ export async function registerInventoryOperation(
 ): Promise<void> {
   const {
     warehouseId,
+    areaId,
     itemId,
     quantity,
     isWeighted,
@@ -196,7 +211,8 @@ export async function registerInventoryOperation(
 
   // 1) Garantizar jornada abierta
   const { id: inventoryCountId } = await ensureOpenInventoryCountForWarehouse(
-    warehouseId
+    warehouseId,
+    areaId
   );
 
   // 2) Obtener la UoM configurada para el ítem en este almacén
@@ -310,15 +326,23 @@ export async function registerInventoryOperation(
 }
 
 export async function getOpenInventoryCountForWarehouse(
-  warehouseId: number
+  warehouseId: number,
+  areaId?: number
 ): Promise<InventoryCount | null> {
-  const { data, error } = await supabase
+  let q = supabase
     .from('inventory_counts')
     .select('*')
     .eq('warehouse_id', warehouseId)
     .eq('status', 'open')
-    .order('created_at', { ascending: false })
-    .maybeSingle();
+    .order('created_at', { ascending: false });
+
+  if (typeof areaId === 'number') {
+    q = q.eq('area_id', areaId);
+  } else {
+    q = q.is('area_id', null);
+  }
+
+  const { data, error } = await q.maybeSingle();
 
   if (error) {
     console.error('❌ Error al obtener jornada abierta:', error.message);
@@ -342,12 +366,18 @@ export async function getInventoryAuditSessions(): Promise<AuditSession[]> {
     .from('inventory_counts')
     .select(
       `
-        id,
+       id,
         status,
         started_at,
         created_at,
         warehouse_id,
+        area_id,
         warehouses:warehouse_id (
+          id,
+          code,
+          name
+        ),
+        warehouse_areas:area_id (
           id,
           code,
           name
@@ -390,6 +420,13 @@ export async function getInventoryAuditSessions(): Promise<AuditSession[]> {
       code: string;
       name: string;
     } | null;
+
+    const area = (c as any).warehouse_areas as {
+      id: number;
+      code: string;
+      name: string;
+    } | null;
+
     const { date, time } = formatDateTime(
       (c as any).started_at ?? (c as any).created_at
     );
@@ -403,6 +440,10 @@ export async function getInventoryAuditSessions(): Promise<AuditSession[]> {
       warehouseCode: wh?.code ?? '',
       itemsAudited,
       status: mapDbStatusToUi((c.status ?? 'open') as DbInventoryCountStatus),
+
+      areaName: area?.name ?? null,
+      areaCode: area?.code ?? null,
+      isArea: !!area,
     };
   });
 
