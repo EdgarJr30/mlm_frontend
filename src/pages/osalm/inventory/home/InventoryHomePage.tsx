@@ -99,9 +99,6 @@ export default function InventoryCountsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
                 Inventario Auditoría
               </h1>
-              <p className="text-sm sm:text-base mt-1 opacity-90">
-                Selecciona un almacén para iniciar o continuar un conteo.
-              </p>
             </div>
 
             {canSeeAuditAdmin && (
