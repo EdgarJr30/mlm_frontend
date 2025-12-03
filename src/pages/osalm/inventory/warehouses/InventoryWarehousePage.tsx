@@ -1,5 +1,3 @@
-// src/pages/inventory/warehouses/InventoryWarehousePage.tsx
-
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
@@ -178,17 +176,11 @@ export default function InventoryWarehousePage() {
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* HEADER AZUL */}
-        <header className="bg-blue-600 text-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 flex items-start gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="mt-1 mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-white/70"
-              aria-label="Volver"
-            >
-              <span className="text-2xl leading-none">‹</span>
-            </button>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+        <header className="bg-blue-600 text-white shadow-sm pt-18 sm:pt-4">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 flex items-center justify-between gap-3">
+            {/* Texto: título + subtítulo */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
                 {loadingWarehouse
                   ? 'Cargando almacén…'
                   : warehouse
@@ -199,6 +191,15 @@ export default function InventoryWarehousePage() {
                 {loading ? 'Cargando productos…' : `${totalProducts} productos`}
               </p>
             </div>
+
+            {/* Flecha de volver al lado derecho */}
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-white/70 shrink-0 cursor-pointer"
+              aria-label="Volver"
+            >
+              <span className="text-2xl leading-none">‹</span>
+            </button>
           </div>
 
           {/* BUSCADOR */}
