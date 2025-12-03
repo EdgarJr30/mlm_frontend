@@ -121,6 +121,23 @@ export default function InventoryWarehouseAuditReviewPage() {
     );
   };
 
+  const handleExportAudit = () => {
+    if (!inventoryCountIdState) {
+      alert(
+        'No hay una jornada de inventario asociada a este almacén. No se puede exportar.'
+      );
+      return;
+    }
+
+    // TODO: aquí luego conectas con tu servicio real de exportación
+    console.log('Exportar auditoría', {
+      inventoryCountId: inventoryCountIdState,
+      auditStatus,
+    });
+
+    alert('Generando archivo de auditoría (pendiente de implementar).');
+  };
+
   const handleSaveChanges = async () => {
     if (isReadOnly) return;
 
@@ -202,7 +219,7 @@ export default function InventoryWarehouseAuditReviewPage() {
               </p>
             </div>
 
-            {/* Estado de auditoría + Volver */}
+            {/* Estado de auditoría + acciones */}
             <div className="flex flex-col items-stretch sm:items-end gap-3 sm:gap-4">
               {/* Selector de estado de la auditoría */}
               <AuditStatusSelector
@@ -211,19 +228,33 @@ export default function InventoryWarehouseAuditReviewPage() {
                 readOnly={isReadOnly}
               />
 
-              {/* Botón volver */}
-              <button
-                type="button"
-                onClick={() =>
-                  navigate('/osalm/conteos_inventario/auditoria/almacenes')
-                }
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
-              >
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
-                  ←
-                </span>
-                <span>Volver a auditorías</span>
-              </button>
+              {/* Botones de acciones (Exportar + Volver) */}
+              <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleExportAudit}
+                  disabled={loading || inventoryCountIdState == null}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-blue-500/25 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-blue-500/40 hover:border-white/50 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
+                    ⬇️
+                  </span>
+                  <span className="whitespace-nowrap">Exportar reporte</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate('/osalm/conteos_inventario/auditoria/almacenes')
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                    ←
+                  </span>
+                  <span className="whitespace-nowrap">Volver a auditorías</span>
+                </button>
+              </div>
             </div>
           </div>
         </header>
