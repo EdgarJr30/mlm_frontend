@@ -10,7 +10,7 @@ type WarehouseCard = {
   name: string; // se muestra, ej: 'OC - Químicos'
 };
 
-export default function InventoryHomePage() {
+export default function InventoryCountsPage() {
   const navigate = useNavigate();
 
   // ✅ Solo usuarios con alguno de estos permisos verán el botón
@@ -40,7 +40,6 @@ export default function InventoryHomePage() {
 
         if (!isMounted) return;
 
-        // 🔎 Mapear filas de BD → modelo para la UI
         const mapped: WarehouseCard[] = (
           data as Array<{
             id: number;
@@ -77,6 +76,15 @@ export default function InventoryHomePage() {
       isMounted = false;
     };
   }, []);
+
+  // 👉 Texto amigable para el contador
+  const warehousesCountLabel = loading
+    ? 'Cargando almacenes…'
+    : warehouses.length === 0
+    ? 'Sin almacenes activos'
+    : warehouses.length === 1
+    ? '1 almacén activo'
+    : `${warehouses.length} almacenes activos`;
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -117,7 +125,7 @@ export default function InventoryHomePage() {
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto">
             {/* Header de la sección */}
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
               <div>
                 <h2 className="text-sm sm:text-lg font-semibold text-gray-800">
                   Almacenes disponibles
@@ -127,9 +135,26 @@ export default function InventoryHomePage() {
                   inventario.
                 </p>
               </div>
-              <span className="text-xs sm:text-sm text-gray-500">
-                {loading ? 'Cargando…' : `${warehouses.length} almacenes`}
-              </span>
+
+              {/* 👉 Tarjeta de resumen, se ve bien en móvil y desktop */}
+              <div className="inline-flex items-center rounded-2xl bg-white border border-gray-200 shadow-sm px-3 py-2 sm:px-4 sm:py-2.5">
+                <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50">
+                  <span className="text-sm">🏬</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                    Estado de almacenes
+                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-semibold text-gray-900">
+                      {loading ? '—' : warehouses.length}
+                    </span>
+                    <span className="text-[11px] sm:text-xs text-gray-500">
+                      {warehousesCountLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Mensaje de error */}
@@ -150,7 +175,6 @@ export default function InventoryHomePage() {
             {/* Grid de almacenes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 pb-8">
               {loading &&
-                // Skeletons mientras carga
                 Array.from({ length: 4 }).map((_, idx) => (
                   <div
                     key={idx}
@@ -176,7 +200,6 @@ export default function InventoryHomePage() {
                     className="group relative flex flex-col items-start gap-2 rounded-2xl bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm border border-gray-100
                                hover:shadow-md hover:border-blue-200 hover:-translate-y-0.5 transition-all text-left"
                   >
-                    {/* Badge superior */}
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-600 text-[11px] sm:text-xs px-2 py-0.5">
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -187,17 +210,14 @@ export default function InventoryHomePage() {
                       </span>
                     </div>
 
-                    {/* Nombre del almacén */}
                     <h3 className="text-sm sm:text-base font-semibold text-gray-900 group-hover:text-blue-700 line-clamp-2">
                       {w.name}
                     </h3>
 
-                    {/* Descripción / hint */}
                     <p className="mt-1 text-xs sm:text-sm text-gray-500">
                       Almacén activo para conteos de inventario.
                     </p>
 
-                    {/* Footer / hint */}
                     <div className="mt-3 flex items-center gap-1 text-[11px] sm:text-xs text-blue-600 font-medium">
                       Ver detalle del almacén
                       <span className="transition-transform group-hover:translate-x-0.5">
