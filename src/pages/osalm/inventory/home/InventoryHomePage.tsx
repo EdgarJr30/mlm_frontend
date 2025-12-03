@@ -10,7 +10,7 @@ type WarehouseCard = {
   name: string; // se muestra, ej: 'OC - Químicos'
 };
 
-export default function InventoryCountsPage() {
+export default function InventoryHomePage() {
   const navigate = useNavigate();
 
   // ✅ Solo usuarios con alguno de estos permisos verán el botón

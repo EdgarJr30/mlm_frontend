@@ -16,7 +16,7 @@ import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
 import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
-import InventoryCountsPage from '../../pages/osalm/inventory/home/InventoryCountsPage';
+import InventoryHomePage from '../../pages/osalm/inventory/home/InventoryHomePage';
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
 import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
 import InventoryAuditWarehouseHistoryPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
@@ -353,7 +353,7 @@ export const APP_ROUTES: AppRoute[] = [
   // Inventario - Conteos de inventario HOME
   {
     path: '/osalm/conteos_inventario',
-    element: <InventoryCountsPage />,
+    element: <InventoryHomePage />,
     allowPerms: [
       'inventory_counts:read',
       'inventory_counts:create',
