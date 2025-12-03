@@ -257,8 +257,8 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
           )}
 
           {session.status === 'in_progress' && (
-            <span className="flex items-center justify-center h-5 w-5 rounded-full border-2 border-blue-500">
-              <span className="h-3 w-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            <span className="flex items-center justify-center h-5 w-5 rounded-full border-2 border-blue-500 bg-blue-50">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
             </span>
           )}
         </div>
