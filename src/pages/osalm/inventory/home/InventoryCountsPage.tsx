@@ -79,13 +79,14 @@ export default function InventoryCountsPage() {
   }, []);
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="min-h-screen flex bg-gray-100">
       <Sidebar />
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
         <header className="bg-blue-600 text-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
+          {/* 👇 En móvil dejamos espacio para el botón hamburguesa (que está en left-4) */}
+          <div className="pl-16 pr-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
                 Inventario Auditoría
