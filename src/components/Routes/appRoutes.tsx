@@ -447,7 +447,10 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/osalm/inventory/offline-status',
     element: <InventoryOfflineStatusPage />,
-    allowPerms: ['rbac:manage_permissions'],
+    allowPerms: [
+      'inventory_operations:read',
+      'inventory_operations:full_access',
+    ],
     showInSidebar: false,
   },
 ];
