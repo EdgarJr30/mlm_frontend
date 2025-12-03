@@ -286,13 +286,16 @@ export default function WarehouseItemCountPage() {
               )}
             </div>
 
-            {/* Flecha a la derecha */}
+            {/* Botón Volver */}
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-white/70 shrink-0"
-              aria-label="Volver"
+              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
             >
-              <span className="text-2xl leading-none">‹</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                ←
+              </span>
+              <span>Volver</span>
             </button>
           </div>
         </header>
