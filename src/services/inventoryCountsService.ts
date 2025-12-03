@@ -39,6 +39,9 @@ export type WarehouseInfo = {
   id: number;
   code: string;
   name: string;
+  areaName?: string | null;
+  areaCode?: string | null;
+  isArea?: boolean;
 };
 
 export type AuditItem = {
@@ -366,18 +369,18 @@ export async function getInventoryAuditSessions(): Promise<AuditSession[]> {
     .from('inventory_counts')
     .select(
       `
-       id,
+        id,
         status,
         started_at,
         created_at,
         warehouse_id,
         area_id,
-        warehouses:warehouse_id (
+        warehouses (
           id,
           code,
           name
         ),
-        warehouse_areas:area_id (
+        warehouse_areas (
           id,
           code,
           name
@@ -691,15 +694,21 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     .from('inventory_counts')
     .select(
       `
+      id,
+      status,
+      warehouse_id,
+      area_id,
+      warehouses (
         id,
-        status,
-        warehouse_id,
-        warehouses:warehouse_id (
-          id,
-          code,
-          name
-        )
-      `
+        code,
+        name
+      ),
+      warehouse_areas (
+        id,
+        code,
+        name
+      )
+    `
     )
     .eq('id', inventoryCountId)
     .maybeSingle();
@@ -719,6 +728,12 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
   }
 
   const wh = (count as any).warehouses as {
+    id: number;
+    code: string;
+    name: string;
+  } | null;
+
+  const area = (count as any).warehouse_areas as {
     id: number;
     code: string;
     name: string;
@@ -803,7 +818,16 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     }) ?? [];
 
   return {
-    warehouse: wh ? { id: wh.id, code: wh.code, name: wh.name } : null,
+    warehouse: wh
+      ? {
+          id: wh.id,
+          code: wh.code,
+          name: wh.name,
+          areaName: area?.name ?? null,
+          areaCode: area?.code ?? null,
+          isArea: !!area,
+        }
+      : null,
     auditStatus: mapDbStatusToUi(
       (count.status ?? 'open') as DbInventoryCountStatus
     ),

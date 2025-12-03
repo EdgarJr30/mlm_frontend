@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 import type {
   Uom,
-  Warehouse,
+  // Warehouse,
   WarehouseArea,
   Item,
   ItemInsert,
@@ -22,6 +22,21 @@ import type {
 
 const PAGE_SIZE = 20;
 
+export type WarehouseDto = {
+  id: number;
+  code: string;
+  name: string;
+};
+
+export type WarehouseAreaDto = {
+  id: number;
+  code: string; // código del área (ABARROTES, CF-01, etc.)
+  name: string; // nombre del área
+  warehouseId: number;
+  warehouseCode: string; // código del almacén (OC, PAP-GRAL, etc.)
+  warehouseName: string; // nombre del almacén
+};
+
 // =========================
 // 1) Catálogos base
 // =========================
@@ -41,19 +56,69 @@ export async function getActiveUoms(): Promise<Uom[]> {
   return (data ?? []) as Uom[];
 }
 
-export async function getActiveWarehouses(): Promise<Warehouse[]> {
+export async function getActiveWarehouses(): Promise<WarehouseDto[]> {
   const { data, error } = await supabase
     .from('warehouses')
-    .select('*')
+    .select('id, code, name')
     .eq('is_active', true)
     .order('name', { ascending: true });
 
   if (error) {
-    console.error('❌ Error al obtener almacenes:', error.message);
-    return [];
+    console.error('❌ Error al cargar almacenes:', error.message);
+    throw new Error(error.message);
   }
 
-  return (data ?? []) as Warehouse[];
+  return (data ?? []) as WarehouseDto[];
+}
+
+export async function getActiveWarehouseAreas(): Promise<WarehouseAreaDto[]> {
+  const { data, error } = await supabase
+    .from('warehouse_areas')
+    .select(
+      `
+        id,
+        code,
+        name,
+        is_active,
+        warehouse_id,
+        warehouses (
+          id,
+          code,
+          name
+        )
+      `
+    )
+    .eq('is_active', true)
+    // 👇 ordenar por nombre del almacén (tabla relacionada)
+    .order('name', { foreignTable: 'warehouses', ascending: true })
+    // 👇 luego por nombre del área
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('❌ Error al cargar áreas de almacén:', error.message);
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: number;
+    code: string;
+    name: string;
+    warehouse_id: number;
+    warehouses: {
+      id: number;
+      code: string;
+      name: string;
+    } | null;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    warehouseId: row.warehouse_id,
+    warehouseCode: row.warehouses?.code ?? '',
+    warehouseName: row.warehouses?.name ?? '',
+  }));
 }
 
 export async function getWarehouseAreasByWarehouseId(

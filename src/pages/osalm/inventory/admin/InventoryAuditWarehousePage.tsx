@@ -1,5 +1,3 @@
-// src/pages/osalm/conteos_inventario/auditoria/InventoryAuditWarehouseHistoryPage.tsx
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
@@ -9,6 +7,8 @@ import {
   type AuditSession,
   type AuditStatus,
 } from '../../../../services/inventoryCountsService';
+
+type AuditHistoryTab = 'warehouses' | 'areas';
 
 export default function InventoryAuditWarehousePage() {
   const navigate = useNavigate();
@@ -20,8 +20,13 @@ export default function InventoryAuditWarehousePage() {
   ]);
 
   const [sessions, setSessions] = useState<AuditSession[]>([]);
+  const [activeTab, setActiveTab] = useState<AuditHistoryTab>('warehouses');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const filteredSessions = sessions.filter((s) =>
+    activeTab === 'warehouses' ? !s.isArea : s.isArea
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -118,22 +123,33 @@ export default function InventoryAuditWarehousePage() {
         {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl">
-            {/* Tabs */}
+            {/* Tabs: Almacenes / Áreas */}
             <div className="mt-1 border-b border-gray-200">
-              <div className="flex gap-8 text-sm font-medium">
-                <button className="relative py-3 flex items-center gap-2 text-blue-600">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-blue-100">
-                    <span className="h-3 w-3 rounded-sm border border-blue-500" />
-                  </span>
-                  <span>Sesiones</span>
-                  <span className="absolute left-0 right-0 -bottom-px h-[3px] rounded-full bg-blue-600" />
+              <div className="inline-flex rounded-full bg-gray-100 p-1 text-sm font-medium">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('warehouses')}
+                  className={[
+                    'px-4 py-1.5 rounded-full',
+                    activeTab === 'warehouses'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700',
+                  ].join(' ')}
+                >
+                  Almacenes
                 </button>
 
-                <button className="py-3 flex items-center gap-2 text-gray-400 hover:text-gray-600">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200">
-                    <span className="h-3 w-3 rounded-sm border border-gray-300" />
-                  </span>
-                  <span>Productos</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('areas')}
+                  className={[
+                    'px-4 py-1.5 rounded-full',
+                    activeTab === 'areas'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700',
+                  ].join(' ')}
+                >
+                  Áreas
                 </button>
               </div>
             </div>
@@ -141,7 +157,9 @@ export default function InventoryAuditWarehousePage() {
             {/* Title: history */}
             <div className="mt-6">
               <h3 className="text-xs font-semibold tracking-[0.14em] text-gray-500">
-                HISTORIAL DE AUDITORÍAS POR ALMACÉN
+                {activeTab === 'warehouses'
+                  ? 'HISTORIAL DE AUDITORÍAS POR ALMACÉN'
+                  : 'HISTORIAL DE AUDITORÍAS POR ÁREA'}
               </h3>
             </div>
 
@@ -159,13 +177,15 @@ export default function InventoryAuditWarehousePage() {
             {/* Sessions list */}
             {!loading && !error && (
               <div className="mt-3 flex flex-col gap-3 sm:gap-4 pb-16">
-                {sessions.length === 0 && (
+                {filteredSessions.length === 0 && (
                   <p className="text-sm text-gray-500">
-                    No hay jornadas de auditoría registradas todavía.
+                    {activeTab === 'warehouses'
+                      ? 'No hay jornadas de auditoría por almacén todavía.'
+                      : 'No hay jornadas de auditoría por área todavía.'}
                   </p>
                 )}
 
-                {sessions.map((session) => (
+                {filteredSessions.map((session) => (
                   <AuditSessionCard key={session.id} session={session} />
                 ))}
               </div>
@@ -203,6 +223,17 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
 
   const cfg = statusConfig[session.status];
 
+  const isArea = session.isArea;
+  const mainTitle = isArea
+    ? session.areaName ?? 'Área de almacén'
+    : session.warehouse;
+
+  const subtitle = isArea
+    ? `${session.warehouse} ${session.areaCode ? `· ${session.areaCode}` : ''}`
+    : session.warehouseCode
+    ? `Código: ${session.warehouseCode}`
+    : undefined;
+
   const handleClick = () => {
     // Usamos warehouseCode como param de ruta (ej: "OC-QUIM")
     navigate(`/osalm/conteos_inventario/auditoria/almacenes/${session.id}`);
@@ -229,9 +260,14 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
           <span className="mx-2">•</span>
           <span>{session.time}</span>
         </p>
+        {/* Título principal: almacén o área */}
         <h4 className="text-lg sm:text-xl font-semibold text-gray-900">
-          {session.warehouse}
+          {mainTitle}
         </h4>
+        {/* Subtítulo con almacén / código */}
+        {subtitle && (
+          <p className="text-xs sm:text-sm text-gray-500">{subtitle}</p>
+        )}
         <p className="text-sm text-gray-500">
           {session.itemsAudited} items auditados
         </p>

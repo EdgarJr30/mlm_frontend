@@ -14,6 +14,7 @@ export type SelectedProductForAudit = {
 
 export type NewWarehouseAuditPayload = {
   warehouseId: string;
+  areaId?: string;
   date: string;
   time: string;
 
@@ -36,6 +37,7 @@ export type NewWarehouseAuditPayload = {
 
 type NewWarehouseAuditFormProps = {
   warehouse: { id: string; name: string };
+  area?: { id: string; name: string } | null;
   initialProduct?: SelectedProductForAudit;
   onCancel: () => void;
   onSubmit?: (payload: NewWarehouseAuditPayload) => void;
@@ -44,6 +46,7 @@ type NewWarehouseAuditFormProps = {
 export function NewWarehouseAuditForm({
   warehouse,
   initialProduct,
+  area,
   onCancel,
   onSubmit,
 }: NewWarehouseAuditFormProps) {
@@ -126,6 +129,7 @@ export function NewWarehouseAuditForm({
 
     const payload: NewWarehouseAuditPayload = {
       warehouseId: warehouse.id,
+      areaId: area?.id,
       date,
       time,
       productSearch,
@@ -156,8 +160,18 @@ export function NewWarehouseAuditForm({
         <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900">
           {warehouse.name}
         </div>
+
+        {area && (
+          <div className="mt-3">
+            <h3 className="text-xs font-semibold text-gray-600 mb-1">Área</h3>
+            <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs sm:text-sm text-blue-900">
+              {area.name}
+            </div>
+          </div>
+        )}
         <p className="mt-2 text-xs text-gray-400">
-          El almacén se toma desde la pantalla anterior y no se puede cambiar.
+          El almacén{area ? ' y el área ' : ' '}se toman desde la pantalla
+          anterior y no se pueden cambiar.
         </p>
       </div>
 

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import {
   getActiveWarehouses,
   getWarehouseItemsByCode,
+  getWarehouseAreasByWarehouseId,
+  getItemIdsByAreaId,
   type WarehouseStockItem,
 } from '../../../../services/inventoryService';
 
@@ -12,6 +14,12 @@ type WarehouseHeader = {
   code: string;
   name: string;
 };
+
+type AreaHeader = {
+  id: number;
+  code: string;
+  name: string;
+} | null;
 
 type WarehouseProduct = {
   itemId: number;
@@ -23,14 +31,22 @@ type WarehouseProduct = {
 
 export default function InventoryWarehousePage() {
   const navigate = useNavigate();
-  const { warehouseId } = useParams<{ warehouseId: string }>(); // slug, ej: "oc-quimicos"
+  const { warehouseId } = useParams<{ warehouseId: string }>(); // slug, ej: "OC-QUIM"
+  const [searchParams] = useSearchParams();
+  const areaCode = searchParams.get('area'); // ej: ?area=CF-01
 
   const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
-  const [products, setProducts] = useState<WarehouseProduct[]>([]);
+  const [area, setArea] = useState<AreaHeader>(null);
+
+  const [stockRows, setStockRows] = useState<WarehouseStockItem[]>([]);
+  const [areaItemIds, setAreaItemIds] = useState<Set<number> | null>(null);
+
   const [search, setSearch] = useState('');
 
   const [loadingWarehouse, setLoadingWarehouse] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingArea, setLoadingArea] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   // 1) Cargar datos del almacén (usando getActiveWarehouses y filtrando por code)
@@ -88,6 +104,67 @@ export default function InventoryWarehousePage() {
     };
   }, [warehouseId]);
 
+  // 1.b) Cargar área física si viene ?area=CODE
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchArea() {
+      if (!warehouse || !areaCode) {
+        setArea(null);
+        setAreaItemIds(null);
+        return;
+      }
+
+      try {
+        setLoadingArea(true);
+
+        const areas = await getWarehouseAreasByWarehouseId(warehouse.id);
+        if (!isMounted) return;
+
+        const found = areas.find((a) => a.code === areaCode);
+
+        if (!found) {
+          console.warn(
+            `⚠️ No se encontró el área "${areaCode}" en el almacén #${warehouse.id}`
+          );
+          setArea(null);
+          setAreaItemIds(null);
+          return;
+        }
+
+        setArea({ id: found.id, code: found.code, name: found.name });
+
+        const itemIds = await getItemIdsByAreaId(found.id);
+        if (!isMounted) return;
+
+        setAreaItemIds(new Set(itemIds));
+      } catch (err: unknown) {
+        if (!isMounted) return;
+        if (err instanceof Error) {
+          console.error('❌ Error al cargar área de almacén:', err.message);
+          setError(
+            `Error al cargar el área "${areaCode}" del almacén: ${err.message}`
+          );
+        } else {
+          console.error('❌ Error desconocido al cargar área de almacén:', err);
+          setError('Ocurrió un error al cargar el área del almacén.');
+        }
+        setArea(null);
+        setAreaItemIds(null);
+      } finally {
+        if (isMounted) {
+          setLoadingArea(false);
+        }
+      }
+    }
+
+    fetchArea();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [warehouse, areaCode]);
+
   // 2) Cargar productos del almacén desde Supabase cuando ya tenemos el código
   useEffect(() => {
     let isMounted = true;
@@ -103,15 +180,7 @@ export default function InventoryWarehousePage() {
         );
         if (!isMounted) return;
 
-        const mapped: WarehouseProduct[] = rows.map((r) => ({
-          itemId: r.item_id,
-          name: r.item_name,
-          code: r.item_sku,
-          uom: r.uom_code,
-          quantity: Number(r.quantity ?? 0), // 👈 aquí convertimos a number
-        }));
-
-        setProducts(mapped);
+        setStockRows(rows);
       } catch (err: unknown) {
         if (!isMounted) return;
         if (err instanceof Error) {
@@ -138,7 +207,25 @@ export default function InventoryWarehousePage() {
     };
   }, [warehouseId]);
 
-  // 3) Filtro por búsqueda
+  // 3) Aplicar filtro por área (si hay área) y mapear a productos
+  const scopedRows = useMemo(() => {
+    if (!areaItemIds) return stockRows;
+    return stockRows.filter((r) => areaItemIds.has(r.item_id));
+  }, [stockRows, areaItemIds]);
+
+  const products: WarehouseProduct[] = useMemo(
+    () =>
+      scopedRows.map((r) => ({
+        itemId: r.item_id,
+        name: r.item_name,
+        code: r.item_sku,
+        uom: r.uom_code,
+        quantity: Number(r.quantity ?? 0),
+      })),
+    [scopedRows]
+  );
+
+  // 4) Filtro por búsqueda
   const filteredProducts = useMemo(() => {
     const term = search.toLowerCase().trim();
     if (!term) return products;
@@ -154,20 +241,21 @@ export default function InventoryWarehousePage() {
   // 👉 clic en cada producto: ir al conteo de ese artículo
   const handleOpenProduct = (product: WarehouseProduct) => {
     if (!warehouse) return;
+
+    const areaQuery = area ? `?area=${area.code}` : '';
+
     navigate(
-      `/osalm/conteos_inventario/almacenes/${warehouse.code}/articulos/${product.code}/conteo`
+      `/osalm/conteos_inventario/almacenes/${warehouse.code}/articulos/${product.code}/conteo${areaQuery}`
     );
-    // Nota: usamos product.code (sku) como :itemId
   };
 
-  // 👉 clic en el botón +
-  const handleNewManualCount = () => {
-    if (!warehouse) return;
-    navigate(`/osalm/conteos_inventario/${warehouse.code}/audits/new`);
-  };
+  // const handleNewManualCount = () => {
+  //   if (!warehouse) return;
+  //   navigate(`/osalm/conteos_inventario/${warehouse.code}/audits/new`);
+  // };
 
   const totalProducts = products.length;
-  const loading = loadingWarehouse || loadingProducts;
+  const loading = loadingWarehouse || loadingProducts || loadingArea;
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -188,8 +276,19 @@ export default function InventoryWarehousePage() {
                   : 'Almacén no encontrado'}
               </h1>
               <p className="text-sm sm:text-base mt-1 opacity-90">
-                {loading ? 'Cargando productos…' : `${totalProducts} productos`}
+                {loading
+                  ? 'Cargando productos…'
+                  : `${totalProducts} productos${
+                      area ? ` en área: ${area.name}` : ''
+                    }`}
               </p>
+              {area && (
+                <p className="text-xs sm:text-sm mt-0.5 text-blue-100">
+                  Área física:{' '}
+                  <span className="font-semibold">{area.name}</span>{' '}
+                  <span className="opacity-80">({area.code})</span>
+                </p>
+              )}
             </div>
 
             {/* Botón Volver */}
@@ -278,7 +377,7 @@ export default function InventoryWarehousePage() {
               <button
                 className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
                 aria-label="Agregar producto"
-                onClick={handleNewManualCount}
+                // onClick={handleNewManualCount}
               >
                 +
               </button>

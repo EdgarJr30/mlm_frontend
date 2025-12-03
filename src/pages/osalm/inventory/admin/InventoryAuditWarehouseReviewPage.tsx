@@ -209,10 +209,14 @@ export default function InventoryWarehouseAuditReviewPage() {
             {/* Título y descripción */}
             <div className="flex-1 min-w-0">
               <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/80">
-                Auditoría de almacén
+                Auditoría de inventario
               </p>
               <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold leading-tight break-words">
-                {warehouse?.name ?? 'Almacén'}
+                {warehouse
+                  ? warehouse.isArea && warehouse.areaName
+                    ? `${warehouse.name} · ${warehouse.areaName}`
+                    : warehouse.name
+                  : 'Almacén'}
               </h1>
               <p className="mt-2 text-sm sm:text-base text-blue-50/90 max-w-xl">
                 Revisión de artículos pendientes, contados y para reconteo.

@@ -19,7 +19,7 @@ import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagemen
 import InventoryHomePage from '../../pages/osalm/inventory/home/InventoryHomePage';
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
 import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
-import InventoryAuditWarehouseHistoryPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
+import InventoryAuditWarehousePage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
 import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
 import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
 
@@ -400,7 +400,7 @@ export const APP_ROUTES: AppRoute[] = [
   // Historial de auditorías por almacén
   {
     path: '/osalm/conteos_inventario/auditoria/almacenes',
-    element: <InventoryAuditWarehouseHistoryPage />,
+    element: <InventoryAuditWarehousePage />,
     allowPerms: [
       'inventory_adjustments:read',
       'inventory_adjustments:create',

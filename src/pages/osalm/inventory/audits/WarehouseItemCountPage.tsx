@@ -1,7 +1,5 @@
-// src/pages/osalm/inventory/WarehouseItemCountPage.tsx
-
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import {
   NewWarehouseAuditForm,
@@ -26,11 +24,20 @@ type WarehouseHeader = {
   name: string;
 };
 
+type LocationState =
+  | {
+      area?: { id: string; name: string };
+    }
+  | undefined;
+
 export default function WarehouseItemCountPage() {
   const navigate = useNavigate();
   const { warehouseId, itemId } = useParams<RouteParams>();
 
   const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
+  const location = useLocation();
+  const state = location.state as LocationState;
+  const area = state?.area ?? null;
   const [initialProduct, setInitialProduct] =
     useState<SelectedProductForAudit | null>(null);
 
@@ -149,6 +156,7 @@ export default function WarehouseItemCountPage() {
 
     const warehouseNumericId = Number(warehouse.id);
     const itemNumericId = Number(initialProduct.id);
+    const areaNumericId = payload.areaId ? Number(payload.areaId) : undefined;
 
     if (Number.isNaN(warehouseNumericId) || Number.isNaN(itemNumericId)) {
       alert(
@@ -162,6 +170,7 @@ export default function WarehouseItemCountPage() {
 
       await registerInventoryOperation({
         warehouseId: warehouseNumericId,
+        areaId: areaNumericId,
         itemId: itemNumericId,
         quantity: payload.quantity,
         isWeighted: payload.isWeighted === 'Y',
@@ -305,6 +314,7 @@ export default function WarehouseItemCountPage() {
           {warehouse && initialProduct && (
             <NewWarehouseAuditForm
               warehouse={{ id: warehouse.id, name: warehouse.name }}
+              area={area}
               initialProduct={initialProduct}
               onCancel={() => navigate(-1)}
               onSubmit={handleSubmit}
