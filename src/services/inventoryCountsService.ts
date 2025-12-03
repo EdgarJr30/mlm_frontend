@@ -171,9 +171,6 @@ export type RegisterInventoryOperationInput = {
   auditorEmail?: string;
   statusComment?: string;
   pendingReasonCode?: PendingReasonCode;
-  inventoryCountId?: number; // jornada ya conocida (útil para offline)
-  clientOpId?: string; // id generado en el dispositivo
-  deviceId?: string; // 'web', 'mobile-xyz', etc.
 };
 
 /**
@@ -195,16 +192,12 @@ export async function registerInventoryOperation(
     auditorEmail,
     statusComment,
     pendingReasonCode,
-    inventoryCountId: inventoryCountIdFromClient,
-    clientOpId: clientOpIdFromClient,
-    deviceId,
   } = input;
 
-  // 1) Garantizar/obtener jornada abierta
-  const inventoryCountId =
-    typeof inventoryCountIdFromClient === 'number'
-      ? inventoryCountIdFromClient
-      : (await ensureOpenInventoryCountForWarehouse(warehouseId)).id;
+  // 1) Garantizar jornada abierta
+  const { id: inventoryCountId } = await ensureOpenInventoryCountForWarehouse(
+    warehouseId
+  );
 
   // 2) Obtener la UoM configurada para el ítem en este almacén
   const { data: whItem, error: whItemError } = await supabase
@@ -228,18 +221,17 @@ export async function registerInventoryOperation(
   const currentStockQty = Number(whItem.quantity ?? 0);
   const netQty = quantity;
 
-  // 3) client_op_id estable
+  // 3) Insertar operación cruda
   const clientOpId =
-    clientOpIdFromClient ??
-    (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const isPending = status === 'pending';
 
   const finalPendingComment = isPending
     ? statusComment?.trim() ||
-      `Marcado como pendiente desde la app${
+      `Marcado como pendiente desde la app web${
         auditorEmail ? ` por ${auditorEmail}` : ''
       }`
     : null;
@@ -248,7 +240,6 @@ export async function registerInventoryOperation(
     ? pendingReasonCode ?? null
     : null;
 
-  // 4) Insertar operación cruda (respetando client_op_id)
   const { error: opError } = await supabase
     .from('inventory_count_operations')
     .insert({
@@ -263,7 +254,7 @@ export async function registerInventoryOperation(
       is_pending: isPending,
       pending_comment: finalPendingComment,
       pending_reason_code: dbPendingReasonCode,
-      device_id: deviceId ?? 'web',
+      device_id: 'web',
     });
 
   if (opError) {
@@ -274,7 +265,7 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 5) Insertar SIEMPRE una línea nueva en inventory_count_lines
+  // 4) NUEVA LÓGICA: insertar SIEMPRE una línea nueva en inventory_count_lines
   const dbStatus: 'counted' | 'pending' | 'ignored' = isPending
     ? 'pending'
     : 'counted';
@@ -300,7 +291,7 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 6) Actualizar warehouse_items.quantity
+  // 5) Actualizar warehouse_items.quantity (sigue igual)
   const newStockQty = currentStockQty + netQty;
 
   const { error: whUpdateError } = await supabase
@@ -313,9 +304,11 @@ export async function registerInventoryOperation(
       '[registerInventoryOperation] warehouse_items update error:',
       whUpdateError
     );
-    // aquí puedes decidir si lanzar error o solo loguear
+    // aquí podrías decidir si lanzar error o solo loguear;
+    // por ahora lo dejamos como log (como ya tenías).
   }
 }
+
 export async function getOpenInventoryCountForWarehouse(
   warehouseId: number
 ): Promise<InventoryCount | null> {
