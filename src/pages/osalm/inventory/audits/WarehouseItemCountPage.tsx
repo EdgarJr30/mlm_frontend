@@ -13,8 +13,7 @@ import {
   getWarehouseItemBySku,
   type WarehouseStockItem,
 } from '../../../../services/inventoryService';
-// import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
-import { submitInventoryOperationWithOfflineSupport } from '../../../../offline/inventoryOfflineStore';
+import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 
 type RouteParams = {
   warehouseId: string; // aquí usas el code desde BD: "OC-QUIM", etc.
@@ -158,15 +157,10 @@ export default function WarehouseItemCountPage() {
       return;
     }
 
-    const deviceId =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('mlm:deviceId') ?? undefined
-        : undefined;
-
     try {
       setSaving(true);
 
-      await submitInventoryOperationWithOfflineSupport({
+      await registerInventoryOperation({
         warehouseId: warehouseNumericId,
         itemId: itemNumericId,
         quantity: payload.quantity,
@@ -175,7 +169,6 @@ export default function WarehouseItemCountPage() {
         auditorEmail: payload.auditorEmail,
         statusComment: payload.statusComment,
         pendingReasonCode: payload.pendingReasonCode,
-        deviceId,
       });
 
       navigate(-1);

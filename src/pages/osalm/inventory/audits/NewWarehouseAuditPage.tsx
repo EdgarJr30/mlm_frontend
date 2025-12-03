@@ -7,8 +7,7 @@ import {
   type SelectedProductForAudit,
 } from './NewWarehouseAuditForm';
 import { getActiveWarehouses } from '../../../../services/inventoryService';
-// import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
-import { submitInventoryOperationWithOfflineSupport } from '../../../../offline/inventoryOfflineStore';
+import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 
 type LocationState =
   | {
@@ -106,17 +105,11 @@ export default function NewWarehouseAuditPage() {
       return;
     }
 
-    // Identificador de dispositivo
-    const deviceId =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('mlm:deviceId') ?? undefined
-        : undefined;
-
     try {
       setSaving(true);
       setError(null);
 
-      await submitInventoryOperationWithOfflineSupport({
+      await registerInventoryOperation({
         warehouseId: warehouseNumericId,
         itemId: itemNumericId,
         quantity: payload.quantity,
@@ -124,8 +117,6 @@ export default function NewWarehouseAuditPage() {
         status: payload.status,
         auditorEmail: payload.auditorEmail,
         statusComment: payload.statusComment,
-        pendingReasonCode: payload.pendingReasonCode,
-        deviceId,
       });
 
       // Podrías navegar hacia atrás o mostrar un mensaje de éxito
