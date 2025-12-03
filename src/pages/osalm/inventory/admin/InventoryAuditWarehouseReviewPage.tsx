@@ -187,21 +187,23 @@ export default function InventoryWarehouseAuditReviewPage() {
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
-        <header className="bg-blue-600 text-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs sm:text-sm uppercase tracking-[0.16em] text-blue-100/90">
+        <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+            {/* Título y descripción */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/80">
                 Auditoría de almacén
               </p>
-              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+              <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold leading-tight break-words">
                 {warehouse?.name ?? 'Almacén'}
               </h1>
-              <p className="text-sm sm:text-base mt-1 opacity-90">
+              <p className="mt-2 text-sm sm:text-base text-blue-50/90 max-w-xl">
                 Revisión de artículos pendientes, contados y para reconteo.
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-3">
+            {/* Estado de auditoría + Volver */}
+            <div className="flex flex-col items-stretch sm:items-end gap-3 sm:gap-4">
               {/* Selector de estado de la auditoría */}
               <AuditStatusSelector
                 status={auditStatus}
@@ -209,13 +211,13 @@ export default function InventoryWarehouseAuditReviewPage() {
                 readOnly={isReadOnly}
               />
 
-              {/* Volver */}
+              {/* Botón volver */}
               <button
                 type="button"
                 onClick={() =>
                   navigate('/osalm/conteos_inventario/auditoria/almacenes')
                 }
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                   ←
