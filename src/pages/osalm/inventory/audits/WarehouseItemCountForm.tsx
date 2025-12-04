@@ -12,7 +12,7 @@ export type SelectedProductForAudit = {
   isWeighted: 'N' | 'Y';
 };
 
-export type NewWarehouseAuditPayload = {
+export type WarehouseItemCountPayload = {
   warehouseId: string;
   areaId?: string;
   date: string;
@@ -40,7 +40,7 @@ type NewWarehouseAuditFormProps = {
   area?: { id: string; name: string } | null;
   initialProduct?: SelectedProductForAudit;
   onCancel: () => void;
-  onSubmit?: (payload: NewWarehouseAuditPayload) => void;
+  onSubmit?: (payload: WarehouseItemCountPayload) => void;
 };
 
 export function NewWarehouseAuditForm({
@@ -127,7 +127,7 @@ export function NewWarehouseAuditForm({
     const derivedStatus: InventoryStatus = isPending ? 'pending' : 'counted';
     const trimmedComment = statusComment.trim();
 
-    const payload: NewWarehouseAuditPayload = {
+    const payload: WarehouseItemCountPayload = {
       warehouseId: warehouse.id,
       areaId: area?.id,
       date,

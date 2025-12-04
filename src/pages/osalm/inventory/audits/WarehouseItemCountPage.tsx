@@ -3,9 +3,9 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import {
   NewWarehouseAuditForm,
-  type NewWarehouseAuditPayload,
+  type WarehouseItemCountPayload,
   type SelectedProductForAudit,
-} from './NewWarehouseAuditForm';
+} from './WarehouseItemCountForm';
 import {
   getActiveWarehouses,
   getWarehouseItemBySku,
@@ -151,7 +151,7 @@ export default function WarehouseItemCountPage() {
     };
   }, [warehouseId, itemId]);
 
-  const handleSubmit = async (payload: NewWarehouseAuditPayload) => {
+  const handleSubmit = async (payload: WarehouseItemCountPayload) => {
     if (!warehouse || !initialProduct) return;
 
     const warehouseNumericId = Number(warehouse.id);
