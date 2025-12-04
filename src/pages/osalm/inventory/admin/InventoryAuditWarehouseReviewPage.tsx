@@ -38,6 +38,9 @@ export default function InventoryWarehouseAuditReviewPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isReadOnly = isClosedFromDb;
+
+  // Carga de datos inicial
   useEffect(() => {
     if (!canManageAudit) {
       setLoading(false);
@@ -92,11 +95,13 @@ export default function InventoryWarehouseAuditReviewPage() {
     };
   }, [canManageAudit, inventoryCountId]);
 
+  // Filtrado de items
   const filteredItems = useMemo(() => {
     if (activeFilter === 'all') return items;
     return items.filter((item) => item.status === activeFilter);
   }, [items, activeFilter]);
 
+  // Estadísticas de items
   const stats = useMemo(
     () => ({
       total: items.length,
@@ -107,20 +112,21 @@ export default function InventoryWarehouseAuditReviewPage() {
     [items]
   );
 
-  const isReadOnly = isClosedFromDb;
-
+  // Cambiar estado de un item
   const handleChangeItemStatus = (id: number, status: ItemStatus) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
     );
   };
 
+  // Cambiar comentario de un item
   const handleChangeItemComment = (id: number, comment: string) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, comment } : item))
     );
   };
 
+  // Exportar auditoría
   const handleExportAudit = () => {
     if (!inventoryCountIdState) {
       alert(
@@ -138,6 +144,14 @@ export default function InventoryWarehouseAuditReviewPage() {
     alert('Generando archivo de auditoría (pendiente de implementar).');
   };
 
+  // Cambiar cantidad contada de un item
+  const handleChangeItemQty = (id: number, countedQty: number) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, countedQty } : item))
+    );
+  };
+
+  // Guardar cambios
   const handleSaveChanges = async () => {
     if (isReadOnly) return;
 
@@ -171,6 +185,7 @@ export default function InventoryWarehouseAuditReviewPage() {
     }
   };
 
+  // Renderizado principal
   if (!canManageAudit) {
     return (
       <div className="h-screen flex bg-gray-100">
@@ -359,6 +374,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                         item={item}
                         onChangeStatus={handleChangeItemStatus}
                         onChangeComment={handleChangeItemComment}
+                        onChangeCountedQty={handleChangeItemQty}
                         readOnly={isReadOnly}
                       />
                     ))}
@@ -552,9 +568,16 @@ function AuditItemRow(props: {
   item: AuditItem;
   onChangeStatus: (id: number, status: ItemStatus) => void;
   onChangeComment: (id: number, comment: string) => void;
+  onChangeCountedQty: (id: number, countedQty: number) => void;
   readOnly?: boolean;
 }) {
-  const { item, onChangeStatus, onChangeComment, readOnly } = props;
+  const {
+    item,
+    onChangeStatus,
+    onChangeComment,
+    onChangeCountedQty,
+    readOnly,
+  } = props;
 
   const statusLabel: Record<ItemStatus, string> = {
     pending: 'Pendiente',
@@ -611,9 +634,34 @@ function AuditItemRow(props: {
           <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
             Contado
           </p>
-          <p className="font-semibold text-gray-800">
-            {item.countedQty.toLocaleString('es-DO')}
-          </p>
+
+          {item.status === 'recount' && !readOnly ? (
+            <div className="inline-flex items-center justify-end gap-1">
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.0001"
+                min={0}
+                value={
+                  Number.isNaN(Number(item.countedQty))
+                    ? ''
+                    : String(item.countedQty)
+                }
+                onChange={(e) => {
+                  const value = e.target.value.replace(',', '.');
+                  const numeric = value === '' ? 0 : Number(value);
+                  if (Number.isNaN(numeric)) return;
+                  onChangeCountedQty(item.id, numeric);
+                }}
+                className="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1 text-right text-xs sm:text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+              />
+              <span className="text-[11px] text-gray-400 ml-1">{item.uom}</span>
+            </div>
+          ) : (
+            <p className="font-semibold text-gray-800">
+              {item.countedQty.toLocaleString('es-DO')}
+            </p>
+          )}
         </div>
 
         {/* Selector de estado */}

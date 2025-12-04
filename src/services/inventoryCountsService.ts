@@ -661,12 +661,16 @@ export async function saveWarehouseAuditChanges(params: {
   if (items.length === 0) return;
 
   // 2) Actualizar SOLO estado, motivo y comentario de cada línea (NO tocamos counted_qty)
+  const nowIso = new Date().toISOString();
+
   const updates = items.map((it) => {
     const isPending = it.status === 'pending';
 
     return supabase
       .from('inventory_count_lines')
       .update({
+        counted_qty: it.countedQty, // cantidad final ajustada
+        last_counted_at: nowIso, // huella de cuándo se ajustó
         status: mapUiItemStatusToDb(it.status),
         status_comment: isPending ? it.comment ?? null : null,
         pending_reason_code: isPending ? it.pendingReasonCode ?? null : null,
