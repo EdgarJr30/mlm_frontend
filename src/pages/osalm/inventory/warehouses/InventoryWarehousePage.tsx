@@ -245,7 +245,7 @@ export default function InventoryWarehousePage() {
     const areaQuery = area ? `?area=${area.code}` : '';
 
     navigate(
-      `/osalm/conteos_inventario/almacenes/${warehouse.code}/articulos/${product.code}/conteo${areaQuery}`
+      `/osalm/conteos_inventario/almacen/${warehouse.code}/articulo/${product.code}${areaQuery}`
     );
   };
 
@@ -372,7 +372,7 @@ export default function InventoryWarehousePage() {
           </div>
 
           {/* FAB (+) */}
-          {warehouse && (
+          {/* {warehouse && (
             <div className="pointer-events-none relative">
               <button
                 className="pointer-events-auto fixed md:absolute bottom-6 right-6 md:right-10 h-16 w-16 rounded-full bg-blue-600 shadow-xl flex items-center justify-center text-4xl text-white"
@@ -382,7 +382,7 @@ export default function InventoryWarehousePage() {
                 +
               </button>
             </div>
-          )}
+          )} */}
         </section>
       </main>
     </div>

@@ -18,7 +18,6 @@ import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPa
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
 import InventoryHomePage from '../../pages/osalm/inventory/home/InventoryHomePage';
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
-import NewWarehouseAuditPage from '../../pages/osalm/inventory/audits/NewWarehouseAuditPage';
 import InventoryAuditWarehousePage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
 import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
 import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
@@ -369,7 +368,7 @@ export const APP_ROUTES: AppRoute[] = [
 
   // Almacenes
   {
-    path: '/osalm/almacenes/:warehouseId',
+    path: '/osalm/conteos_inventario/almacen/:warehouseId',
     element: <InventoryWarehousePage />,
     allowPerms: [
       'inventory_warehouses:read',
@@ -383,17 +382,19 @@ export const APP_ROUTES: AppRoute[] = [
     showInSidebar: false,
   },
 
-  // Nuevo conteo de inventario en almacén
+  // Conteo de artículo en almacén
   {
-    path: '/osalm/conteos_inventario/:warehouseId/audits/new',
-    element: <NewWarehouseAuditPage />,
+    path: '/osalm/conteos_inventario/almacen/:warehouseId/articulo/:itemId/:areaId?',
+    element: <WarehouseItemCountPage />,
     allowPerms: [
-      'inventory_operations:read',
-      'inventory_operations:work',
-      'inventory_operations:delete',
-      'inventory_operations:full_access',
+      'inventory_counts:read',
+      'inventory_counts:create',
+      'inventory_counts:delete',
+      'inventory_counts:update',
+      'inventory_counts:cancel',
+      'inventory_counts:full_access',
     ],
-    name: 'Nuevo Conteo',
+    name: 'Ajustes de Inventario',
     showInSidebar: false,
   },
 
@@ -426,36 +427,6 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Ajustes de Inventario',
     showInSidebar: false,
   },
-
-  {
-    path: '/osalm/conteos_inventario/almacenes/:warehouseId/articulos/:itemId/conteo',
-    element: <WarehouseItemCountPage />,
-    allowPerms: [
-      'inventory_counts:read',
-      'inventory_counts:create',
-      'inventory_counts:delete',
-      'inventory_counts:update',
-      'inventory_counts:cancel',
-      'inventory_counts:full_access',
-    ],
-    name: 'Ajustes de Inventario',
-    showInSidebar: false,
-  },
-
-  // Ajustes de inventario por almacén
-  // {
-  //   path: '/osalm/almacenes/:warehouseId/adjustments',
-  //   element: <InventoryWarehousePage />,
-  //   allowPerms: [
-  //     'inventory_adjustments:read',
-  //     'inventory_adjustments:create',
-  //     'inventory_adjustments:export',
-  //     'inventory_adjustments:approve',
-  //     'inventory_adjustments:full_access',
-  //   ],
-  //   name: 'Ajustes de Inventario',
-  //   showInSidebar: false,
-  // },
 ];
 
 // Rutas públicas / especiales que no usan RequireRole

@@ -43,14 +43,16 @@ export default function InventoryHomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleOpenWarehouse = (warehouseCode: string) => {
-    navigate(`/osalm/almacenes/${warehouseCode}`);
+    navigate(`/osalm/conteos_inventario/almacen/${warehouseCode}`);
   };
 
   const handleOpenArea = (warehouseCode: string, areaCode: string) => {
     // Puedes leer este query param en la pantalla de conteos
     // para saber en qué área estás contando.
     navigate(
-      `/osalm/almacenes/${warehouseCode}?area=${encodeURIComponent(areaCode)}`
+      `/osalm/conteos_inventario/almacen/${warehouseCode}?area=${encodeURIComponent(
+        areaCode
+      )}`
     );
   };
 
