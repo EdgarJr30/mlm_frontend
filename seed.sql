@@ -1569,3 +1569,912 @@ LEFT JOIN public.assignees ap
   ON ap.id = a.primary_assignee_id
 LEFT JOIN public.special_incidents si
   ON si.id = t.special_incident_id;
+
+
+
+  BEGIN;
+
+-- ===========================================
+-- TABLAS BASE
+-- ===========================================
+
+DROP TABLE IF EXISTS public.inventory_adjustments CASCADE;
+DROP TABLE IF EXISTS public.inventory_count_operations CASCADE;
+DROP TABLE IF EXISTS public.inventory_count_lines CASCADE;
+DROP TABLE IF EXISTS public.inventory_counts CASCADE;
+DROP TABLE IF EXISTS public.baskets CASCADE;
+DROP TABLE IF EXISTS public.item_uoms CASCADE;
+DROP TABLE IF EXISTS public.warehouse_items CASCADE;
+DROP TABLE IF EXISTS public.warehouse_areas CASCADE;
+DROP TABLE IF EXISTS public.warehouse_area_items CASCADE;
+DROP TABLE IF EXISTS public.items CASCADE;
+DROP TABLE IF EXISTS public.uoms CASCADE;
+DROP TABLE IF EXISTS public.warehouses CASCADE;
+
+-- WAREHOUSES
+CREATE TABLE public.warehouses (
+  id          bigint generated always as identity primary key,
+  code        text not null unique,
+  name        text not null,
+  is_active   boolean not null default true,
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- UOMS
+CREATE TABLE public.uoms (
+  id          bigint generated always as identity primary key,
+  code        text not null unique,     -- "LB", "KG", "UND", etc.
+  name        text not null,            -- "Libras", "Kilogramos", etc.
+  is_active   boolean not null default true,
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- ITEMS (SIN UNIDAD DE MEDIDA BASE)
+CREATE TABLE public.items (
+  id            bigint generated always as identity primary key,
+  sku           text not null unique,        -- código de artículo
+  name          text not null,
+  is_weightable boolean not null default false,      -- suele pesarse
+
+  -- otros campos: categoría, marca, etc.
+  is_active     boolean not null default true,
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- STOCK POR ALMACÉN
+CREATE TABLE public.warehouse_items (
+  id            bigint generated always as identity primary key,
+  warehouse_id  bigint not null references public.warehouses(id),
+  item_id       bigint not null references public.items(id),
+  uom_id        bigint not null references public.uoms(id),
+  quantity      numeric(18,4) not null default 0,
+  is_active     boolean not null default true,
+
+  -- Evita duplicados del mismo item en la misma UoM y almacén
+  unique (warehouse_id, item_id, uom_id),
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- AREAS FÍSICAS DENTRO DE UN ALMACÉN
+CREATE TABLE public.warehouse_areas (
+  id           bigint generated always as identity primary key,
+  warehouse_id bigint not null references public.warehouses(id) ON DELETE CASCADE,
+  code         text not null,      -- CF-01, CF-VEG, QUIM, etc.
+  name         text not null,      -- "Cuarto Frío 1", "Cuarto Frío Vegetales"
+  is_active    boolean not null default true,
+
+  UNIQUE (warehouse_id, code),
+
+  -- Auditoría
+  created_at   timestamptz NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   timestamptz NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   uuid REFERENCES public.users(id),
+  updated_by   uuid REFERENCES public.users(id)
+);
+
+-- ASIGNACIÓN DE ÍTEMS A ÁREAS FÍSICAS (DENTRO DE UN ALMACÉN)
+CREATE TABLE public.warehouse_area_items (
+  id        bigint generated always as identity primary key,
+  area_id   bigint not null references public.warehouse_areas(id) ON DELETE CASCADE,
+  item_id   bigint not null references public.items(id),
+  is_active boolean not null default true,
+
+  UNIQUE (area_id, item_id),
+
+  -- Auditoría
+  created_at   timestamptz NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   timestamptz NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   uuid REFERENCES public.users(id),
+  updated_by   uuid REFERENCES public.users(id)
+);
+
+-- RELACIÓN ITEM ↔ UOMS (PARA FUTURO: CONVERSIONES ENTRE UOMS)
+CREATE TABLE public.item_uoms (
+  id                bigint generated always as identity primary key,
+  item_id           bigint not null references public.items(id) on delete cascade,
+  uom_id            bigint not null references public.uoms(id),
+
+  -- pensado para futuro: conversión entre unidades del mismo ítem
+  conversion_factor numeric(18,6),  -- puede ser NULL en el MVP
+
+  is_active         boolean not null default true,
+
+  unique (item_id, uom_id),
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- CANASTOS
+CREATE TABLE public.baskets (
+  id          bigint generated always as identity primary key,
+  name        text not null,              -- "Canasto verde"
+  color       text not null,              -- "verde", "rojo"
+  weight      numeric(18,4) not null,     -- peso del canasto
+  uom_id      bigint not null references public.uoms(id),  -- unidad del peso (ej: LB)
+  is_active   boolean not null default true,
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- CABECERA DE CONTEO
+CREATE TABLE public.inventory_counts (
+  id            bigint generated always as identity primary key,
+  warehouse_id  bigint not null REFERENCES public.warehouses(id),
+  area_id       bigint REFERENCES public.warehouse_areas(id),
+  name          text not null,               -- "Conteo Nov-2025 Almacén Central"
+  description   text,
+  status        text not null default 'open',  -- open | closed | cancelled
+  planned_at    timestamptz,
+  started_at    timestamptz,
+  closed_at     timestamptz,
+  closed_by     uuid references public.users(id),
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id),
+
+  CONSTRAINT inventory_counts_status_chk
+    CHECK (status IN ('open', 'closed', 'cancelled'))
+);
+
+-- LÍNEAS DE CONTEO
+CREATE TABLE public.inventory_count_lines (
+  id                 bigint generated always as identity primary key,
+  inventory_count_id bigint not null references public.inventory_counts(id) on delete cascade,
+  item_id            bigint not null references public.items(id),
+  uom_id             bigint not null references public.uoms(id),  -- UoM final del conteo
+
+  counted_qty        numeric(18,4),   -- cantidad física contada (en uom_id)
+  last_counted_at    timestamptz,
+
+  -- Nuevo: estado final de este artículo en este conteo
+  status             text not null default 'counted', -- 'counted' | 'pending' | 'ignored'
+  status_comment     text,                            -- explicación/resumen final
+  pending_reason_code text,
+
+  -- unique (inventory_count_id, item_id, uom_id),
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id),
+
+  -- Validación del estado
+  CONSTRAINT inventory_count_lines_status_chk
+    CHECK (status IN ('counted', 'pending', 'ignored')),
+
+  -- Validación del código de motivo
+  CONSTRAINT inventory_count_lines_reason_chk
+    CHECK (
+      pending_reason_code IS NULL
+      OR pending_reason_code IN ('UOM_DIFFERENT', 'REVIEW')
+    )
+);
+
+-- OPERACIONES DE CONTEO (DISPAROS)
+CREATE TABLE public.inventory_count_operations (
+  id                 bigint generated always as identity primary key,
+  client_op_id       uuid not null,              -- generado en el móvil
+  inventory_count_id bigint not null references public.inventory_counts(id),
+  item_id            bigint not null references public.items(id),
+  uom_id             bigint not null references public.uoms(id),  -- UoM en la que se contó
+
+  user_id            uuid references public.users(id),       -- quién contó
+  device_id          text,                                   -- identificador del dispositivo
+
+  -- Lógica de pesado
+  is_weighted        boolean not null default false,       -- usuario marcó "es pesado"
+  basket_id          bigint references public.baskets(id),        -- canasto usado (si aplica)
+  gross_qty          numeric(18,4),  -- lectura bruta de la balanza (producto + canasto)
+  net_qty            numeric(18,4),  -- cantidad neta después de restar el canasto (si aplica)
+
+  -- Estado de la operación
+  is_pending         boolean not null default false,       -- caso raro (uom inexistente, etc.)
+  pending_comment    text,                                 -- descripción del problema
+  pending_reason_code text, 
+
+  unique (client_op_id),
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id),
+
+   -- Validación del motivo
+  CONSTRAINT inventory_count_ops_reason_chk
+    CHECK (
+      pending_reason_code IS NULL
+      OR pending_reason_code IN ('UOM_DIFFERENT', 'REVIEW')
+    )
+);
+
+-- AJUSTES
+CREATE TABLE public.inventory_adjustments (
+  id                  bigint generated always as identity primary key,
+  inventory_count_id  bigint not null references public.inventory_counts(id),
+  item_id             bigint not null references public.items(id),
+  uom_id              bigint not null references public.uoms(id),
+
+  difference_qty      numeric(18,4) not null,  -- cuánto se va a ajustar (en uom_id)
+  adjustment_reason   text,                    -- "Toma física Nov 2025"
+
+  posted_to_erp       boolean not null default false,
+  posted_at           timestamptz,
+  erp_document_ref    text,                    -- número de ajuste en el ERP
+
+  -- Auditoría
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- ================================
+-- 1. Triggers de trazabilidad
+-- ================================
+
+-- ITEMS
+DROP TRIGGER IF EXISTS trg_items_created ON public.items;
+CREATE TRIGGER trg_items_created
+BEFORE INSERT ON public.items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_items_updated ON public.items;
+CREATE TRIGGER trg_items_updated
+BEFORE UPDATE ON public.items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- WAREHOUSES
+DROP TRIGGER IF EXISTS trg_warehouses_created ON public.warehouses;
+CREATE TRIGGER trg_warehouses_created
+BEFORE INSERT ON public.warehouses
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_warehouses_updated ON public.warehouses;
+CREATE TRIGGER trg_warehouses_updated
+BEFORE UPDATE ON public.warehouses
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- WAREHOUSE_ITEMS
+DROP TRIGGER IF EXISTS trg_warehouse_items_created ON public.warehouse_items;
+CREATE TRIGGER trg_warehouse_items_created
+BEFORE INSERT ON public.warehouse_items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_warehouse_items_updated ON public.warehouse_items;
+CREATE TRIGGER trg_warehouse_items_updated
+BEFORE UPDATE ON public.warehouse_items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- WAREHOUSE_AREAS
+DROP TRIGGER IF EXISTS trg_warehouse_areas_created ON public.warehouse_areas;
+CREATE TRIGGER trg_warehouse_areas_created
+BEFORE INSERT ON public.warehouse_areas
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_warehouse_areas_updated ON public.warehouse_areas;
+CREATE TRIGGER trg_warehouse_areas_updated
+BEFORE UPDATE ON public.warehouse_areas
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- WAREHOUSE_AREA_ITEMS
+DROP TRIGGER IF EXISTS trg_warehouse_area_items_created ON public.warehouse_area_items;
+CREATE TRIGGER trg_warehouse_area_items_created
+BEFORE INSERT ON public.warehouse_area_items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_warehouse_area_items_updated ON public.warehouse_area_items;
+CREATE TRIGGER trg_warehouse_area_items_updated
+BEFORE UPDATE ON public.warehouse_area_items
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- UOMS
+DROP TRIGGER IF EXISTS trg_uoms_created ON public.uoms;
+CREATE TRIGGER trg_uoms_created
+BEFORE INSERT ON public.uoms
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_uoms_updated ON public.uoms;
+CREATE TRIGGER trg_uoms_updated
+BEFORE UPDATE ON public.uoms
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- ITEM_UOMS
+DROP TRIGGER IF EXISTS trg_item_uoms_created ON public.item_uoms;
+CREATE TRIGGER trg_item_uoms_created
+BEFORE INSERT ON public.item_uoms
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_item_uoms_updated ON public.item_uoms;
+CREATE TRIGGER trg_item_uoms_updated
+BEFORE UPDATE ON public.item_uoms
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- BASKETS
+DROP TRIGGER IF EXISTS trg_baskets_created ON public.baskets;
+CREATE TRIGGER trg_baskets_created
+BEFORE INSERT ON public.baskets
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_baskets_updated ON public.baskets;
+CREATE TRIGGER trg_baskets_updated
+BEFORE UPDATE ON public.baskets
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- INVENTORY_COUNTS
+DROP TRIGGER IF EXISTS trg_inventory_counts_created ON public.inventory_counts;
+CREATE TRIGGER trg_inventory_counts_created
+BEFORE INSERT ON public.inventory_counts
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_inventory_counts_updated ON public.inventory_counts;
+CREATE TRIGGER trg_inventory_counts_updated
+BEFORE UPDATE ON public.inventory_counts
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- INVENTORY_COUNT_LINES
+DROP TRIGGER IF EXISTS trg_inventory_count_lines_created ON public.inventory_count_lines;
+CREATE TRIGGER trg_inventory_count_lines_created
+BEFORE INSERT ON public.inventory_count_lines
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_inventory_count_lines_updated ON public.inventory_count_lines;
+CREATE TRIGGER trg_inventory_count_lines_updated
+BEFORE UPDATE ON public.inventory_count_lines
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- INVENTORY_COUNT_OPERATIONS
+DROP TRIGGER IF EXISTS trg_inventory_count_operations_created ON public.inventory_count_operations;
+CREATE TRIGGER trg_inventory_count_operations_created
+BEFORE INSERT ON public.inventory_count_operations
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_inventory_count_operations_updated ON public.inventory_count_operations;
+CREATE TRIGGER trg_inventory_count_operations_updated
+BEFORE UPDATE ON public.inventory_count_operations
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- INVENTORY_ADJUSTMENTS
+DROP TRIGGER IF EXISTS trg_inventory_adjustments_created ON public.inventory_adjustments;
+CREATE TRIGGER trg_inventory_adjustments_created
+BEFORE INSERT ON public.inventory_adjustments
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_inventory_adjustments_updated ON public.inventory_adjustments;
+CREATE TRIGGER trg_inventory_adjustments_updated
+BEFORE UPDATE ON public.inventory_adjustments
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- ================================
+-- 2. Habilitar Row Level Security
+-- ================================
+ALTER TABLE public.items                      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.warehouses                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.warehouse_items            ENABLE ROW LEVEL SECURITY;
+--ALTER TABLE public.warehouse_areas            ENABLE ROW LEVEL SECURITY;
+--ALTER TABLE public.warehouse_area_items       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.uoms                       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.item_uoms                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.baskets                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_counts           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_count_lines      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_count_operations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_adjustments      ENABLE ROW LEVEL SECURITY;
+
+-- ================================
+-- 2.x POLICIES (IGUALES A TU SCRIPT ORIGINAL)
+-- ================================
+
+-- items → resource: inventory_items
+DROP POLICY IF EXISTS items_select ON public.items;
+DROP POLICY IF EXISTS items_insert ON public.items;
+DROP POLICY IF EXISTS items_update ON public.items;
+DROP POLICY IF EXISTS items_delete ON public.items;
+
+CREATE POLICY items_select
+ON public.items
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_items:read')
+  OR public.me_has_permission('inventory_items:full_access')
+);
+
+CREATE POLICY items_insert
+ON public.items
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_items:create')
+  OR public.me_has_permission('inventory_items:full_access')
+);
+
+CREATE POLICY items_update
+ON public.items
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_items:update')
+  OR public.me_has_permission('inventory_items:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_items:update')
+  OR public.me_has_permission('inventory_items:full_access')
+);
+
+CREATE POLICY items_delete
+ON public.items
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_items:delete')
+  OR public.me_has_permission('inventory_items:full_access')
+);
+
+-- warehouses → resource: inventory_warehouses
+DROP POLICY IF EXISTS warehouses_select ON public.warehouses;
+DROP POLICY IF EXISTS warehouses_insert ON public.warehouses;
+DROP POLICY IF EXISTS warehouses_update ON public.warehouses;
+DROP POLICY IF EXISTS warehouses_delete ON public.warehouses;
+
+CREATE POLICY warehouses_select
+ON public.warehouses
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_warehouses:read')
+  OR public.me_has_permission('inventory_warehouses:full_access')
+);
+
+CREATE POLICY warehouses_insert
+ON public.warehouses
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_warehouses:create')
+  OR public.me_has_permission('inventory_warehouses:full_access')
+);
+
+CREATE POLICY warehouses_update
+ON public.warehouses
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_warehouses:update')
+  OR public.me_has_permission('inventory_warehouses:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_warehouses:update')
+  OR public.me_has_permission('inventory_warehouses:full_access')
+);
+
+CREATE POLICY warehouses_delete
+ON public.warehouses
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_warehouses:delete')
+  OR public.me_has_permission('inventory_warehouses:full_access')
+);
+
+-- uoms → resource: inventory_uoms
+DROP POLICY IF EXISTS uoms_select ON public.uoms;
+DROP POLICY IF EXISTS uoms_insert ON public.uoms;
+DROP POLICY IF EXISTS uoms_update ON public.uoms;
+DROP POLICY IF EXISTS uoms_delete ON public.uoms;
+
+CREATE POLICY uoms_select
+ON public.uoms
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_uoms:read')
+  OR public.me_has_permission('inventory_uoms:full_access')
+);
+
+CREATE POLICY uoms_insert
+ON public.uoms
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_uoms:create')
+  OR public.me_has_permission('inventory_uoms:full_access')
+);
+
+CREATE POLICY uoms_update
+ON public.uoms
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_uoms:update')
+  OR public.me_has_permission('inventory_uoms:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_uoms:update')
+  OR public.me_has_permission('inventory_uoms:full_access')
+);
+
+CREATE POLICY uoms_delete
+ON public.uoms
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_uoms:delete')
+  OR public.me_has_permission('inventory_uoms:full_access')
+);
+
+-- item_uoms → ligado a permisos de inventory_items
+DROP POLICY IF EXISTS item_uoms_select ON public.item_uoms;
+DROP POLICY IF EXISTS item_uoms_insert ON public.item_uoms;
+DROP POLICY IF EXISTS item_uoms_update ON public.item_uoms;
+DROP POLICY IF EXISTS item_uoms_delete ON public.item_uoms;
+
+CREATE POLICY item_uoms_select
+ON public.item_uoms
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_items:read')
+  OR public.me_has_permission('inventory_items:full_access')
+);
+
+CREATE POLICY item_uoms_insert
+ON public.item_uoms
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_items:full_access')
+);
+
+CREATE POLICY item_uoms_update
+ON public.item_uoms
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_items:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_items:full_access')
+);
+
+CREATE POLICY item_uoms_delete
+ON public.item_uoms
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_items:full_access')
+);
+
+-- baskets → resource: inventory_baskets
+DROP POLICY IF EXISTS baskets_select ON public.baskets;
+DROP POLICY IF EXISTS baskets_insert ON public.baskets;
+DROP POLICY IF EXISTS baskets_update ON public.baskets;
+DROP POLICY IF EXISTS baskets_delete ON public.baskets;
+
+CREATE POLICY baskets_select
+ON public.baskets
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_baskets:read')
+  OR public.me_has_permission('inventory_baskets:full_access')
+);
+
+CREATE POLICY baskets_insert
+ON public.baskets
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_baskets:create')
+  OR public.me_has_permission('inventory_baskets:full_access')
+);
+
+CREATE POLICY baskets_update
+ON public.baskets
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_baskets:update')
+  OR public.me_has_permission('inventory_baskets:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_baskets:update')
+  OR public.me_has_permission('inventory_baskets:full_access')
+);
+
+CREATE POLICY baskets_delete
+ON public.baskets
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_baskets:delete')
+  OR public.me_has_permission('inventory_baskets:full_access')
+);
+
+-- inventory_counts → resource: inventory_counts
+DROP POLICY IF EXISTS inv_counts_select ON public.inventory_counts;
+DROP POLICY IF EXISTS inv_counts_insert ON public.inventory_counts;
+DROP POLICY IF EXISTS inv_counts_update ON public.inventory_counts;
+DROP POLICY IF EXISTS inv_counts_delete ON public.inventory_counts;
+
+CREATE POLICY inv_counts_select
+ON public.inventory_counts
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_counts:read')
+  OR public.me_has_permission('inventory_counts:full_access')
+);
+
+CREATE POLICY inv_counts_insert
+ON public.inventory_counts
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_counts:create')
+  OR public.me_has_permission('inventory_counts:full_access')
+);
+
+CREATE POLICY inv_counts_update
+ON public.inventory_counts
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_counts:update')
+  OR public.me_has_permission('inventory_counts:cancel')
+  OR public.me_has_permission('inventory_counts:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_counts:update')
+  OR public.me_has_permission('inventory_counts:cancel')
+  OR public.me_has_permission('inventory_counts:full_access')
+);
+
+CREATE POLICY inv_counts_delete
+ON public.inventory_counts
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_counts:delete')
+  OR public.me_has_permission('inventory_counts:full_access')
+);
+
+-- inventory_count_lines → uso permisos de inventory_counts
+DROP POLICY IF EXISTS inv_count_lines_select ON public.inventory_count_lines;
+DROP POLICY IF EXISTS inv_count_lines_insert ON public.inventory_count_lines;
+DROP POLICY IF EXISTS inv_count_lines_update ON public.inventory_count_lines;
+DROP POLICY IF EXISTS inv_count_lines_delete ON public.inventory_count_lines;
+
+CREATE POLICY inv_count_lines_select
+ON public.inventory_count_lines
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_counts:read')
+  OR public.me_has_permission('inventory_counts:full_access')
+);
+
+CREATE POLICY inv_count_lines_insert
+ON public.inventory_count_lines
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_counts:full_access')
+);
+
+CREATE POLICY inv_count_lines_update
+ON public.inventory_count_lines
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_counts:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_counts:full_access')
+);
+
+CREATE POLICY inv_count_lines_delete
+ON public.inventory_count_lines
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_counts:full_access')
+);
+
+-- inventory_count_operations → resource: inventory_operations
+DROP POLICY IF EXISTS inv_ops_select ON public.inventory_count_operations;
+DROP POLICY IF EXISTS inv_ops_insert ON public.inventory_count_operations;
+DROP POLICY IF EXISTS inv_ops_update ON public.inventory_count_operations;
+DROP POLICY IF EXISTS inv_ops_delete ON public.inventory_count_operations;
+
+CREATE POLICY inv_ops_select
+ON public.inventory_count_operations
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_operations:read')
+  OR public.me_has_permission('inventory_operations:full_access')
+);
+
+CREATE POLICY inv_ops_insert
+ON public.inventory_count_operations
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_operations:work')
+  OR public.me_has_permission('inventory_operations:full_access')
+);
+
+CREATE POLICY inv_ops_update
+ON public.inventory_count_operations
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_operations:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_operations:full_access')
+);
+
+CREATE POLICY inv_ops_delete
+ON public.inventory_count_operations
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_operations:delete')
+  OR public.me_has_permission('inventory_operations:full_access')
+);
+
+-- inventory_adjustments → resource: inventory_adjustments
+DROP POLICY IF EXISTS inv_adj_select ON public.inventory_adjustments;
+DROP POLICY IF EXISTS inv_adj_insert ON public.inventory_adjustments;
+DROP POLICY IF EXISTS inv_adj_update ON public.inventory_adjustments;
+DROP POLICY IF EXISTS inv_adj_delete ON public.inventory_adjustments;
+
+CREATE POLICY inv_adj_select
+ON public.inventory_adjustments
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_adjustments:read')
+  OR public.me_has_permission('inventory_adjustments:export')
+  OR public.me_has_permission('inventory_adjustments:approve')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+CREATE POLICY inv_adj_insert
+ON public.inventory_adjustments
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_adjustments:create')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+CREATE POLICY inv_adj_update
+ON public.inventory_adjustments
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_adjustments:approve')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_adjustments:approve')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+CREATE POLICY inv_adj_delete
+ON public.inventory_adjustments
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_adjustments:full_access')
+);
+
+-- warehouse_items → stock por almacén
+DROP POLICY IF EXISTS warehouse_items_select ON public.warehouse_items;
+DROP POLICY IF EXISTS warehouse_items_insert ON public.warehouse_items;
+DROP POLICY IF EXISTS warehouse_items_update ON public.warehouse_items;
+DROP POLICY IF EXISTS warehouse_items_delete ON public.warehouse_items;
+
+CREATE POLICY warehouse_items_select
+ON public.warehouse_items
+FOR SELECT
+USING (
+  public.me_has_permission('inventory_warehouses:read')
+  OR public.me_has_permission('inventory_warehouses:full_access')
+  OR public.me_has_permission('inventory_items:read')
+  OR public.me_has_permission('inventory_items:full_access')
+  OR public.me_has_permission('inventory_adjustments:read')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+CREATE POLICY warehouse_items_insert
+ON public.warehouse_items
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('inventory_warehouses:full_access')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+CREATE POLICY warehouse_items_update
+ON public.warehouse_items
+FOR UPDATE
+USING (
+  public.me_has_permission('inventory_warehouses:full_access')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('inventory_warehouses:full_access')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+CREATE POLICY warehouse_items_delete
+ON public.warehouse_items
+FOR DELETE
+USING (
+  public.me_has_permission('inventory_warehouses:full_access')
+  OR public.me_has_permission('inventory_adjustments:full_access')
+);
+
+-- ===========================================
+-- TABLAS VIEWS
+-- ===========================================
+DROP VIEW IF EXISTS public.vw_warehouse_stock CASCADE;
+
+CREATE OR REPLACE VIEW public.vw_warehouse_stock AS
+SELECT
+  wi.id              AS warehouse_item_id,
+  wi.quantity        AS quantity,
+  wi.is_active       AS is_active,
+
+  -- Almacén
+  w.id               AS warehouse_id,
+  w.code             AS warehouse_code,
+  w.name             AS warehouse_name,
+
+  -- Artículo
+  i.id               AS item_id,
+  i.sku              AS item_sku,
+  i.name             AS item_name,
+  i.is_weightable    AS item_is_weightable,
+
+  -- UoM del ítem en este almacén (stock)
+  u.id               AS uom_id,
+  u.code             AS uom_code,
+  u.name             AS uom_name,
+
+  -- Auditoría (heredada del registro de stock)
+  wi.created_at,
+  wi.updated_at,
+  wi.created_by,
+  wi.updated_by
+FROM public.warehouse_items wi
+JOIN public.warehouses w ON w.id = wi.warehouse_id
+JOIN public.items      i ON i.id = wi.item_id
+JOIN public.uoms       u ON u.id = wi.uom_id;
+
+GRANT SELECT ON public.vw_warehouse_stock TO anon, authenticated;
+
+COMMIT;
