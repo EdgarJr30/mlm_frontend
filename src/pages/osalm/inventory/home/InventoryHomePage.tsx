@@ -131,8 +131,8 @@ export default function InventoryHomePage() {
       ? '1 almacén activo'
       : '1 área activa'
     : viewMode === 'warehouses'
-    ? `${currentCount} almacenes activos`
-    : `${currentCount} áreas activas`;
+    ? `almacenes activos`
+    : `áreas activas`;
 
   const titleLabel =
     viewMode === 'warehouses'
