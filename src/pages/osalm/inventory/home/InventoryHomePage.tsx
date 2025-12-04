@@ -231,7 +231,7 @@ export default function InventoryHomePage() {
                       : 'Estado de áreas'}
                   </span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-base sm:text-lg font-semibold text-gray-900">
+                    <span className="text-base sm:text-lg font-semibold text-gray-600">
                       {loading ? '—' : currentCount}
                     </span>
                     <span className="text-[11px] sm:text-xs text-gray-500">
