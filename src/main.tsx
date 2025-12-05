@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { APP_ROUTES, PUBLIC_ROUTES } from './components/Routes/appRoutes';
-// import RequireRole from './components/Routes/RequireRole';
 import RequirePerm from './components/Routes/RequirePerm';
 import ProtectedRoute from './components/Routes/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
