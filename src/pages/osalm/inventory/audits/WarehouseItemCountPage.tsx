@@ -8,14 +8,15 @@ import {
 } from './WarehouseItemCountForm';
 import {
   getActiveWarehouses,
-  getWarehouseItemBySku,
+  // getWarehouseItemBySku,
+  getWarehouseItemByWarehouseItemId,
   type WarehouseStockItem,
 } from '../../../../services/inventoryService';
 import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 
 type RouteParams = {
   warehouseId: string; // aquí usas el code desde BD: "OC-QUIM", etc.
-  itemId: string; // SKU: "A000001"
+  warehouseItemId: string; // SKU: "A000001"
 };
 
 type WarehouseHeader = {
@@ -32,7 +33,7 @@ type LocationState =
 
 export default function WarehouseItemCountPage() {
   const navigate = useNavigate();
-  const { warehouseId, itemId } = useParams<RouteParams>();
+  const { warehouseId, warehouseItemId } = useParams<RouteParams>();
 
   const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
   const location = useLocation();
@@ -103,7 +104,7 @@ export default function WarehouseItemCountPage() {
     let isMounted = true;
 
     async function fetchItem() {
-      if (!warehouseId || !itemId) {
+      if (!warehouseId || !warehouseItemId) {
         setLoadingItem(false);
         return;
       }
@@ -111,10 +112,8 @@ export default function WarehouseItemCountPage() {
       try {
         setLoadingItem(true);
         // no pisamos error de almacén si ya lo hay
-        const row: WarehouseStockItem | null = await getWarehouseItemBySku(
-          warehouseId,
-          itemId
-        );
+        const row: WarehouseStockItem | null =
+          await getWarehouseItemByWarehouseItemId(Number(warehouseItemId));
         if (!isMounted) return;
 
         if (!row) {
@@ -122,9 +121,11 @@ export default function WarehouseItemCountPage() {
         } else {
           setInitialProduct({
             id: String(row.item_id),
+            warehouseItemId: String(row.warehouse_item_id),
             code: row.item_sku,
             name: row.item_name,
             uomCode: row.uom_code,
+            uomId: String(row.uom_id),
             isWeighted: row.item_is_weightable ? 'Y' : 'N',
           });
         }
@@ -132,7 +133,7 @@ export default function WarehouseItemCountPage() {
         if (!isMounted) return;
         if (err instanceof Error) {
           console.error(
-            `❌ Error al cargar item "${itemId}" en almacén "${warehouseId}":`,
+            `❌ Error al cargar item "${warehouseItemId}" en almacén "${warehouseId}":`,
             err.message
           );
           setError(err.message);
@@ -149,16 +150,22 @@ export default function WarehouseItemCountPage() {
     return () => {
       isMounted = false;
     };
-  }, [warehouseId, itemId]);
+  }, [warehouseId, warehouseItemId]);
 
   const handleSubmit = async (payload: WarehouseItemCountPayload) => {
     if (!warehouse || !initialProduct) return;
 
     const warehouseNumericId = Number(warehouse.id);
     const itemNumericId = Number(initialProduct.id);
+    const uomNumericId = Number(initialProduct.uomId);
+    const warehouseItemNumericId = Number(initialProduct.warehouseItemId);
     const areaNumericId = payload.areaId ? Number(payload.areaId) : undefined;
 
-    if (Number.isNaN(warehouseNumericId) || Number.isNaN(itemNumericId)) {
+    if (
+      Number.isNaN(warehouseNumericId) ||
+      Number.isNaN(itemNumericId) ||
+      Number.isNaN(uomNumericId)
+    ) {
       alert(
         'Ocurrió un problema con los identificadores de almacén o artículo.'
       );
@@ -172,6 +179,8 @@ export default function WarehouseItemCountPage() {
         warehouseId: warehouseNumericId,
         areaId: areaNumericId,
         itemId: itemNumericId,
+        uomId: uomNumericId,
+        warehouseItemId: warehouseItemNumericId,
         quantity: payload.quantity,
         isWeighted: payload.isWeighted === 'Y',
         status: payload.status,
@@ -231,7 +240,8 @@ export default function WarehouseItemCountPage() {
               </p>
               <p className="text-xs text-gray-500 mb-4">
                 No pudimos cargar la información del artículo con id/code:{' '}
-                <span className="font-mono">{itemId}</span> en el almacén{' '}
+                <span className="font-mono">{warehouseItemId}</span> en el
+                almacén{' '}
                 <span className="font-semibold">
                   {warehouse?.code ?? warehouseId}
                 </span>

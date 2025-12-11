@@ -182,6 +182,8 @@ export type RegisterInventoryOperationInput = {
   warehouseId: number;
   areaId?: number;
   itemId: number;
+  uomId: number;
+  warehouseItemId?: number;
   quantity: number;
   isWeighted: boolean;
   status: InventoryStatus; // 'counted' | 'pending' | 'recount'
@@ -197,6 +199,12 @@ export type RegisterInventoryOperationInput = {
  * - Inserta operación cruda (inventory_count_operations)
  * - Actualiza/resume línea (inventory_count_lines) ACUMULANDO la cantidad
  */
+type WarehouseItemRow = {
+  id: number;
+  uom_id: number;
+  quantity: string | number | null;
+};
+
 export async function registerInventoryOperation(
   input: RegisterInventoryOperationInput
 ): Promise<void> {
@@ -204,6 +212,8 @@ export async function registerInventoryOperation(
     warehouseId,
     areaId,
     itemId,
+    uomId,
+    warehouseItemId,
     quantity,
     isWeighted,
     status,
@@ -218,26 +228,47 @@ export async function registerInventoryOperation(
     areaId
   );
 
-  // 2) Obtener la UoM configurada para el ítem en este almacén
-  const { data: whItem, error: whItemError } = await supabase
-    .from('warehouse_items')
-    .select('id, uom_id, quantity')
-    .eq('warehouse_id', warehouseId)
-    .eq('item_id', itemId)
-    .maybeSingle();
+  // 2) Obtener la fila de warehouse_items SIN ambigüedad
+  let whItemData: WarehouseItemRow | null = null;
+  let whItemError: unknown = null;
 
-  if (whItemError || !whItem) {
+  if (typeof warehouseItemId === 'number') {
+    // Si viene el id de warehouse_items, lo usamos directo
+    const { data, error } = await supabase
+      .from('warehouse_items')
+      .select('id, uom_id, quantity')
+      .eq('id', warehouseItemId)
+      .maybeSingle();
+
+    whItemData = (data ?? null) as WarehouseItemRow | null;
+    whItemError = error;
+  } else {
+    // Fallback: buscamos por (warehouse_id, item_id, uom_id)
+    const { data, error } = await supabase
+      .from('warehouse_items')
+      .select('id, uom_id, quantity')
+      .eq('warehouse_id', warehouseId)
+      .eq('item_id', itemId)
+      .eq('uom_id', uomId)
+      .maybeSingle();
+
+    whItemData = (data ?? null) as WarehouseItemRow | null;
+    whItemError = error;
+  }
+
+  if (whItemError || !whItemData) {
     console.error(
       '[registerInventoryOperation] warehouse_items error:',
       whItemError
     );
     throw new Error(
-      'No existe configuración de stock para este artículo en este almacén'
+      'No existe configuración de stock para este artículo/UoM en este almacén'
     );
   }
 
-  const uomId = whItem.uom_id as number;
-  const currentStockQty = Number(whItem.quantity ?? 0);
+  // Por seguridad, usamos siempre la UoM real de la fila de warehouse_items
+  const effectiveUomId = whItemData.uom_id;
+  const currentStockQty = Number(whItemData.quantity ?? 0);
   const netQty = quantity;
 
   // 3) Insertar operación cruda
@@ -265,7 +296,7 @@ export async function registerInventoryOperation(
       client_op_id: clientOpId,
       inventory_count_id: inventoryCountId,
       item_id: itemId,
-      uom_id: uomId,
+      uom_id: effectiveUomId,
       is_weighted: isWeighted,
       basket_id: null,
       gross_qty: null,
@@ -284,7 +315,7 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 4) NUEVA LÓGICA: insertar SIEMPRE una línea nueva en inventory_count_lines
+  // 4) Insertar SIEMPRE una línea nueva en inventory_count_lines
   const dbStatus: 'counted' | 'pending' | 'ignored' = isPending
     ? 'pending'
     : 'counted';
@@ -294,7 +325,7 @@ export async function registerInventoryOperation(
     .insert({
       inventory_count_id: inventoryCountId,
       item_id: itemId,
-      uom_id: uomId,
+      uom_id: effectiveUomId,
       counted_qty: netQty,
       last_counted_at: new Date().toISOString(),
       status: dbStatus,
@@ -310,21 +341,20 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 5) Actualizar warehouse_items.quantity (sigue igual)
+  // 5) Actualizar warehouse_items.quantity
   const newStockQty = currentStockQty + netQty;
 
   const { error: whUpdateError } = await supabase
     .from('warehouse_items')
     .update({ quantity: newStockQty })
-    .eq('id', whItem.id);
+    .eq('id', whItemData.id);
 
   if (whUpdateError) {
     console.error(
       '[registerInventoryOperation] warehouse_items update error:',
       whUpdateError
     );
-    // aquí podrías decidir si lanzar error o solo loguear;
-    // por ahora lo dejamos como log (como ya tenías).
+    // Por ahora solo logueamos.
   }
 }
 

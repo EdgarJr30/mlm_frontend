@@ -702,3 +702,23 @@ export async function getWarehouseItemBySku(
 
   return (data as WarehouseStockItem) ?? null;
 }
+
+export async function getWarehouseItemByWarehouseItemId(
+  warehouseItemId: number
+): Promise<WarehouseStockItem | null> {
+  const { data, error } = await supabase
+    .from('vw_warehouse_stock')
+    .select('*')
+    .eq('warehouse_item_id', warehouseItemId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      `❌ Error al buscar warehouse_item_id ${warehouseItemId}:`,
+      error.message
+    );
+    return null;
+  }
+
+  return (data as WarehouseStockItem) ?? null;
+}

@@ -6,9 +6,11 @@ export type PendingReasonCode = 'UOM_DIFFERENT' | 'REVIEW';
 
 export type SelectedProductForAudit = {
   id: string;
+  warehouseItemId: string;
   code: string;
   name: string;
   uomCode: string;
+  uomId: string;
   isWeighted: 'N' | 'Y';
 };
 
@@ -21,6 +23,7 @@ export type WarehouseItemCountPayload = {
   // Producto
   productSearch: string;
   productId?: string;
+  productWarehouseItemId?: string;
   productCode?: string;
   productName?: string;
   uomCode?: string;
@@ -134,6 +137,7 @@ export function NewWarehouseAuditForm({
       time,
       productSearch,
       productId: initialProduct?.id,
+      productWarehouseItemId: initialProduct?.warehouseItemId,
       productCode: initialProduct?.code,
       productName: initialProduct?.name,
       uomCode: initialProduct?.uomCode,

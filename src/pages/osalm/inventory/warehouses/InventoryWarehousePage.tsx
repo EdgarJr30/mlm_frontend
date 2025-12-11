@@ -22,6 +22,7 @@ type AreaHeader = {
 } | null;
 
 type WarehouseProduct = {
+  warehouseItemId: number;
   itemId: number;
   name: string;
   code: string; // sku → lo usamos en la ruta
@@ -216,6 +217,7 @@ export default function InventoryWarehousePage() {
   const products: WarehouseProduct[] = useMemo(
     () =>
       scopedRows.map((r) => ({
+        warehouseItemId: r.warehouse_item_id,
         itemId: r.item_id,
         name: r.item_name,
         code: r.item_sku,
@@ -245,7 +247,7 @@ export default function InventoryWarehousePage() {
     const areaQuery = area ? `?area=${area.code}` : '';
 
     navigate(
-      `/osalm/conteos_inventario/almacen/${warehouse.code}/articulo/${product.code}${areaQuery}`
+      `/osalm/conteos_inventario/almacen/${warehouse.code}/articulo/${product.warehouseItemId}${areaQuery}`
     );
   };
 
@@ -354,7 +356,7 @@ export default function InventoryWarehousePage() {
                 !error &&
                 filteredProducts.map((product) => (
                   <ProductCard
-                    key={product.itemId}
+                    key={product.warehouseItemId}
                     product={product}
                     onOpen={() => handleOpenProduct(product)}
                   />

@@ -384,7 +384,7 @@ export const APP_ROUTES: AppRoute[] = [
 
   // Conteo de artículo en almacén
   {
-    path: '/osalm/conteos_inventario/almacen/:warehouseId/articulo/:itemId/:areaId?',
+    path: '/osalm/conteos_inventario/almacen/:warehouseId/articulo/:warehouseItemId/:areaId?',
     element: <WarehouseItemCountPage />,
     allowPerms: [
       'inventory_counts:read',
