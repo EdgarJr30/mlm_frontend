@@ -249,6 +249,15 @@ export default function InventoryWarehouseAuditReviewPage() {
     }
   };
 
+  // Cambiar UoM de un item
+  const handleChangeItemUom = (id: number, uomId: number, uomCode: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, uomId, uom: uomCode } : item
+      )
+    );
+  };
+
   // Renderizado principal
   if (!canManageAudit) {
     return (
@@ -439,6 +448,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                         onChangeStatus={handleChangeItemStatus}
                         onChangeComment={handleChangeItemComment}
                         onChangeCountedQty={handleChangeItemQty}
+                        onChangeUom={handleChangeItemUom}
                         readOnly={isReadOnly}
                       />
                     ))}
@@ -633,6 +643,7 @@ function AuditItemRow(props: {
   onChangeStatus: (id: number, status: ItemStatus) => void;
   onChangeComment: (id: number, comment: string) => void;
   onChangeCountedQty: (id: number, countedQty: number) => void;
+  onChangeUom: (id: number, uomId: number, uomCode: string) => void;
   readOnly?: boolean;
 }) {
   const {
@@ -640,6 +651,7 @@ function AuditItemRow(props: {
     onChangeStatus,
     onChangeComment,
     onChangeCountedQty,
+    onChangeUom,
     readOnly,
   } = props;
 
@@ -677,9 +689,35 @@ function AuditItemRow(props: {
         <div className="w-24 sm:w-28 font-mono text-gray-700">{item.sku}</div>
         <div className="flex-1">
           <p className="font-semibold text-gray-900">{item.name}</p>
-          <p className="text-[11px] sm:text-xs text-gray-500">
-            UoM: {item.uom}
-          </p>
+          {readOnly ||
+          !item.availableUoms ||
+          item.availableUoms.length === 0 ? (
+            <p className="text-[11px] sm:text-xs text-gray-500">
+              UoM: {item.uom}
+            </p>
+          ) : (
+            <div className="mt-1 inline-flex items-center gap-2">
+              <span className="text-[11px] text-gray-400">UoM:</span>
+              <select
+                value={item.uomId}
+                onChange={(e) => {
+                  const newUomId = Number(e.target.value);
+                  const selected = item.availableUoms?.find(
+                    (u) => u.id === newUomId
+                  );
+                  if (!selected) return;
+                  onChangeUom(item.id, selected.id, selected.code);
+                }}
+                className="rounded-full border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+              >
+                {item.availableUoms?.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.code} — {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* En móviles mostramos el motivo debajo del nombre */}
           {motiveInfo && (

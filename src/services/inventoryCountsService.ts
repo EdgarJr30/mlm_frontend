@@ -46,6 +46,8 @@ export type WarehouseInfo = {
 
 export type AuditItem = {
   id: number; // id de inventory_count_lines
+  itemId: number;
+  uomId: number;
   sku: string;
   name: string;
   uom: string;
@@ -53,6 +55,12 @@ export type AuditItem = {
   status: ItemStatus;
   comment?: string;
   pendingReasonCode?: PendingReasonCode;
+
+  availableUoms?: Array<{
+    id: number;
+    code: string;
+    name: string;
+  }>;
 };
 
 type DbInventoryCountStatus = 'open' | 'closed' | 'cancelled';
@@ -587,6 +595,7 @@ export async function getWarehouseAuditForReview(
 
   const itemIds = (lines ?? []).map((l) => l.item_id as number);
   const uomIds = (lines ?? []).map((l) => l.uom_id as number);
+  const uomsByItem = await getUomsForItems(itemIds);
 
   // 4) Traer descripción (SKU, nombre, UoM) desde la vista vw_warehouse_stock
   let descByKey = new Map<
@@ -627,9 +636,12 @@ export async function getWarehouseAuditForReview(
     lines?.map((l) => {
       const key = `${l.item_id}-${l.uom_id}`;
       const desc = descByKey.get(key);
+      const availableUoms = uomsByItem.get(l.item_id as number) ?? [];
 
       return {
         id: l.id as number,
+        itemId: l.item_id as number,
+        uomId: l.uom_id as number,
         sku: desc?.sku ?? '',
         name: desc?.name ?? '',
         uom: desc?.uomCode ?? '',
@@ -640,6 +652,7 @@ export async function getWarehouseAuditForReview(
         comment: (l.status_comment as string | null) ?? undefined,
         pendingReasonCode:
           (l.pending_reason_code as PendingReasonCode | null) ?? undefined,
+        availableUoms,
       };
     }) ?? [];
 
@@ -699,6 +712,7 @@ export async function saveWarehouseAuditChanges(params: {
     return supabase
       .from('inventory_count_lines')
       .update({
+        uom_id: it.uomId,
         counted_qty: it.countedQty, // cantidad final ajustada
         last_counted_at: nowIso, // huella de cuándo se ajustó
         status: mapUiItemStatusToDb(it.status),
@@ -797,6 +811,7 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
 
   const itemIds = (lines ?? []).map((l) => l.item_id as number);
   const uomIds = (lines ?? []).map((l) => l.uom_id as number);
+  const uomsByItem = await getUomsForItems(itemIds);
 
   let descByKey = new Map<
     string,
@@ -835,9 +850,12 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     lines?.map((l) => {
       const key = `${l.item_id}-${l.uom_id}`;
       const desc = descByKey.get(key);
+      const availableUoms = uomsByItem.get(l.item_id as number) ?? [];
 
       return {
         id: l.id as number,
+        itemId: l.item_id as number,
+        uomId: l.uom_id as number,
         sku: desc?.sku ?? '',
         name: desc?.name ?? '',
         uom: desc?.uomCode ?? '',
@@ -848,6 +866,7 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
         comment: (l.status_comment as string | null) ?? undefined,
         pendingReasonCode:
           (l.pending_reason_code as PendingReasonCode | null) ?? undefined,
+        availableUoms,
       };
     }) ?? [];
 
@@ -868,4 +887,47 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     items,
     inventoryCountId: count.id as number,
   };
+}
+
+async function getUomsForItems(
+  itemIds: number[]
+): Promise<Map<number, Array<{ id: number; code: string; name: string }>>> {
+  if (itemIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('item_uoms')
+    .select(
+      `
+      item_id,
+      uom_id,
+      uoms ( id, code, name )
+    `
+    )
+    .eq('is_active', true)
+    .in('item_id', itemIds);
+
+  if (error) {
+    console.error('Error fetching item_uoms for audit', error);
+    return new Map();
+  }
+
+  const map = new Map<
+    number,
+    Array<{ id: number; code: string; name: string }>
+  >();
+
+  for (const row of data ?? []) {
+    const u = (row as any).uoms as {
+      id: number;
+      code: string;
+      name: string;
+    } | null;
+    if (!u) continue;
+
+    const list = map.get(row.item_id as number) ?? [];
+    list.push({ id: u.id, code: u.code, name: u.name });
+    map.set(row.item_id as number, list);
+  }
+
+  return map;
 }
