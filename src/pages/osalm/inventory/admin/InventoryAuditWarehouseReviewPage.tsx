@@ -4,7 +4,6 @@ import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
 import {
   getInventoryAuditById,
-  // getWarehouseAuditForReview,
   saveWarehouseAuditChanges,
   type AuditStatus,
   type ItemStatus,
@@ -12,6 +11,7 @@ import {
   type WarehouseInfo,
 } from '../../../../services/inventoryCountsService';
 import type { PendingReasonCode } from '../../../../types/inventory';
+import { InventoryAuditExportButton } from './InventoryAuditExportButton';
 
 type FilterTab = 'all' | ItemStatus;
 
@@ -124,88 +124,6 @@ export default function InventoryWarehouseAuditReviewPage() {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, comment } : item))
     );
-  };
-
-  // Exportar auditoría en TXT (formato SAP)
-  const handleExportAudit = () => {
-    if (!warehouse) {
-      alert('No hay información del almacén para exportar.');
-      return;
-    }
-
-    if (!inventoryCountIdState) {
-      alert(
-        'No hay una jornada de inventario asociada a este almacén. No se puede exportar.'
-      );
-      return;
-    }
-
-    if (!items || items.length === 0) {
-      alert('No hay líneas de conteo para exportar.');
-      return;
-    }
-
-    // 👉 Si en algún momento quisieras exportar solo ciertos estados:
-    // const exportItems = items.filter((it) => it.status === 'counted');
-    const exportItems = items;
-
-    if (exportItems.length === 0) {
-      alert('No hay líneas válidas para exportar.');
-      return;
-    }
-
-    // 1) Encabezado requerido
-    const header = 'ItemCode\tWhsCode\tSumVar\tUomCode';
-
-    // 2) Filas de datos
-    const bodyLines = exportItems.map((it) => {
-      const qty =
-        typeof it.countedQty === 'number' && Number.isFinite(it.countedQty)
-          ? String(it.countedQty) // deja el punto decimal tal cual (ej: 10.5)
-          : '0';
-
-      return [
-        it.sku, // ItemCode
-        warehouse.code, // WhsCode (OC, PAP-GRAL, etc.)
-        qty, // SumVar
-        it.uom, // UomCode
-      ].join('\t');
-    });
-
-    const content = [header, ...bodyLines].join('\r\n');
-
-    // 3) Construir nombre de archivo:
-    // auditoria_<nombre_almacen_limpio>_YYYYMMDD_HHMM.txt
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    const mm = pad(now.getMonth() + 1);
-    const dd = pad(now.getDate());
-    const hh = pad(now.getHours());
-    const mi = pad(now.getMinutes());
-
-    // Limpieza del nombre del almacén para que sea seguro en el filename
-    const safeWarehouseName = warehouse.name
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // quita tildes
-      .replace(/[^A-Za-z0-9]+/g, '_') // espacios y símbolos → "_"
-      .replace(/^_+|_+$/g, ''); // quita "_" al inicio/fin
-
-    const fileName = `auditoria_${safeWarehouseName}_${yyyy}${mm}${dd}_${hh}${mi}.txt`;
-
-    // 4) Crear Blob y disparar descarga
-    const blob = new Blob([content], {
-      type: 'text/plain;charset=utf-8',
-    });
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   };
 
   // Cambiar cantidad contada de un item
@@ -322,17 +240,12 @@ export default function InventoryWarehouseAuditReviewPage() {
 
               {/* Botones de acciones (Exportar + Volver) */}
               <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleExportAudit}
+                <InventoryAuditExportButton
+                  warehouse={warehouse}
+                  items={items}
+                  inventoryCountId={inventoryCountIdState}
                   disabled={loading || inventoryCountIdState == null}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-blue-500/25 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-blue-500/40 hover:border-white/50 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                >
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
-                    ⬇️
-                  </span>
-                  <span className="whitespace-nowrap">Exportar reporte</span>
-                </button>
+                />
 
                 <button
                   type="button"
