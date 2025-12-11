@@ -247,7 +247,17 @@ export default function InventoryWarehousePage() {
     const areaQuery = area ? `?area=${area.code}` : '';
 
     navigate(
-      `/osalm/conteos_inventario/almacen/${warehouse.code}/articulo/${product.warehouseItemId}${areaQuery}`
+      `/osalm/conteos_inventario/almacen/${warehouse.code}/articulo/${product.warehouseItemId}${areaQuery}`,
+      area
+        ? {
+            state: {
+              area: {
+                id: String(area.id), // WarehouseItemCountPage espera string
+                name: area.name,
+              },
+            },
+          }
+        : undefined
     );
   };
 
