@@ -10,6 +10,8 @@ type InventoryAuditExportButtonProps = {
   disabled?: boolean;
 };
 
+const DELIMITER = '\t';
+
 export function InventoryAuditExportButton({
   warehouse,
   items,
@@ -34,8 +36,6 @@ export function InventoryAuditExportButton({
       return;
     }
 
-    // 👉 Si en algún momento quisieras exportar solo ciertos estados:
-    // const exportItems = items.filter((it) => it.status === 'counted');
     const exportItems = items;
 
     if (exportItems.length === 0) {
@@ -43,10 +43,11 @@ export function InventoryAuditExportButton({
       return;
     }
 
-    // 1) Encabezado requerido
-    const header = 'ItemCode\tWhsCode\tSumVar\tUomCode';
+    // 1) Encabezado requerido (con tabulaciones)
+    const headerFields = ['ItemCode', 'WhsCode', 'SumVar', 'UomCode'];
+    const header = headerFields.join(DELIMITER);
 
-    // 2) Filas de datos
+    // 2) Filas de datos con tabulaciones
     const bodyLines = exportItems.map((it) => {
       const qty =
         typeof it.countedQty === 'number' && Number.isFinite(it.countedQty)
@@ -58,14 +59,13 @@ export function InventoryAuditExportButton({
         warehouse.code, // WhsCode (OC, PAP-GRAL, etc.)
         qty, // SumVar
         it.uom, // UomCode
-      ].join('\t');
+      ].join(DELIMITER);
     });
 
     // ⚠️ Doble encabezado como pediste:
     const content = [header, header, ...bodyLines].join('\r\n');
 
     // 3) Construir nombre de archivo:
-    // auditoria_<nombre_almacen_limpio>_YYYYMMDD_HHMM.txt
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const yyyy = now.getFullYear();
@@ -74,7 +74,6 @@ export function InventoryAuditExportButton({
     const hh = pad(now.getHours());
     const mi = pad(now.getMinutes());
 
-    // Limpieza del nombre del almacén para que sea seguro en el filename
     const safeWarehouseName = warehouse.name
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '') // quita tildes
