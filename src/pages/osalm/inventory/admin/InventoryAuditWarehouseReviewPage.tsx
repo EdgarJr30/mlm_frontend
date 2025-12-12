@@ -201,7 +201,20 @@ export default function InventoryWarehouseAuditReviewPage() {
   // Cambiar cantidad contada de un item
   const handleChangeItemQty = (id: number, countedQty: number) => {
     setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, countedQty } : item))
+      prev.map((item) => {
+        if (item.id !== id) return item;
+
+        const factor =
+          item.availableUoms?.find((u) => u.id === item.uomId)?.factor ?? 1;
+
+        const baseCountedQty = factor > 0 ? countedQty * factor : countedQty;
+
+        return {
+          ...item,
+          countedQty,
+          baseCountedQty,
+        };
+      })
     );
   };
 
@@ -246,11 +259,44 @@ export default function InventoryWarehouseAuditReviewPage() {
   };
 
   // Cambiar UoM de un item
+  // Cambiar UoM de un item
   const handleChangeItemUom = (id: number, uomId: number, uomCode: string) => {
     setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, uomId, uom: uomCode } : item
-      )
+      prev.map((item) => {
+        if (item.id !== id) return item;
+
+        const available = item.availableUoms ?? [];
+
+        // UoM destino
+        const target = available.find((u) => u.id === uomId);
+        const targetFactor = target?.factor ?? 1;
+
+        // UoM anterior (la que estaba seleccionada antes del cambio)
+        const previous = available.find((u) => u.id === item.uomId);
+        const previousFactor = previous?.factor ?? 1;
+
+        // 🧮 Base "real" para hacer conversiones:
+        // 1) Si ya tenemos baseCountedQty > 0, usamos ese valor.
+        // 2) Si no, lo calculamos a partir de la cantidad actual y el factor de la UoM anterior.
+        let effectiveBase = item.baseCountedQty ?? 0;
+
+        if (!Number.isFinite(effectiveBase) || effectiveBase <= 0) {
+          const qty = Number(item.countedQty ?? 0);
+          effectiveBase = previousFactor > 0 ? qty * previousFactor : qty;
+        }
+
+        // Cantidad en la nueva UoM
+        const newCountedQty =
+          targetFactor > 0 ? effectiveBase / targetFactor : item.countedQty;
+
+        return {
+          ...item,
+          uomId,
+          uom: uomCode,
+          countedQty: newCountedQty,
+          baseCountedQty: effectiveBase,
+        };
+      })
     );
   };
 

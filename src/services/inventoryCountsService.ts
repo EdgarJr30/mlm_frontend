@@ -52,14 +52,15 @@ export type AuditItem = {
   name: string;
   uom: string;
   countedQty: number;
+  baseCountedQty?: number;
   status: ItemStatus;
   comment?: string;
   pendingReasonCode?: PendingReasonCode;
-
   availableUoms?: Array<{
     id: number;
     code: string;
     name: string;
+    factor: number; // cuántas unidades de la UoM base hay en 1 unidad de esta UoM
   }>;
 };
 
@@ -212,7 +213,31 @@ type WarehouseItemRow = {
   id: number;
   uom_id: number;
   quantity: string | number | null;
+  base_quantity?: string | number | null;
 };
+
+async function getConversionFactorForItemUom(
+  itemId: number,
+  uomId: number
+): Promise<number> {
+  const { data, error } = await supabase
+    .from('item_uoms')
+    .select('conversion_factor')
+    .eq('item_id', itemId)
+    .eq('uom_id', uomId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[getConversionFactorForItemUom] error:', error);
+    // En caso de fallo, asumimos factor 1 para no romper el flujo
+    return 1;
+  }
+
+  const factor = Number(data?.conversion_factor ?? 1);
+  if (!Number.isFinite(factor) || factor <= 0) return 1;
+
+  return factor;
+}
 
 export async function registerInventoryOperation(
   input: RegisterInventoryOperationInput
@@ -246,7 +271,7 @@ export async function registerInventoryOperation(
     // Si viene el id de warehouse_items, lo usamos directo
     const { data, error } = await supabase
       .from('warehouse_items')
-      .select('id, uom_id, quantity')
+      .select('id, uom_id, quantity, base_quantity')
       .eq('id', warehouseItemId)
       .maybeSingle();
 
@@ -256,7 +281,7 @@ export async function registerInventoryOperation(
     // Fallback: buscamos por (warehouse_id, item_id, uom_id)
     const { data, error } = await supabase
       .from('warehouse_items')
-      .select('id, uom_id, quantity')
+      .select('id, uom_id, quantity, base_quantity')
       .eq('warehouse_id', warehouseId)
       .eq('item_id', itemId)
       .eq('uom_id', uomId)
@@ -279,11 +304,13 @@ export async function registerInventoryOperation(
   // Por seguridad, usamos siempre la UoM real de la fila de warehouse_items
   const effectiveUomId = whItemData.uom_id;
   const currentStockQty = Number(whItemData.quantity ?? 0);
+  const currentBaseQty = Number(whItemData.base_quantity ?? 0);
 
   let grossQty: number | null = null;
   let netQty: number = quantity;
   let basketIdToSave: number | null = null;
 
+  // 2.1) Lógica de canasto / peso
   if (isWeighted && typeof basketId === 'number' && !Number.isNaN(basketId)) {
     const { data: basketRow, error: basketError } = await supabase
       .from('baskets')
@@ -310,14 +337,20 @@ export async function registerInventoryOperation(
     if (netQty < 0) netQty = 0;
 
     basketIdToSave = basketId;
-  }
-
-  // Si no es pesado, la cantidad digitada ya es neta
-  if (!isWeighted) {
+  } else {
+    // Si no es pesado, la cantidad digitada ya es neta
     grossQty = null;
     netQty = quantity;
     basketIdToSave = null;
   }
+
+  // 2.2) Cantidades en unidad base (usando conversion_factor de item_uoms)
+  const conversionFactor = await getConversionFactorForItemUom(
+    itemId,
+    effectiveUomId
+  );
+  const baseNetQty = netQty * conversionFactor;
+  const baseGrossQty = grossQty !== null ? grossQty * conversionFactor : null;
 
   // 3) Insertar operación cruda
   const clientOpId =
@@ -349,6 +382,9 @@ export async function registerInventoryOperation(
       basket_id: basketIdToSave,
       gross_qty: grossQty,
       net_qty: netQty,
+      // 👉 estos campos asumen que existen en la tabla
+      base_gross_qty: baseGrossQty,
+      base_net_qty: baseNetQty,
       is_pending: isPending,
       pending_comment: finalPendingComment,
       pending_reason_code: dbPendingReasonCode,
@@ -375,6 +411,7 @@ export async function registerInventoryOperation(
       item_id: itemId,
       uom_id: effectiveUomId,
       counted_qty: netQty,
+      base_counted_qty: baseNetQty,
       last_counted_at: new Date().toISOString(),
       status: dbStatus,
       status_comment: dbStatus === 'pending' ? finalPendingComment : null,
@@ -389,12 +426,16 @@ export async function registerInventoryOperation(
     );
   }
 
-  // 5) Actualizar warehouse_items.quantity
+  // 5) Actualizar warehouse_items.quantity y base_quantity
   const newStockQty = currentStockQty + netQty;
+  const newBaseStockQty = currentBaseQty + baseNetQty;
 
   const { error: whUpdateError } = await supabase
     .from('warehouse_items')
-    .update({ quantity: newStockQty })
+    .update({
+      quantity: newStockQty,
+      base_quantity: newBaseStockQty,
+    })
     .eq('id', whItemData.id);
 
   if (whUpdateError) {
@@ -620,6 +661,7 @@ export async function getWarehouseAuditForReview(
         item_id,
         uom_id,
         counted_qty,
+        base_counted_qty,
         status,
         status_comment,
         pending_reason_code
@@ -753,8 +795,9 @@ export async function saveWarehouseAuditChanges(params: {
       .from('inventory_count_lines')
       .update({
         uom_id: it.uomId,
-        counted_qty: it.countedQty, // cantidad final ajustada
-        last_counted_at: nowIso, // huella de cuándo se ajustó
+        counted_qty: it.countedQty,
+        base_counted_qty: it.baseCountedQty ?? null,
+        last_counted_at: nowIso,
         status: mapUiItemStatusToDb(it.status),
         status_comment: isPending ? it.comment ?? null : null,
         pending_reason_code: isPending ? it.pendingReasonCode ?? null : null,
@@ -832,13 +875,14 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     .from('inventory_count_lines')
     .select(
       `
-        id,
-        item_id,
-        uom_id,
-        counted_qty,
-        status,
-        status_comment,
-        pending_reason_code
+         id,
+    item_id,
+    uom_id,
+    counted_qty,
+    base_counted_qty,
+    status,
+    status_comment,
+    pending_reason_code
       `
     )
     .eq('inventory_count_id', count.id)
@@ -892,6 +936,25 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
       const desc = descByKey.get(key);
       const availableUoms = uomsByItem.get(l.item_id as number) ?? [];
 
+      // UoM actual de la línea
+      const currentUom = availableUoms.find((u) => u.id === l.uom_id);
+      const factorCurrent = currentUom?.factor ?? 1;
+
+      const countedFromDb = Number(l.counted_qty ?? 0);
+
+      // 🧮 Aseguramos un baseCountedQty válido:
+      // - Si viene null/0 desde BD, lo calculamos a partir de counted_qty y el factor actual
+      let baseCountedQty = Number(l.base_counted_qty);
+
+      if (!Number.isFinite(baseCountedQty) || baseCountedQty <= 0) {
+        baseCountedQty =
+          factorCurrent > 0 ? countedFromDb * factorCurrent : countedFromDb;
+      }
+
+      // Cantidad visible en la UoM actual
+      const countedQty =
+        factorCurrent > 0 ? baseCountedQty / factorCurrent : countedFromDb;
+
       return {
         id: l.id as number,
         itemId: l.item_id as number,
@@ -899,7 +962,8 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
         sku: desc?.sku ?? '',
         name: desc?.name ?? '',
         uom: desc?.uomCode ?? '',
-        countedQty: Number(l.counted_qty ?? 0),
+        countedQty,
+        baseCountedQty,
         status: mapDbItemStatusToUi(
           (l.status ?? 'counted') as 'pending' | 'counted' | 'ignored'
         ),
@@ -931,7 +995,9 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
 
 async function getUomsForItems(
   itemIds: number[]
-): Promise<Map<number, Array<{ id: number; code: string; name: string }>>> {
+): Promise<
+  Map<number, Array<{ id: number; code: string; name: string; factor: number }>>
+> {
   if (itemIds.length === 0) return new Map();
 
   const { data, error } = await supabase
@@ -940,6 +1006,7 @@ async function getUomsForItems(
       `
       item_id,
       uom_id,
+      conversion_factor,
       uoms ( id, code, name )
     `
     )
@@ -953,7 +1020,7 @@ async function getUomsForItems(
 
   const map = new Map<
     number,
-    Array<{ id: number; code: string; name: string }>
+    Array<{ id: number; code: string; name: string; factor: number }>
   >();
 
   for (const row of data ?? []) {
@@ -964,8 +1031,10 @@ async function getUomsForItems(
     } | null;
     if (!u) continue;
 
+    const factor = Number((row as any).conversion_factor ?? 1) || 1;
+
     const list = map.get(row.item_id as number) ?? [];
-    list.push({ id: u.id, code: u.code, name: u.name });
+    list.push({ id: u.id, code: u.code, name: u.name, factor });
     map.set(row.item_id as number, list);
   }
 
