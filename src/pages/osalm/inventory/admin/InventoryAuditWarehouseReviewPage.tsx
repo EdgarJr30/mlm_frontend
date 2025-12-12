@@ -16,6 +16,8 @@ import { showToastError, showToastSuccess } from '../../../../notifications';
 
 type FilterTab = 'all' | ItemStatus;
 
+const PAGE_SIZE = 50;
+
 // Helper seguro para extraer mensajes de error
 function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -57,6 +59,8 @@ export default function InventoryWarehouseAuditReviewPage() {
   const [isClosedFromDb, setIsClosedFromDb] = useState(false);
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+  const [currentPage, setCurrentPage] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,13 +127,40 @@ export default function InventoryWarehouseAuditReviewPage() {
     };
   }, [canManageAudit, inventoryCountId]);
 
+  // Reset página cuando cambia el filtro
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [activeFilter]);
+
   // Filtrado de items
   const filteredItems = useMemo(() => {
     if (activeFilter === 'all') return items;
     return items.filter((item) => item.status === activeFilter);
   }, [items, activeFilter]);
 
-  // Estadísticas de items
+  // Paginación
+  const totalItemsForFilter = filteredItems.length;
+  const totalPages =
+    totalItemsForFilter === 0 ? 1 : Math.ceil(totalItemsForFilter / PAGE_SIZE);
+
+  const paginatedItems = useMemo(() => {
+    const safePage =
+      currentPage >= totalPages ? totalPages - 1 : Math.max(currentPage, 0);
+    const from = safePage * PAGE_SIZE;
+    const to = from + PAGE_SIZE;
+    return filteredItems.slice(from, to);
+  }, [filteredItems, currentPage, totalPages]);
+
+  const currentRange = useMemo(() => {
+    if (totalItemsForFilter === 0) {
+      return { from: 0, to: 0 };
+    }
+    const from = currentPage * PAGE_SIZE + 1;
+    const to = Math.min((currentPage + 1) * PAGE_SIZE, totalItemsForFilter);
+    return { from, to };
+  }, [currentPage, totalItemsForFilter]);
+
+  // Estadísticas de items (sobre todo el universo)
   const stats = useMemo(
     () => ({
       total: items.length,
@@ -258,7 +289,7 @@ export default function InventoryWarehouseAuditReviewPage() {
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
-          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 max-w-6xl mx-auto w-full">
             {/* Título y descripción */}
             <div className="flex-1 min-w-0">
               <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/80">
@@ -313,7 +344,7 @@ export default function InventoryWarehouseAuditReviewPage() {
 
         {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl">
+          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto w-full">
             {loading && (
               <p className="text-sm text-gray-500">Cargando auditoría...</p>
             )}
@@ -354,65 +385,121 @@ export default function InventoryWarehouseAuditReviewPage() {
                   </div>
 
                   {/* Filtros por estado de item */}
-                  <div className="inline-flex rounded-full bg-gray-100 p-1 text-xs sm:text-sm font-medium">
-                    <FilterChip
-                      label="Todos"
-                      active={activeFilter === 'all'}
-                      onClick={() => setActiveFilter('all')}
-                    />
-                    <FilterChip
-                      label="Pendientes"
-                      active={activeFilter === 'pending'}
-                      tone="warning"
-                      onClick={() => setActiveFilter('pending')}
-                    />
-                    <FilterChip
-                      label="Contados"
-                      active={activeFilter === 'counted'}
-                      tone="success"
-                      onClick={() => setActiveFilter('counted')}
-                    />
-                    <FilterChip
-                      label="Recontar"
-                      active={activeFilter === 'recount'}
-                      tone="info"
-                      onClick={() => setActiveFilter('recount')}
-                    />
+                  <div className="w-full sm:w-auto overflow-x-auto">
+                    <div className="inline-flex rounded-full bg-gray-100 p-1 text-xs sm:text-sm font-medium">
+                      <FilterChip
+                        label="Todos"
+                        active={activeFilter === 'all'}
+                        onClick={() => setActiveFilter('all')}
+                      />
+                      <FilterChip
+                        label="Pendientes"
+                        active={activeFilter === 'pending'}
+                        tone="warning"
+                        onClick={() => setActiveFilter('pending')}
+                      />
+                      <FilterChip
+                        label="Contados"
+                        active={activeFilter === 'counted'}
+                        tone="success"
+                        onClick={() => setActiveFilter('counted')}
+                      />
+                      <FilterChip
+                        label="Recontar"
+                        active={activeFilter === 'recount'}
+                        tone="info"
+                        onClick={() => setActiveFilter('recount')}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Listado de items */}
                 <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
-                  <div className="border-b border-gray-100 px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-500 flex">
-                    <div className="w-24 sm:w-28">SKU</div>
-                    <div className="flex-1">Artículo</div>
-                    <div className="w-20 sm:w-24 text-right">Contado</div>
-                    <div className="w-24 sm:w-28 text-center">Estado</div>
-                    <div className="hidden sm:block w-40 text-center">
-                      Motivo
-                    </div>
-                    <div className="hidden sm:block w-56">Comentario</div>
-                  </div>
-
-                  <div className="divide-y divide-gray-100">
-                    {filteredItems.length === 0 && (
-                      <div className="px-4 sm:px-6 py-6 text-center text-sm text-gray-500">
-                        No hay artículos para este filtro.
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[720px]">
+                      <div className="border-b border-gray-100 px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-500 flex">
+                        <div className="w-24 sm:w-28">SKU</div>
+                        <div className="flex-1">Artículo</div>
+                        <div className="w-20 sm:w-24 text-right">Contado</div>
+                        <div className="w-24 sm:w-28 text-center">Estado</div>
+                        <div className="hidden sm:block w-40 text-center">
+                          Motivo
+                        </div>
+                        <div className="hidden sm:block w-56">Comentario</div>
                       </div>
-                    )}
 
-                    {filteredItems.map((item) => (
-                      <AuditItemRow
-                        key={item.id}
-                        item={item}
-                        onChangeStatus={handleChangeItemStatus}
-                        onChangeComment={handleChangeItemComment}
-                        onChangeCountedQty={handleChangeItemQty}
-                        onChangeUom={handleChangeItemUom}
-                        readOnly={isReadOnly}
-                      />
-                    ))}
+                      <div className="divide-y divide-gray-100">
+                        {paginatedItems.length === 0 && (
+                          <div className="px-4 sm:px-6 py-6 text-center text-sm text-gray-500">
+                            No hay artículos para este filtro.
+                          </div>
+                        )}
+
+                        {paginatedItems.map((item) => (
+                          <AuditItemRow
+                            key={item.id}
+                            item={item}
+                            onChangeStatus={handleChangeItemStatus}
+                            onChangeComment={handleChangeItemComment}
+                            onChangeCountedQty={handleChangeItemQty}
+                            onChangeUom={handleChangeItemUom}
+                            readOnly={isReadOnly}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Paginador */}
+                  {totalItemsForFilter > PAGE_SIZE && (
+                    <div className="border-t border-gray-100 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-gray-600">
+                      <span>
+                        Mostrando{' '}
+                        <span className="font-semibold">
+                          {currentRange.from}
+                        </span>{' '}
+                        –{' '}
+                        <span className="font-semibold">{currentRange.to}</span>{' '}
+                        de{' '}
+                        <span className="font-semibold">
+                          {totalItemsForFilter}
+                        </span>{' '}
+                        artículos
+                      </span>
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(p - 1, 0))
+                          }
+                          disabled={currentPage === 0}
+                          className="px-3 py-1 rounded-full border border-gray-200 bg-white text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                          Anterior
+                        </button>
+                        <span className="text-xs sm:text-sm text-gray-500">
+                          Página{' '}
+                          <span className="font-semibold">
+                            {currentPage + 1}
+                          </span>{' '}
+                          de <span className="font-semibold">{totalPages}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCurrentPage((p) =>
+                              p + 1 >= totalPages ? p : p + 1
+                            )
+                          }
+                          disabled={currentPage + 1 >= totalPages}
+                          className="px-3 py-1 rounded-full border border-gray-200 bg-white text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer de acciones */}
