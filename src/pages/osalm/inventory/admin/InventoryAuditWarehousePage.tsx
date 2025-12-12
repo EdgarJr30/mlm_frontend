@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEventHandler } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
@@ -67,7 +67,7 @@ export default function InventoryAuditWarehousePage() {
         <Sidebar />
         <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
           <header className="bg-blue-600 text-white shadow-sm">
-            <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
+            <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4 max-w-6xl mx-auto w-full">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
                   Inventario Auditoría
@@ -79,7 +79,7 @@ export default function InventoryAuditWarehousePage() {
             </div>
           </header>
           <section className="flex-1 flex items-center justify-center">
-            <p className="text-gray-600 text-sm sm:text-base">
+            <p className="text-gray-600 text-sm sm:text-base text-center px-4">
               No tienes permisos para administrar las auditorías de almacenes.
             </p>
           </section>
@@ -95,68 +95,75 @@ export default function InventoryAuditWarehousePage() {
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
-          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 flex items-center justify-between gap-4">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Títulos */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/80">
+                Auditoría de inventario
+              </p>
+              <h1 className="mt-1 text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
                 Inventario Auditoría
               </h1>
               <p className="text-sm sm:text-base mt-1 opacity-90">
-                Administración de auditorías de almacenes
+                Administración de auditorías de almacenes.
               </p>
             </div>
 
             {/* Botón Volver */}
-            <button
-              type="button"
-              onClick={() => navigate('/osalm/conteos_inventario')}
-              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
-            >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
-                ←
-              </span>
-              <span>Volver</span>
-            </button>
+            <div className="flex justify-start sm:justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/osalm/conteos_inventario')}
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                  ←
+                </span>
+                <span className="whitespace-nowrap">Volver</span>
+              </button>
+            </div>
           </div>
         </header>
 
         {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl">
+          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto w-full">
             {/* Tabs: Almacenes / Áreas */}
             <div className="mt-1 border-b border-gray-200">
-              <div className="inline-flex rounded-full bg-gray-100 p-1 text-sm font-medium">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('warehouses')}
-                  className={[
-                    'px-4 py-1.5 rounded-full',
-                    activeTab === 'warehouses'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700',
-                  ].join(' ')}
-                >
-                  Almacenes
-                </button>
+              <div className="w-full overflow-x-auto">
+                <div className="inline-flex rounded-full bg-gray-100 p-1 text-xs sm:text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('warehouses')}
+                    className={[
+                      'px-4 py-1.5 rounded-full whitespace-nowrap',
+                      activeTab === 'warehouses'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700',
+                    ].join(' ')}
+                  >
+                    Almacenes
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('areas')}
-                  className={[
-                    'px-4 py-1.5 rounded-full',
-                    activeTab === 'areas'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700',
-                  ].join(' ')}
-                >
-                  Áreas
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('areas')}
+                    className={[
+                      'px-4 py-1.5 rounded-full whitespace-nowrap',
+                      activeTab === 'areas'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700',
+                    ].join(' ')}
+                  >
+                    Áreas
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Title: history */}
             <div className="mt-6">
-              <h3 className="text-xs font-semibold tracking-[0.14em] text-gray-500">
+              <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.14em] text-gray-500">
                 {activeTab === 'warehouses'
                   ? 'HISTORIAL DE AUDITORÍAS POR ALMACÉN'
                   : 'HISTORIAL DE AUDITORÍAS POR ÁREA'}
@@ -229,17 +236,16 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
     : session.warehouse;
 
   const subtitle = isArea
-    ? `${session.warehouse} ${session.areaCode ? `· ${session.areaCode}` : ''}`
+    ? `${session.warehouse}${session.areaCode ? ` · ${session.areaCode}` : ''}`
     : session.warehouseCode
     ? `Código: ${session.warehouseCode}`
     : undefined;
 
   const handleClick = () => {
-    // Usamos warehouseCode como param de ruta (ej: "OC-QUIM")
     navigate(`/osalm/conteos_inventario/auditoria/almacenes/${session.id}`);
   };
 
-  const handleKeyDown: React.KeyboardEventHandler<HTMLElement> = (event) => {
+  const handleKeyDown: KeyboardEventHandler<HTMLElement> = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       handleClick();
@@ -252,55 +258,65 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className="bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
+      className="bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
     >
-      <div className="flex flex-col gap-1">
+      {/* Info izquierda */}
+      <div className="flex-1 min-w-0">
         <p className="text-xs sm:text-sm text-gray-500 tracking-wide">
           <span className="font-medium">{session.date}</span>
-          <span className="mx-2">•</span>
-          <span>{session.time}</span>
+          <span className="mx-2 hidden sm:inline">•</span>
+          <span className="block sm:inline">{session.time}</span>
         </p>
-        {/* Título principal: almacén o área */}
-        <h4 className="text-lg sm:text-xl font-semibold text-gray-900">
+
+        <h4 className="mt-1 text-lg sm:text-xl font-semibold text-gray-900 truncate">
           {mainTitle}
         </h4>
-        {/* Subtítulo con almacén / código */}
+
         {subtitle && (
-          <p className="text-xs sm:text-sm text-gray-500">{subtitle}</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{subtitle}</p>
         )}
-        <p className="text-sm text-gray-500">
+
+        <p className="mt-1 text-sm text-gray-500">
           {session.itemsAudited} items auditados
         </p>
       </div>
 
-      <div className="flex flex-col items-end gap-1 min-w-[110px]">
-        <div
-          className={[
-            'flex items-center justify-center h-10 w-10 rounded-full border-2 bg-white',
-            cfg.iconRing,
-          ].join(' ')}
-        >
-          {session.status === 'completed' && (
-            <span className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white text-xl leading-none">
-              ✓
-            </span>
-          )}
+      {/* Estado derecha */}
+      <div className="flex items-center sm:items-end justify-between sm:justify-end gap-3">
+        <div className="flex flex-col items-end gap-1 min-w-[110px]">
+          <div
+            className={[
+              'flex items-center justify-center h-10 w-10 rounded-full border-2 bg-white',
+              cfg.iconRing,
+            ].join(' ')}
+          >
+            {session.status === 'completed' && (
+              <span className="flex items-center justify-center h-6 w-6 rounded-full bg-green-500 text-white text-xl leading-none">
+                ✓
+              </span>
+            )}
 
-          {session.status === 'pending' && (
-            <span className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-400 text-white text-xl leading-none">
-              ⏱
-            </span>
-          )}
+            {session.status === 'pending' && (
+              <span className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-400 text-white text-xl leading-none">
+                ⏱
+              </span>
+            )}
 
-          {session.status === 'in_progress' && (
-            <span className="flex items-center justify-center h-5 w-5 rounded-full border-2 border-blue-500 bg-blue-50">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-            </span>
-          )}
+            {session.status === 'in_progress' && (
+              <span className="flex items-center justify-center h-5 w-5 rounded-full border-2 border-blue-500 bg-blue-50">
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+              </span>
+            )}
+          </div>
+          <span
+            className={[
+              'text-sm font-medium mt-1 text-right',
+              cfg.textColor,
+            ].join(' ')}
+          >
+            {cfg.label}
+          </span>
         </div>
-        <span className={['text-sm font-medium mt-1', cfg.textColor].join(' ')}>
-          {cfg.label}
-        </span>
       </div>
     </article>
   );
