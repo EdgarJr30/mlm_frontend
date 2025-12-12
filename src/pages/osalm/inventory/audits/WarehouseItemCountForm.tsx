@@ -106,12 +106,17 @@ export function NewWarehouseAuditForm({
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
+    let raw = e.target.value;
+
+    // quitar ceros a la izquierda, pero dejando al menos un dígito
+    raw = raw.replace(/^0+(?=\d)/, '');
+
     if (raw === '') {
       setQuantity(0);
       return;
     }
     const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return;
     setQuantity(clampQuantity(parsed));
   };
 
@@ -287,10 +292,11 @@ export function NewWarehouseAuditForm({
             –
           </button>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={0}
             max={99999}
-            value={quantity}
+            value={quantity === 0 ? '0' : String(quantity)}
             onChange={handleQuantityChange}
             className="w-28 text-center text-2xl font-bold text-gray-900 rounded-xl border border-gray-200 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
           />
