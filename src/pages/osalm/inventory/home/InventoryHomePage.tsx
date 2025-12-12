@@ -342,9 +342,8 @@ export default function InventoryHomePage() {
                     </div>
 
                     <h3 className="text-sm sm:text-base font-semibold text-gray-900 group-hover:text-emerald-700 line-clamp-2">
-                      {a.warehouseName}
+                      {a.name}
                     </h3>
-                    <p className="text-xs sm:text-sm text-gray-600">{a.name}</p>
 
                     <p className="mt-1 text-[11px] sm:text-xs text-gray-500">
                       Área activa para conteos de inventario en este almacén.
