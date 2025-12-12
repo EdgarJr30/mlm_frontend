@@ -47,14 +47,14 @@ type NewWarehouseAuditFormProps = {
 function getBasketColorClass(color: string | null | undefined): string {
   const c = (color ?? '').toLowerCase();
 
-  if (c.includes('rojo') || c.includes('red')) return 'bg-red-500';
-  if (c.includes('verde') || c.includes('green')) return 'bg-green-500';
-  if (c.includes('azul') || c.includes('blue')) return 'bg-blue-500';
-  if (c.includes('amarillo') || c.includes('yellow')) return 'bg-yellow-400';
-  if (c.includes('naranja') || c.includes('orange')) return 'bg-orange-500';
-  if (c.includes('morado') || c.includes('purple')) return 'bg-purple-500';
+  if (c.includes('rojo') || c.includes('red')) return 'text-red-600';
+  if (c.includes('verde') || c.includes('green')) return 'text-green-600';
+  if (c.includes('azul') || c.includes('blue')) return 'text-blue-600';
+  if (c.includes('amarillo') || c.includes('yellow')) return 'text-yellow-500';
+  if (c.includes('naranja') || c.includes('orange')) return 'text-orange-500';
+  if (c.includes('morado') || c.includes('purple')) return 'text-purple-500';
 
-  return 'bg-gray-400';
+  return 'text-gray-500';
 }
 
 export function NewWarehouseAuditForm({
@@ -199,7 +199,7 @@ export function NewWarehouseAuditForm({
       productName: initialProduct?.name,
       uomCode: initialProduct?.uomCode,
       isWeighted,
-      quantity, //aquí sigue yendo lo que el usuario digitó
+      quantity, // aquí sigue yendo lo que el usuario digitó
       basketId: selectedBasketId ?? undefined,
       status: derivedStatus,
       auditorEmail,
@@ -303,7 +303,7 @@ export function NewWarehouseAuditForm({
       {/* ¿Es pesado? */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          ¿Es Pesado?
+          ¿Este artículo debe ser pesado en balanza?
         </h2>
         <div className="grid grid-cols-2 gap-3">
           <button
@@ -319,7 +319,7 @@ export function NewWarehouseAuditForm({
                   : 'bg-gray-100 text-gray-700'
               }`}
           >
-            N
+            No
           </button>
           <button
             type="button"
@@ -331,7 +331,7 @@ export function NewWarehouseAuditForm({
                   : 'bg-gray-100 text-gray-700'
               }`}
           >
-            Y
+            Sí
           </button>
         </div>
 
@@ -361,13 +361,42 @@ export function NewWarehouseAuditForm({
                             : 'border-gray-200 bg-gray-50 text-gray-700'
                         }`}
                     >
-                      <span
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-white text-lg shadow-sm ${getBasketColorClass(
-                          basket.color
-                        )}`}
-                      >
-                        🧺
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white text-lg shadow-sm">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          strokeWidth={1.6}
+                          className={`w-6 h-6 ${getBasketColorClass(
+                            basket.color
+                          )}`}
+                        >
+                          <g
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            {/* Cuerpo del huacal, bajito */}
+                            <path d="M4 9.5c0-.9.7-1.5 1.6-1.5h12.8c.9 0 1.6.6 1.6 1.5v4.7c0 1.3-1 2.3-2.3 2.3H6.3C5 16.5 4 15.5 4 14.2Z" />
+
+                            {/* Borde superior */}
+                            <path d="M5.2 8.25h13.6" />
+
+                            {/* Asas laterales */}
+                            <path d="M6.2 10.1h1.9M15.9 10.1h1.9" />
+
+                            {/* Listones horizontales (solo 2 para no ensuciar) */}
+                            <path d="M6 11.9h12M6 13.5h12" />
+
+                            {/* Listones verticales internos (3 nada más) */}
+                            <path d="M8.3 10.2v4.1M12 10.2v4.1M15.7 10.2v4.1" />
+
+                            {/* Base suavemente marcada */}
+                            <path d="M7.2 16.1h3.1M13.7 16.1h3.1" />
+                          </g>
+                        </svg>
                       </span>
+
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold truncate">{basket.name}</p>
                         <p className="text-[11px] text-gray-500">
