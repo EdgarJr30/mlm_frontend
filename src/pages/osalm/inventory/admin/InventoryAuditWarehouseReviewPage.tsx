@@ -12,8 +12,31 @@ import {
 } from '../../../../services/inventoryCountsService';
 import type { PendingReasonCode } from '../../../../types/inventory';
 import { InventoryAuditExportButton } from './InventoryAuditExportButton';
+import { showToastError, showToastSuccess } from '../../../../notifications';
 
 type FilterTab = 'all' | ItemStatus;
+
+// Helper seguro para extraer mensajes de error
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    const anyErr = err as {
+      message?: string;
+      error_description?: string;
+      error?: string;
+      code?: string;
+    };
+    return (
+      anyErr.message ??
+      anyErr.error_description ??
+      anyErr.error ??
+      anyErr.code ??
+      'Ocurrió un error'
+    );
+  }
+  return 'Ocurrió un error';
+}
 
 export default function InventoryWarehouseAuditReviewPage() {
   const navigate = useNavigate();
@@ -44,6 +67,9 @@ export default function InventoryWarehouseAuditReviewPage() {
   useEffect(() => {
     if (!canManageAudit) {
       setLoading(false);
+      showToastError(
+        'No tienes permisos para administrar las auditorías de almacenes.'
+      );
       return;
     }
 
@@ -51,14 +77,18 @@ export default function InventoryWarehouseAuditReviewPage() {
 
     async function load() {
       if (!inventoryCountId) {
-        setError('No se encontró el id de la jornada en la URL.');
+        const msg = 'No se encontró el id de la jornada en la URL.';
+        setError(msg);
+        showToastError(msg);
         setLoading(false);
         return;
       }
 
       const numericId = Number(inventoryCountId);
       if (Number.isNaN(numericId)) {
-        setError('El id de la jornada no es válido.');
+        const msg = 'El id de la jornada no es válido.';
+        setError(msg);
+        showToastError(msg);
         setLoading(false);
         return;
       }
@@ -78,11 +108,9 @@ export default function InventoryWarehouseAuditReviewPage() {
         setIsClosedFromDb(data.auditStatus === 'completed');
       } catch (err: unknown) {
         if (!isMounted) return;
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Error cargando la auditoría del almacén');
-        }
+        const msg = extractErrorMessage(err);
+        setError(msg);
+        showToastError(`Error cargando la auditoría del almacén: ${msg}`);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -112,6 +140,19 @@ export default function InventoryWarehouseAuditReviewPage() {
     [items]
   );
 
+  // Cambiar estado de la auditoría (para mostrar toast cuando se marca como completada)
+  const handleChangeAuditStatus = (nextStatus: AuditStatus) => {
+    if (isReadOnly) return;
+
+    setAuditStatus(nextStatus);
+
+    if (nextStatus === 'completed') {
+      showToastSuccess(
+        'La auditoría se ha marcado como Completada. No olvides guardar los cambios para cerrar el almacén.'
+      );
+    }
+  };
+
   // Cambiar estado de un item
   const handleChangeItemStatus = (id: number, status: ItemStatus) => {
     setItems((prev) =>
@@ -135,10 +176,15 @@ export default function InventoryWarehouseAuditReviewPage() {
 
   // Guardar cambios
   const handleSaveChanges = async () => {
-    if (isReadOnly) return;
+    if (isReadOnly) {
+      showToastError(
+        'Este conteo ya está cerrado; no se pueden guardar cambios.'
+      );
+      return;
+    }
 
     if (!inventoryCountIdState) {
-      alert(
+      showToastError(
         'No hay una jornada de inventario asociada a este almacén. No se pueden guardar cambios.'
       );
       return;
@@ -153,15 +199,16 @@ export default function InventoryWarehouseAuditReviewPage() {
         items,
       });
 
-      alert('Cambios guardados correctamente.');
+      const successMsg =
+        auditStatus === 'completed'
+          ? 'Cambios guardados y auditoría marcada como Completada.'
+          : 'Cambios de la auditoría guardados correctamente.';
+
+      showToastSuccess(successMsg);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-        alert(`Error al guardar cambios: ${err.message}`);
-      } else {
-        setError('Error al guardar cambios');
-        alert('Error al guardar cambios');
-      }
+      const baseMsg = extractErrorMessage(err);
+      setError(baseMsg);
+      showToastError(`Error al guardar cambios: ${baseMsg}`);
     } finally {
       setSaving(false);
     }
@@ -234,7 +281,7 @@ export default function InventoryWarehouseAuditReviewPage() {
               {/* Selector de estado de la auditoría */}
               <AuditStatusSelector
                 status={auditStatus}
-                onChange={setAuditStatus}
+                onChange={handleChangeAuditStatus}
                 readOnly={isReadOnly}
               />
 
