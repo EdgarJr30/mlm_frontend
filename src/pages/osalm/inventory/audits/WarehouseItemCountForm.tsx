@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '../../../../context/UserContext';
+import type { Basket } from '../../../../types/inventory';
 
 export type InventoryStatus = 'counted' | 'pending' | 'recount';
 export type PendingReasonCode = 'UOM_DIFFERENT' | 'REVIEW';
@@ -19,8 +20,6 @@ export type WarehouseItemCountPayload = {
   areaId?: string;
   date: string;
   time: string;
-
-  // Producto
   productSearch: string;
   productId?: string;
   productWarehouseItemId?: string;
@@ -28,11 +27,9 @@ export type WarehouseItemCountPayload = {
   productName?: string;
   uomCode?: string;
   isWeighted: 'N' | 'Y';
-
   quantity: number;
-
-  // 👇 Se envía “por detrás”
-  status: InventoryStatus; // counted por defecto, pending si hay motivo
+  basketId?: string;
+  status: InventoryStatus;
   auditorEmail: string;
   statusComment?: string;
   pendingReasonCode?: PendingReasonCode;
@@ -44,7 +41,21 @@ type NewWarehouseAuditFormProps = {
   initialProduct?: SelectedProductForAudit;
   onCancel: () => void;
   onSubmit?: (payload: WarehouseItemCountPayload) => void;
+  baskets?: Basket[];
 };
+
+function getBasketColorClass(color: string | null | undefined): string {
+  const c = (color ?? '').toLowerCase();
+
+  if (c.includes('rojo') || c.includes('red')) return 'bg-red-500';
+  if (c.includes('verde') || c.includes('green')) return 'bg-green-500';
+  if (c.includes('azul') || c.includes('blue')) return 'bg-blue-500';
+  if (c.includes('amarillo') || c.includes('yellow')) return 'bg-yellow-400';
+  if (c.includes('naranja') || c.includes('orange')) return 'bg-orange-500';
+  if (c.includes('morado') || c.includes('purple')) return 'bg-purple-500';
+
+  return 'bg-gray-400';
+}
 
 export function NewWarehouseAuditForm({
   warehouse,
@@ -52,9 +63,9 @@ export function NewWarehouseAuditForm({
   area,
   onCancel,
   onSubmit,
+  baskets = [],
 }: NewWarehouseAuditFormProps) {
   const { profile } = useUser();
-
   const [date] = useState(() => new Date().toISOString().slice(0, 10));
   const [time] = useState(() => {
     const now = new Date();
@@ -62,29 +73,25 @@ export function NewWarehouseAuditForm({
     const mm = String(now.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
   });
-
-  // Producto
   const [productSearch, setProductSearch] = useState(() =>
     initialProduct ? `${initialProduct.code} - ${initialProduct.name}` : ''
   );
-
   const [isWeighted, setIsWeighted] = useState<'N' | 'Y'>(
     initialProduct?.isWeighted ?? 'N'
   );
-
-  // Cantidad
   const [quantity, setQuantity] = useState<number>(0);
   const [rawQuantity, setRawQuantity] = useState('0');
-
-  // 🔁 Ya NO se muestra el status en la UI.
-  // Se calcula en el submit: counted si no hay motivo, pending si hay motivo.
+  const [selectedBasketId, setSelectedBasketId] = useState<string | null>(null);
+  const selectedBasket =
+    baskets.find((b) => String(b.id) === selectedBasketId) ?? null;
+  const netPreview =
+    isWeighted === 'Y' && selectedBasket
+      ? Math.max(0, quantity - Number(selectedBasket.weight ?? 0))
+      : null;
   const [pendingReasonCode, setPendingReasonCode] = useState<
     PendingReasonCode | ''
   >('');
-
   const [statusComment, setStatusComment] = useState<string>('');
-
-  // Auditor
   const [auditorEmail, setAuditorEmail] = useState('');
   useEffect(() => {
     if (profile?.email && auditorEmail === '') {
@@ -192,8 +199,9 @@ export function NewWarehouseAuditForm({
       productName: initialProduct?.name,
       uomCode: initialProduct?.uomCode,
       isWeighted,
-      quantity,
-      status: derivedStatus, // 👈 aquí va counted o pending según el motivo
+      quantity, //aquí sigue yendo lo que el usuario digitó
+      basketId: selectedBasketId ?? undefined,
+      status: derivedStatus,
       auditorEmail,
       pendingReasonCode: isPending ? pendingReasonCode : undefined,
       statusComment:
@@ -300,7 +308,10 @@ export function NewWarehouseAuditForm({
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => setIsWeighted('N')}
+            onClick={() => {
+              setIsWeighted('N');
+              setSelectedBasketId(null);
+            }}
             className={`h-11 rounded-2xl text-sm font-semibold transition
               ${
                 isWeighted === 'N'
@@ -323,6 +334,61 @@ export function NewWarehouseAuditForm({
             Y
           </button>
         </div>
+
+        {isWeighted === 'Y' && (
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold text-gray-600 mb-2">
+              Selecciona el canasto usado
+            </h3>
+
+            {baskets.length === 0 ? (
+              <p className="text-[11px] text-gray-400">
+                No hay canastos activos configurados. Contacta al administrador.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {baskets.map((basket) => {
+                  const isSelected = selectedBasketId === String(basket.id);
+                  return (
+                    <button
+                      key={basket.id}
+                      type="button"
+                      onClick={() => setSelectedBasketId(String(basket.id))}
+                      className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
+                        ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 text-blue-800'
+                            : 'border-gray-200 bg-gray-50 text-gray-700'
+                        }`}
+                    >
+                      <span
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-white text-lg shadow-sm ${getBasketColorClass(
+                          basket.color
+                        )}`}
+                      >
+                        🧺
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{basket.name}</p>
+                        <p className="text-[11px] text-gray-500">
+                          Peso canasto:{' '}
+                          <span className="font-semibold">
+                            {Number(basket.weight ?? 0).toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="mt-2 text-[11px] text-gray-400">
+              El peso del canasto se restará automáticamente de la cantidad
+              ingresada en el conteo.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Cantidad */}
@@ -336,6 +402,7 @@ export function NewWarehouseAuditForm({
           >
             –
           </button>
+
           <input
             type="text"
             inputMode="decimal"
@@ -345,6 +412,7 @@ export function NewWarehouseAuditForm({
             onChange={handleQuantityChange}
             className="w-28 text-center text-2xl font-bold text-gray-900 rounded-xl border border-gray-200 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
           />
+
           <button
             type="button"
             onClick={increment}
@@ -353,9 +421,20 @@ export function NewWarehouseAuditForm({
             +
           </button>
         </div>
+
         <p className="mt-2 text-[11px] text-gray-400 text-center">
-          Mínimo 0 · Máximo 99,999 unidades.
+          Mínimo 0 · Máximo 99,999{' '}
+          {isWeighted === 'Y' ? 'de peso bruto.' : 'unidades.'}
         </p>
+
+        {isWeighted === 'Y' && selectedBasket && netPreview !== null && (
+          <p className="mt-2 text-[11px] text-blue-700 text-center">
+            Se registrará{' '}
+            <span className="font-semibold">{netPreview.toFixed(2)}</span> como
+            cantidad neta ({quantity.toFixed(2)} −{' '}
+            {Number(selectedBasket.weight).toFixed(2)} de canasto).
+          </p>
+        )}
       </div>
 
       {/* Estado del Inventario – solo motivos tipo “bolitas” */}

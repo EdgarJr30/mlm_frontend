@@ -8,10 +8,11 @@ import {
 } from './WarehouseItemCountForm';
 import {
   getActiveWarehouses,
-  // getWarehouseItemBySku,
   getWarehouseItemByWarehouseItemId,
   type WarehouseStockItem,
+  getActiveBaskets,
 } from '../../../../services/inventoryService';
+import type { Basket } from '../../../../types/inventory';
 import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
 
@@ -64,7 +65,7 @@ export default function WarehouseItemCountPage() {
   const area = state?.area ?? null;
   const [initialProduct, setInitialProduct] =
     useState<SelectedProductForAudit | null>(null);
-
+  const [baskets, setBaskets] = useState<Basket[]>([]);
   const [loadingWarehouse, setLoadingWarehouse] = useState(true);
   const [loadingItem, setLoadingItem] = useState(true);
   const [, setError] = useState<string | null>(null);
@@ -181,6 +182,26 @@ export default function WarehouseItemCountPage() {
     };
   }, [warehouseId, warehouseItemId]);
 
+  // Carga de canastos (baskets)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchBaskets() {
+      try {
+        const data = await getActiveBaskets();
+        if (!isMounted) return;
+        setBaskets(data);
+      } catch (err) {
+        console.error('❌ Error al cargar canastos:', err);
+      }
+    }
+
+    fetchBaskets();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleSubmit = async (payload: WarehouseItemCountPayload) => {
     if (!warehouse || !initialProduct) {
       showToastError(
@@ -195,6 +216,11 @@ export default function WarehouseItemCountPage() {
     const warehouseItemNumericId = Number(initialProduct.warehouseItemId);
     const areaNumericId = payload.areaId ? Number(payload.areaId) : undefined;
 
+    const isWeighted = payload.isWeighted === 'Y';
+    const basketIdNumeric = payload.basketId
+      ? Number(payload.basketId)
+      : undefined;
+
     if (
       Number.isNaN(warehouseNumericId) ||
       Number.isNaN(itemNumericId) ||
@@ -207,6 +233,20 @@ export default function WarehouseItemCountPage() {
       return;
     }
 
+    if (isWeighted && (!basketIdNumeric || Number.isNaN(basketIdNumeric))) {
+      showToastError('Selecciona un canasto para registrar artículos pesados.');
+      return;
+    }
+
+    const basket = isWeighted
+      ? baskets.find((b) => b.id === basketIdNumeric)
+      : undefined;
+
+    const basketWeight = basket ? Number(basket.weight ?? 0) : 0;
+    const grossQty = payload.quantity;
+    const netQty =
+      isWeighted && basket ? Math.max(0, grossQty - basketWeight) : grossQty;
+
     const articuloEtiqueta = `${initialProduct.code} · ${initialProduct.name} (${initialProduct.uomCode})`;
 
     try {
@@ -218,8 +258,9 @@ export default function WarehouseItemCountPage() {
         itemId: itemNumericId,
         uomId: uomNumericId,
         warehouseItemId: warehouseItemNumericId,
-        quantity: payload.quantity,
-        isWeighted: payload.isWeighted === 'Y',
+        quantity: grossQty, //enviamos la cantidad digitada (peso bruto)
+        isWeighted,
+        basketId: basketIdNumeric,
         status: payload.status,
         auditorEmail: payload.auditorEmail,
         statusComment: payload.statusComment,
@@ -228,14 +269,19 @@ export default function WarehouseItemCountPage() {
 
       const esPendiente = payload.status === 'pending';
 
-      // ✅ Toast de éxito según estado
+      const cantidadTexto = isWeighted
+        ? `${netQty.toFixed(2)} (bruto ${grossQty.toFixed(
+            2
+          )} − canasto ${basketWeight.toFixed(2)})`
+        : `${grossQty.toFixed(2)}`;
+
       if (esPendiente) {
         showToastSuccess(
-          `Artículo marcado como pendiente: ${articuloEtiqueta} — Cantidad: ${payload.quantity}`
+          `Artículo marcado como pendiente: ${articuloEtiqueta} — Cantidad: ${cantidadTexto}`
         );
       } else {
         showToastSuccess(
-          `Artículo contado: ${articuloEtiqueta} — Cantidad: ${payload.quantity}`
+          `Artículo contado: ${articuloEtiqueta} — Cantidad: ${cantidadTexto}`
         );
       }
 
@@ -383,6 +429,7 @@ export default function WarehouseItemCountPage() {
                 warehouse={{ id: warehouse.id, name: warehouse.name }}
                 area={area}
                 initialProduct={initialProduct}
+                baskets={baskets}
                 onCancel={() => navigate(-1)}
                 onSubmit={handleSubmit}
               />

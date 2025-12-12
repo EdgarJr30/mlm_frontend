@@ -198,6 +198,7 @@ export type RegisterInventoryOperationInput = {
   auditorEmail?: string;
   statusComment?: string;
   pendingReasonCode?: PendingReasonCode;
+  basketId?: number;
 };
 
 /**
@@ -228,6 +229,7 @@ export async function registerInventoryOperation(
     auditorEmail,
     statusComment,
     pendingReasonCode,
+    basketId,
   } = input;
 
   // 1) Garantizar jornada abierta
@@ -277,7 +279,45 @@ export async function registerInventoryOperation(
   // Por seguridad, usamos siempre la UoM real de la fila de warehouse_items
   const effectiveUomId = whItemData.uom_id;
   const currentStockQty = Number(whItemData.quantity ?? 0);
-  const netQty = quantity;
+
+  let grossQty: number | null = null;
+  let netQty: number = quantity;
+  let basketIdToSave: number | null = null;
+
+  if (isWeighted && typeof basketId === 'number' && !Number.isNaN(basketId)) {
+    const { data: basketRow, error: basketError } = await supabase
+      .from('baskets')
+      .select('weight')
+      .eq('id', basketId)
+      .maybeSingle();
+
+    if (basketError || !basketRow) {
+      console.error(
+        '[registerInventoryOperation] basket fetch error:',
+        basketError
+      );
+      throw new Error(
+        'No se pudo obtener la configuración del canasto seleccionado'
+      );
+    }
+
+    const basketWeight = Number((basketRow as any).weight ?? 0);
+
+    grossQty = quantity;
+    netQty = quantity - basketWeight;
+
+    if (!Number.isFinite(netQty)) netQty = 0;
+    if (netQty < 0) netQty = 0;
+
+    basketIdToSave = basketId;
+  }
+
+  // Si no es pesado, la cantidad digitada ya es neta
+  if (!isWeighted) {
+    grossQty = null;
+    netQty = quantity;
+    basketIdToSave = null;
+  }
 
   // 3) Insertar operación cruda
   const clientOpId =
@@ -306,8 +346,8 @@ export async function registerInventoryOperation(
       item_id: itemId,
       uom_id: effectiveUomId,
       is_weighted: isWeighted,
-      basket_id: null,
-      gross_qty: null,
+      basket_id: basketIdToSave,
+      gross_qty: grossQty,
       net_qty: netQty,
       is_pending: isPending,
       pending_comment: finalPendingComment,
