@@ -276,8 +276,8 @@ export default function InventoryWarehousePage() {
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* HEADER AZUL */}
-        <header className="bg-blue-600 text-white shadow-sm pt-18 sm:pt-4">
-          <div className="px-4 sm:px-6 lg:px-10 pb-4 flex items-center justify-between gap-3">
+        <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Texto: título + subtítulo */}
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
@@ -304,37 +304,41 @@ export default function InventoryWarehousePage() {
             </div>
 
             {/* Botón Volver */}
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
-            >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
-                ←
-              </span>
-              <span>Volver</span>
-            </button>
+            <div className="flex justify-start sm:justify-end">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                  ←
+                </span>
+                <span className="whitespace-nowrap">Volver</span>
+              </button>
+            </div>
           </div>
 
           {/* BUSCADOR */}
           <div className="bg-blue-600 pb-4 px-4 sm:px-6 lg:px-10">
-            <div className="bg-white rounded-2xl shadow-sm flex items-center px-4 py-3 text-gray-500">
-              <span className="mr-3 text-xl">🔍</span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar producto o código..."
-                className="w-full bg-transparent outline-none text-sm sm:text-base placeholder:text-gray-400"
-                disabled={loading || !!error || !warehouse}
-              />
+            <div className="max-w-6xl mx-auto w-full">
+              <div className="bg-white rounded-2xl shadow-sm flex items-center px-4 py-3 text-gray-500">
+                <span className="mr-3 text-xl">🔍</span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar producto o código..."
+                  className="w-full bg-transparent outline-none text-sm sm:text-base placeholder:text-gray-400"
+                  disabled={loading || !!error || !warehouse}
+                />
+              </div>
             </div>
           </div>
         </header>
 
         {/* LISTA DE PRODUCTOS */}
         <section className="flex-1 overflow-y-auto">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-5xl">
+          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-5xl mx-auto w-full">
             {/* Mensaje de error */}
             {error && (
               <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs sm:text-sm text-red-700">
