@@ -107,11 +107,11 @@ export default function WarehouseItemCountPage() {
         if (err instanceof Error) {
           console.error('❌ Error al cargar almacén:', err.message);
           setError(err.message);
-          showToastError(`No se pudo cargar el almacén: ${err.message}`); // 👈
+          showToastError(`No se pudo cargar el almacén: ${err.message}`);
         } else {
           console.error('❌ Error desconocido al cargar almacén:', err);
           setError('Ocurrió un error al cargar el almacén.');
-          showToastError('Ocurrió un error al cargar el almacén.'); // 👈
+          showToastError('Ocurrió un error al cargar el almacén.');
         }
       } finally {
         if (isMounted) setLoadingWarehouse(false);
@@ -164,11 +164,11 @@ export default function WarehouseItemCountPage() {
           setError(err.message);
           showToastError(
             `No se pudo cargar la información del artículo: ${err.message}`
-          ); // 👈
+          );
         } else {
           console.error('❌ Error desconocido al cargar item:', err);
           setError('Ocurrió un error al cargar el artículo.');
-          showToastError('Ocurrió un error al cargar el artículo.'); // 👈
+          showToastError('Ocurrió un error al cargar el artículo.');
         }
       } finally {
         if (isMounted) setLoadingItem(false);
@@ -258,17 +258,10 @@ export default function WarehouseItemCountPage() {
       <div className="h-screen flex bg-gray-100">
         <Sidebar />
         <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
-          <header className="bg-blue-600 text-white shadow-sm">
-            <div className="px-4 sm:px-6 lg:px-10 py-4 flex items-start gap-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="mt-1 mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-white/70"
-                aria-label="Volver"
-              >
-                <span className="text-2xl leading-none">‹</span>
-              </button>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+          <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
+            <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
                   Conteo de Inventario
                 </h1>
                 {warehouse && (
@@ -278,17 +271,31 @@ export default function WarehouseItemCountPage() {
                   </p>
                 )}
               </div>
+
+              <div className="flex justify-end shrink-0">
+                <button
+                  onClick={() => navigate(-1)}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+                  aria-label="Volver"
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                    ←
+                  </span>
+                  <span className="whitespace-nowrap">Volver</span>
+                </button>
+              </div>
             </div>
           </header>
-          <section className="flex-1 flex items-center justify-center px-4">
-            <div className="bg-white rounded-2xl shadow-sm px-6 py-8 max-w-md text-center">
+
+          <section className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-10 py-4 sm:py-6">
+            <div className="bg-white rounded-2xl shadow-sm px-6 py-8 max-w-md w-full text-center">
               <p className="text-sm text-gray-700 font-semibold mb-2">
                 Artículo no encontrado
               </p>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs sm:text-sm text-gray-500 mb-4 break-words">
                 No pudimos cargar la información del artículo con id/code:{' '}
-                <span className="font-mono">{warehouseItemId}</span> en el
-                almacén{' '}
+                <span className="font-mono break-all">{warehouseItemId}</span>{' '}
+                en el almacén{' '}
                 <span className="font-semibold">
                   {warehouse?.code ?? warehouseId}
                 </span>
@@ -315,7 +322,7 @@ export default function WarehouseItemCountPage() {
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* HEADER AZUL */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
-          <div className="px-4 sm:px-6 lg:px-10 pb-4 flex items-center justify-between gap-4">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Texto del header */}
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
@@ -353,30 +360,34 @@ export default function WarehouseItemCountPage() {
             </div>
 
             {/* Botón Volver */}
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
-            >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
-                ←
-              </span>
-              <span>Volver</span>
-            </button>
+            <div className="flex justify-start sm:justify-end">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                  ←
+                </span>
+                <span className="whitespace-nowrap">Volver</span>
+              </button>
+            </div>
           </div>
         </header>
 
         {/* CONTENIDO */}
         <section className="flex-1 overflow-y-auto">
-          {warehouse && initialProduct && (
-            <NewWarehouseAuditForm
-              warehouse={{ id: warehouse.id, name: warehouse.name }}
-              area={area}
-              initialProduct={initialProduct}
-              onCancel={() => navigate(-1)}
-              onSubmit={handleSubmit}
-            />
-          )}
+          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-3xl lg:max-w-4xl mx-auto w-full">
+            {warehouse && initialProduct && (
+              <NewWarehouseAuditForm
+                warehouse={{ id: warehouse.id, name: warehouse.name }}
+                area={area}
+                initialProduct={initialProduct}
+                onCancel={() => navigate(-1)}
+                onSubmit={handleSubmit}
+              />
+            )}
+          </div>
         </section>
       </main>
     </div>
