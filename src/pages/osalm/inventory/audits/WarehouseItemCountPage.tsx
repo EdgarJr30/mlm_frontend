@@ -13,6 +13,7 @@ import {
   type WarehouseStockItem,
 } from '../../../../services/inventoryService';
 import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
+import { showToastError, showToastSuccess } from '../../../../notifications';
 
 type RouteParams = {
   warehouseId: string; // aquí usas el code desde BD: "OC-QUIM", etc.
@@ -30,6 +31,28 @@ type LocationState =
       area?: { id: string; name: string };
     }
   | undefined;
+
+// Helper seguro para extraer mensajes de error
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    const anyErr = err as {
+      message?: string;
+      error_description?: string;
+      error?: string;
+      code?: string;
+    };
+    return (
+      anyErr.message ??
+      anyErr.error_description ??
+      anyErr.error ??
+      anyErr.code ??
+      'Ocurrió un error'
+    );
+  }
+  return 'Ocurrió un error';
+}
 
 export default function WarehouseItemCountPage() {
   const navigate = useNavigate();
@@ -84,9 +107,11 @@ export default function WarehouseItemCountPage() {
         if (err instanceof Error) {
           console.error('❌ Error al cargar almacén:', err.message);
           setError(err.message);
+          showToastError(`No se pudo cargar el almacén: ${err.message}`); // 👈
         } else {
           console.error('❌ Error desconocido al cargar almacén:', err);
           setError('Ocurrió un error al cargar el almacén.');
+          showToastError('Ocurrió un error al cargar el almacén.'); // 👈
         }
       } finally {
         if (isMounted) setLoadingWarehouse(false);
@@ -137,9 +162,13 @@ export default function WarehouseItemCountPage() {
             err.message
           );
           setError(err.message);
+          showToastError(
+            `No se pudo cargar la información del artículo: ${err.message}`
+          ); // 👈
         } else {
           console.error('❌ Error desconocido al cargar item:', err);
           setError('Ocurrió un error al cargar el artículo.');
+          showToastError('Ocurrió un error al cargar el artículo.'); // 👈
         }
       } finally {
         if (isMounted) setLoadingItem(false);
@@ -153,7 +182,12 @@ export default function WarehouseItemCountPage() {
   }, [warehouseId, warehouseItemId]);
 
   const handleSubmit = async (payload: WarehouseItemCountPayload) => {
-    if (!warehouse || !initialProduct) return;
+    if (!warehouse || !initialProduct) {
+      showToastError(
+        'No se pudo registrar el conteo. Faltan los datos del almacén o del artículo seleccionado.'
+      );
+      return;
+    }
 
     const warehouseNumericId = Number(warehouse.id);
     const itemNumericId = Number(initialProduct.id);
@@ -164,13 +198,16 @@ export default function WarehouseItemCountPage() {
     if (
       Number.isNaN(warehouseNumericId) ||
       Number.isNaN(itemNumericId) ||
-      Number.isNaN(uomNumericId)
+      Number.isNaN(uomNumericId) ||
+      Number.isNaN(warehouseItemNumericId)
     ) {
-      alert(
-        'Ocurrió un problema con los identificadores de almacén o artículo.'
+      showToastError(
+        'Ocurrió un problema con los identificadores de almacén o artículo. Vuelve atrás y selecciona el artículo nuevamente.'
       );
       return;
     }
+
+    const articuloEtiqueta = `${initialProduct.code} · ${initialProduct.name} (${initialProduct.uomCode})`;
 
     try {
       setSaving(true);
@@ -189,15 +226,25 @@ export default function WarehouseItemCountPage() {
         pendingReasonCode: payload.pendingReasonCode,
       });
 
+      const esPendiente = payload.status === 'pending';
+
+      // ✅ Toast de éxito según estado
+      if (esPendiente) {
+        showToastSuccess(
+          `Artículo marcado como pendiente: ${articuloEtiqueta} — Cantidad: ${payload.quantity}`
+        );
+      } else {
+        showToastSuccess(
+          `Artículo contado: ${articuloEtiqueta} — Cantidad: ${payload.quantity}`
+        );
+      }
+
       navigate(-1);
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('❌ Error registrando conteo:', error.message);
-        alert(`No se pudo guardar el conteo: ${error.message}`);
-      } else {
-        console.error('❌ Error desconocido registrando conteo:', error);
-        alert('Ocurrió un error al guardar el conteo.');
-      }
+      console.error('❌ Error registrando conteo:', error);
+      showToastError(
+        `No se pudo guardar el conteo: ${extractErrorMessage(error)}`
+      );
     } finally {
       setSaving(false);
     }
