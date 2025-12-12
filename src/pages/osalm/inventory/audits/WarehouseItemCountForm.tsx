@@ -74,6 +74,7 @@ export function NewWarehouseAuditForm({
 
   // Cantidad
   const [quantity, setQuantity] = useState<number>(0);
+  const [rawQuantity, setRawQuantity] = useState('0');
 
   // 🔁 Ya NO se muestra el status en la UI.
   // Se calcula en el submit: counted si no hay motivo, pending si hay motivo.
@@ -108,20 +109,64 @@ export function NewWarehouseAuditForm({
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = e.target.value;
 
-    // quitar ceros a la izquierda, pero dejando al menos un dígito
-    raw = raw.replace(/^0+(?=\d)/, '');
+    // Permitir solo números y un punto
+    raw = raw.replace(/[^0-9.]/g, '');
 
+    // Evitar más de un punto decimal
+    const parts = raw.split('.');
+    if (parts.length > 2) return;
+
+    // Si el usuario borra todo
     if (raw === '') {
       setQuantity(0);
+      setRawQuantity('0');
       return;
     }
+
+    // Permitir que el usuario escriba solo "."
+    if (raw === '.') {
+      setQuantity(0);
+      setRawQuantity(raw);
+      return;
+    }
+
+    // Permitir "0." o "15." sin ejecutar Number() sobre el decimal
+    if (raw.endsWith('.')) {
+      const parsed = Number(parts[0]);
+      if (!Number.isNaN(parsed)) {
+        const clamped = clampQuantity(parsed);
+        setQuantity(clamped);
+      }
+      setRawQuantity(raw);
+      return;
+    }
+
+    // Evitar ceros iniciales, excepto "0.x"
+    if (parts.length === 1) {
+      raw = raw.replace(/^0+(?=\d)/, '');
+      if (raw === '') raw = '0';
+    }
+
     const parsed = Number(raw);
     if (Number.isNaN(parsed)) return;
-    setQuantity(clampQuantity(parsed));
+
+    const clamped = clampQuantity(parsed);
+    setQuantity(clamped);
+    setRawQuantity(String(clamped));
   };
 
-  const increment = () => setQuantity((q) => clampQuantity(q + 1));
-  const decrement = () => setQuantity((q) => clampQuantity(q - 1));
+  const increment = () =>
+    setQuantity((q) => {
+      const next = clampQuantity(q + 1);
+      setRawQuantity(String(next));
+      return next;
+    });
+  const decrement = () =>
+    setQuantity((q) => {
+      const next = clampQuantity(q - 1);
+      setRawQuantity(String(next));
+      return next;
+    });
 
   const auditorDisplay =
     profile?.name ??
@@ -293,10 +338,10 @@ export function NewWarehouseAuditForm({
           </button>
           <input
             type="text"
-            inputMode="numeric"
+            inputMode="decimal"
             min={0}
             max={99999}
-            value={quantity === 0 ? '0' : String(quantity)}
+            value={rawQuantity}
             onChange={handleQuantityChange}
             className="w-28 text-center text-2xl font-bold text-gray-900 rounded-xl border border-gray-200 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
           />
