@@ -664,21 +664,40 @@ export type WarehouseStockItem = {
 export async function getWarehouseItemsByCode(
   warehouseCode: string
 ): Promise<WarehouseStockItem[]> {
-  const { data, error } = await supabase
-    .from('vw_warehouse_stock')
-    .select('*')
-    .eq('warehouse_code', warehouseCode)
-    .order('item_name', { ascending: true });
+  const PAGE_SIZE = 1000;
+  let from = 0;
+  let all: WarehouseStockItem[] = [];
 
-  if (error) {
-    console.error(
-      `❌ Error al obtener items de almacén "${warehouseCode}":`,
-      error.message
-    );
-    return [];
+  while (true) {
+    const { data, error } = await supabase
+      .from('vw_warehouse_stock')
+      .select('*')
+      .eq('warehouse_code', warehouseCode)
+      .order('item_name', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error(
+        `❌ Error al obtener items de almacén "${warehouseCode}":`,
+        error.message
+      );
+      return all; // o lanza throw si prefieres
+    }
+
+    const rows = (data ?? []) as WarehouseStockItem[];
+    all = all.concat(rows);
+
+    // si vino menos que el PAGE_SIZE, ya no hay más rows
+    if (rows.length < PAGE_SIZE) break;
+
+    from += PAGE_SIZE;
   }
 
-  return (data ?? []) as WarehouseStockItem[];
+  console.log(
+    `✅ getWarehouseItemsByCode("${warehouseCode}") → ${all.length} filas`
+  );
+
+  return all;
 }
 
 export async function getWarehouseItemBySku(
