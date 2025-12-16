@@ -218,7 +218,7 @@ export function NewWarehouseAuditForm({
     >
       {/* Almacén */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Almacén *</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Almacén</h2>
         <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900">
           {warehouse.name}
         </div>
@@ -240,13 +240,13 @@ export function NewWarehouseAuditForm({
       {/* Producto */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-gray-700">Producto *</h2>
-          <button
+          <h2 className="text-sm font-semibold text-gray-700">Producto</h2>
+          {/* <button
             type="button"
             className="inline-flex items-center rounded-2xl border border-gray-200 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 bg-gray-50"
           >
             ✓ Maestra
-          </button>
+          </button> */}
         </div>
 
         {initialProduct ? (
@@ -263,9 +263,9 @@ export function NewWarehouseAuditForm({
                   </span>
                 </p>
               </div>
-              <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-blue-700 shadow-sm">
+              {/* <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-blue-700 shadow-sm">
                 Seleccionado desde el listado
-              </span>
+              </span> */}
             </div>
             <p className="mt-2 text-[11px] text-gray-500">
               Si este no es el producto correcto, cierre esta pantalla y
@@ -452,8 +452,7 @@ export function NewWarehouseAuditForm({
         </div>
 
         <p className="mt-2 text-[11px] text-gray-400 text-center">
-          Mínimo 0 · Máximo 99,999{' '}
-          {isWeighted === 'Y' ? 'de peso bruto.' : 'unidades.'}
+          Mínimo 0 · {isWeighted === 'Y' ? 'de peso bruto.' : 'unidades.'}
         </p>
 
         {isWeighted === 'Y' && selectedBasket && netPreview !== null && (
@@ -466,10 +465,10 @@ export function NewWarehouseAuditForm({
         )}
       </div>
 
-      {/* Estado del Inventario – solo motivos tipo “bolitas” */}
+      {/* Registrar Incidencia del Articulo */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-2">
-          Estado del Inventario
+          Registrar Incidencia del Artículo
         </h2>
         <p className="text-[11px] text-gray-500 mb-3">
           Si no seleccionas ningún motivo, el artículo se registrará como{' '}
@@ -556,7 +555,7 @@ export function NewWarehouseAuditForm({
 
       {/* Auditor */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Auditor *</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Auditor</h2>
         <div className="w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm sm:text-base bg-gray-50 text-gray-900">
           {auditorDisplay || 'Cargando usuario...'}
         </div>
