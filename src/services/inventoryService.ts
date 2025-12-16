@@ -61,7 +61,7 @@ export async function getActiveWarehouses(): Promise<WarehouseDto[]> {
     .from('warehouses')
     .select('id, code, name')
     .eq('is_active', true)
-    .order('name', { ascending: true });
+    .order('id', { ascending: false });
 
   if (error) {
     console.error('❌ Error al cargar almacenes:', error.message);
@@ -89,9 +89,9 @@ export async function getActiveWarehouseAreas(): Promise<WarehouseAreaDto[]> {
       `
     )
     .eq('is_active', true)
-    // 👇 ordenar por nombre del almacén (tabla relacionada)
-    .order('name', { foreignTable: 'warehouses', ascending: true })
-    // 👇 luego por nombre del área
+    // 👇 Primero por ID del almacén (tabla relacionada) de mayor a menor
+    .order('id', { foreignTable: 'warehouses', ascending: false })
+    // 👇 Luego opcionalmente por nombre del área
     .order('name', { ascending: true });
 
   if (error) {

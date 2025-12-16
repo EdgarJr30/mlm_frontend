@@ -71,6 +71,9 @@ export default function InventoryHomePage() {
 
         if (!isMounted) return;
 
+        // ============================================
+        // 1) MAPEAR ALMACENES + ORDENAR POR CÓDIGO 1,2,3...
+        // ============================================
         const mappedWarehouses: WarehouseCard[] = (
           warehousesData as WarehouseDto[]
         ).map((w) => ({
@@ -79,6 +82,42 @@ export default function InventoryHomePage() {
           name: w.name,
         }));
 
+        // Extraer prefijo y número de un código tipo "OC07", "OC02", "OC"
+        const parseWarehouseCode = (
+          code: string
+        ): { prefix: string; num: number | null } => {
+          const prefixMatch = code.match(/^[A-Za-z-]+/);
+          const prefix = prefixMatch ? prefixMatch[0] : code;
+          const numMatch = code.match(/(\d+)/);
+          const num = numMatch ? Number(numMatch[1]) : null;
+          return { prefix, num: Number.isNaN(num as number) ? null : num };
+        };
+
+        mappedWarehouses.sort((a, b) => {
+          const pa = parseWarehouseCode(a.code);
+          const pb = parseWarehouseCode(b.code);
+
+          // 1) Agrupar por prefijo (OC, PAP, CF, etc.)
+          if (pa.prefix !== pb.prefix) {
+            return pa.prefix.localeCompare(pb.prefix);
+          }
+
+          // 2) Dentro del mismo prefijo, ordenar por número
+          const aHasNum = pa.num !== null;
+          const bHasNum = pb.num !== null;
+
+          if (aHasNum && bHasNum)
+            return (pa.num as number) - (pb.num as number);
+          if (aHasNum) return -1; // con número primero
+          if (bHasNum) return 1; // sin número al final
+
+          // 3) Si ninguno tiene número, ordenar por nombre
+          return a.name.localeCompare(b.name);
+        });
+
+        // ============================================
+        // 2) MAPEAR ÁREAS + ORDEN AVANZADO
+        // ============================================
         const mappedAreas: WarehouseAreaCard[] = (
           areasData as WarehouseAreaDto[]
         ).map((a) => ({
@@ -89,6 +128,35 @@ export default function InventoryHomePage() {
           warehouseName: a.warehouseName,
         }));
 
+        const getNumericFromCode = (code: string): number | null => {
+          const match = code.match(/\d+/);
+          if (!match) return null;
+          const n = Number(match[0]);
+          return Number.isNaN(n) ? null : n;
+        };
+
+        mappedAreas.sort((a, b) => {
+          // 1) Agrupar por código de almacén
+          if (a.warehouseCode !== b.warehouseCode) {
+            return a.warehouseCode.localeCompare(b.warehouseCode);
+          }
+
+          // 2) Ordenar por número dentro del área
+          const numA = getNumericFromCode(a.code);
+          const numB = getNumericFromCode(b.code);
+
+          const aHasNum = numA !== null;
+          const bHasNum = numB !== null;
+
+          if (aHasNum && bHasNum) return (numA as number) - (numB as number);
+          if (aHasNum) return -1;
+          if (bHasNum) return 1;
+
+          // 3) Si ninguno tiene número: ordenar por nombre
+          return a.name.localeCompare(b.name);
+        });
+
+        // GUARDAR ESTADOS
         setWarehouses(mappedWarehouses);
         setAreas(mappedAreas);
       } catch (err: unknown) {
