@@ -409,7 +409,7 @@ export default function WarehouseItemCountPage() {
             </div>
 
             {/* Botón Volver */}
-            <div className="flex justify-start sm:justify-end">
+            <div className="flex justify-end sm:justify-end">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
