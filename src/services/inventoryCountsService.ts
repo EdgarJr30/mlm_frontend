@@ -62,6 +62,11 @@ export type AuditItem = {
     name: string;
     factor: number; // cuántas unidades de la UoM base hay en 1 unidad de esta UoM
   }>;
+  countedBy?: {
+    id: string;
+    name: string;
+    email?: string;
+  };
 };
 
 type DbInventoryCountStatus = 'open' | 'closed' | 'cancelled';
@@ -664,7 +669,14 @@ export async function getWarehouseAuditForReview(
         base_counted_qty,
         status,
         status_comment,
-        pending_reason_code
+        pending_reason_code,
+        created_by,
+        users:created_by (
+          id,
+          name,
+          last_name,
+          email
+        )
       `
     )
     .eq('inventory_count_id', inventoryCount.id)
@@ -720,6 +732,19 @@ export async function getWarehouseAuditForReview(
       const desc = descByKey.get(key);
       const availableUoms = uomsByItem.get(l.item_id as number) ?? [];
 
+      // ✅ AQUÍ (antes del return)
+      const u = (l as any).users as {
+        id: string;
+        name?: string | null;
+        last_name?: string | null;
+        email?: string | null;
+      } | null;
+
+      const displayName =
+        [u?.name, u?.last_name].filter(Boolean).join(' ').trim() ||
+        (u?.email ?? '') ||
+        '—';
+
       return {
         id: l.id as number,
         itemId: l.item_id as number,
@@ -735,6 +760,15 @@ export async function getWarehouseAuditForReview(
         pendingReasonCode:
           (l.pending_reason_code as PendingReasonCode | null) ?? undefined,
         availableUoms,
+
+        // ✅ NUEVO
+        countedBy: (l as any).created_by
+          ? {
+              id: String((l as any).created_by),
+              name: displayName,
+              email: u?.email ?? undefined,
+            }
+          : undefined,
       };
     }) ?? [];
 
@@ -882,7 +916,14 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     base_counted_qty,
     status,
     status_comment,
-    pending_reason_code
+    pending_reason_code,
+     created_by,
+      users:created_by (
+        id,
+        name,
+        last_name,
+        email
+      )
       `
     )
     .eq('inventory_count_id', count.id)
@@ -942,18 +983,27 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
 
       const countedFromDb = Number(l.counted_qty ?? 0);
 
-      // 🧮 Aseguramos un baseCountedQty válido:
-      // - Si viene null/0 desde BD, lo calculamos a partir de counted_qty y el factor actual
       let baseCountedQty = Number(l.base_counted_qty);
-
       if (!Number.isFinite(baseCountedQty) || baseCountedQty <= 0) {
         baseCountedQty =
           factorCurrent > 0 ? countedFromDb * factorCurrent : countedFromDb;
       }
 
-      // Cantidad visible en la UoM actual
       const countedQty =
         factorCurrent > 0 ? baseCountedQty / factorCurrent : countedFromDb;
+
+      // ✅ AQUÍ (antes del return)
+      const u = (l as any).users as {
+        id: string;
+        name?: string | null;
+        last_name?: string | null;
+        email?: string | null;
+      } | null;
+
+      const displayName =
+        [u?.name, u?.last_name].filter(Boolean).join(' ').trim() ||
+        (u?.email ?? '') ||
+        '—';
 
       return {
         id: l.id as number,
@@ -971,6 +1021,15 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
         pendingReasonCode:
           (l.pending_reason_code as PendingReasonCode | null) ?? undefined,
         availableUoms,
+
+        // ✅ NUEVO
+        countedBy: (l as any).created_by
+          ? {
+              id: String((l as any).created_by),
+              name: displayName,
+              email: u?.email ?? undefined,
+            }
+          : undefined,
       };
     }) ?? [];
 

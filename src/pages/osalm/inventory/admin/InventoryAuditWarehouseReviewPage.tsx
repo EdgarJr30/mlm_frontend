@@ -152,9 +152,7 @@ export default function InventoryWarehouseAuditReviewPage() {
   }, [filteredItems, currentPage, totalPages]);
 
   const currentRange = useMemo(() => {
-    if (totalItemsForFilter === 0) {
-      return { from: 0, to: 0 };
-    }
+    if (totalItemsForFilter === 0) return { from: 0, to: 0 };
     const from = currentPage * PAGE_SIZE + 1;
     const to = Math.min((currentPage + 1) * PAGE_SIZE, totalItemsForFilter);
     return { from, to };
@@ -171,34 +169,30 @@ export default function InventoryWarehouseAuditReviewPage() {
     [items]
   );
 
-  // Cambiar estado de la auditoría (para mostrar toast cuando se marca como completada)
+  // Cambiar estado de la auditoría
   const handleChangeAuditStatus = (nextStatus: AuditStatus) => {
     if (isReadOnly) return;
-
     setAuditStatus(nextStatus);
 
     if (nextStatus === 'completed') {
       showToastSuccess(
-        'La auditoría se ha marcado como Completada. No olvides guardar los cambios para cerrar el almacén.'
+        'La auditoría se ha marcado como Completada. Guarda para cerrar el conteo.'
       );
     }
   };
 
-  // Cambiar estado de un item
   const handleChangeItemStatus = (id: number, status: ItemStatus) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
     );
   };
 
-  // Cambiar comentario de un item
   const handleChangeItemComment = (id: number, comment: string) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, comment } : item))
     );
   };
 
-  // Cambiar cantidad contada de un item
   const handleChangeItemQty = (id: number, countedQty: number) => {
     setItems((prev) =>
       prev.map((item) => {
@@ -209,16 +203,11 @@ export default function InventoryWarehouseAuditReviewPage() {
 
         const baseCountedQty = factor > 0 ? countedQty * factor : countedQty;
 
-        return {
-          ...item,
-          countedQty,
-          baseCountedQty,
-        };
+        return { ...item, countedQty, baseCountedQty };
       })
     );
   };
 
-  // Guardar cambios
   const handleSaveChanges = async () => {
     if (isReadOnly) {
       showToastError(
@@ -236,6 +225,7 @@ export default function InventoryWarehouseAuditReviewPage() {
 
     setSaving(true);
     setError(null);
+
     try {
       await saveWarehouseAuditChanges({
         inventoryCountId: inventoryCountIdState,
@@ -243,12 +233,11 @@ export default function InventoryWarehouseAuditReviewPage() {
         items,
       });
 
-      const successMsg =
+      showToastSuccess(
         auditStatus === 'completed'
           ? 'Cambios guardados y auditoría marcada como Completada.'
-          : 'Cambios de la auditoría guardados correctamente.';
-
-      showToastSuccess(successMsg);
+          : 'Cambios de la auditoría guardados correctamente.'
+      );
     } catch (err: unknown) {
       const baseMsg = extractErrorMessage(err);
       setError(baseMsg);
@@ -258,8 +247,6 @@ export default function InventoryWarehouseAuditReviewPage() {
     }
   };
 
-  // Cambiar UoM de un item
-  // Cambiar UoM de un item
   const handleChangeItemUom = (id: number, uomId: number, uomCode: string) => {
     setItems((prev) =>
       prev.map((item) => {
@@ -267,25 +254,18 @@ export default function InventoryWarehouseAuditReviewPage() {
 
         const available = item.availableUoms ?? [];
 
-        // UoM destino
         const target = available.find((u) => u.id === uomId);
         const targetFactor = target?.factor ?? 1;
 
-        // UoM anterior (la que estaba seleccionada antes del cambio)
         const previous = available.find((u) => u.id === item.uomId);
         const previousFactor = previous?.factor ?? 1;
 
-        // 🧮 Base "real" para hacer conversiones:
-        // 1) Si ya tenemos baseCountedQty > 0, usamos ese valor.
-        // 2) Si no, lo calculamos a partir de la cantidad actual y el factor de la UoM anterior.
         let effectiveBase = item.baseCountedQty ?? 0;
-
         if (!Number.isFinite(effectiveBase) || effectiveBase <= 0) {
           const qty = Number(item.countedQty ?? 0);
           effectiveBase = previousFactor > 0 ? qty * previousFactor : qty;
         }
 
-        // Cantidad en la nueva UoM
         const newCountedQty =
           targetFactor > 0 ? effectiveBase / targetFactor : item.countedQty;
 
@@ -300,28 +280,36 @@ export default function InventoryWarehouseAuditReviewPage() {
     );
   };
 
-  // Renderizado principal
+  // Renderizado principal (sin permiso)
   if (!canManageAudit) {
     return (
       <div className="h-screen flex bg-gray-100">
         <Sidebar />
         <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
-          <header className="bg-blue-600 text-white shadow-sm">
-            <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
-                  Inventario Auditoría
-                </h1>
-                <p className="text-sm sm:text-base mt-1 opacity-90">
-                  Acceso restringido
-                </p>
-              </div>
+          <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
+            <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full">
+              <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+                Inventario Auditoría
+              </h1>
+              <p className="text-sm sm:text-base mt-1 opacity-90">
+                Acceso restringido
+              </p>
             </div>
           </header>
-          <section className="flex-1 flex items-center justify-center">
-            <p className="text-gray-600 text-sm sm:text-base">
-              No tienes permisos para administrar las auditorías de almacenes.
-            </p>
+          <section className="flex-1 flex items-center justify-center px-4">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+              <p className="text-gray-900 font-semibold">No autorizado</p>
+              <p className="text-gray-600 text-sm mt-1">
+                No tienes permisos para administrar las auditorías de almacenes.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="mt-4 w-full rounded-xl bg-gray-900 text-white py-2 text-sm font-semibold hover:bg-black"
+              >
+                Volver
+              </button>
+            </div>
           </section>
         </main>
       </div>
@@ -335,35 +323,42 @@ export default function InventoryWarehouseAuditReviewPage() {
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
         {/* TOP BAR */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
-          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 max-w-6xl mx-auto w-full">
-            {/* Título y descripción */}
-            <div className="flex-1 min-w-0">
+          <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col gap-4">
+            {/* Título */}
+            <div className="flex flex-col gap-2">
               <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/80">
                 Auditoría de inventario
               </p>
-              <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold leading-tight break-words">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight break-words">
                 {warehouse
                   ? warehouse.isArea && warehouse.areaName
                     ? `${warehouse.name} · ${warehouse.areaName}`
                     : warehouse.name
                   : 'Almacén'}
               </h1>
-              <p className="mt-2 text-sm sm:text-base text-blue-50/90 max-w-xl">
-                Revisión de artículos pendientes, contados y para reconteo.
+              <p className="text-sm sm:text-base text-blue-50/90 max-w-2xl">
+                Cambia el estado de cada artículo, ajusta UoM y cantidades (si
+                aplica) y deja comentarios claros.
               </p>
+
+              {isReadOnly && (
+                <div className="mt-2 inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-xs sm:text-sm">
+                  <span className="text-base">🔒</span>
+                  <span className="font-semibold">Conteo cerrado</span>
+                  <span className="opacity-90">(solo lectura)</span>
+                </div>
+              )}
             </div>
 
-            {/* Estado de auditoría + acciones */}
-            <div className="flex flex-col items-stretch sm:items-end gap-3 sm:gap-4">
-              {/* Selector de estado de la auditoría */}
+            {/* Acciones + estado */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <AuditStatusSelector
                 status={auditStatus}
                 onChange={handleChangeAuditStatus}
                 readOnly={isReadOnly}
               />
 
-              {/* Botones de acciones (Exportar + Volver) */}
-              <div className="flex sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <InventoryAuditExportButton
                   warehouse={warehouse}
                   items={items}
@@ -376,12 +371,12 @@ export default function InventoryWarehouseAuditReviewPage() {
                   onClick={() =>
                     navigate('/osalm/conteos_inventario/auditoria/almacenes')
                   }
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
                 >
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                     ←
                   </span>
-                  <span className="whitespace-nowrap">Volver a auditorías</span>
+                  <span className="whitespace-nowrap">Volver</span>
                 </button>
               </div>
             </div>
@@ -390,28 +385,40 @@ export default function InventoryWarehouseAuditReviewPage() {
 
         {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
-          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto w-full">
+          <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-7xl 2xl:max-w-[1400px] mx-auto w-full">
+            {/* Estado de carga / error */}
             {loading && (
-              <p className="text-sm text-gray-500">Cargando auditoría...</p>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                <p className="text-sm text-gray-500">Cargando auditoría…</p>
+              </div>
             )}
 
             {error && !loading && (
-              <p className="text-sm text-red-500 mb-4">{error}</p>
+              <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-4">
+                <p className="text-sm text-red-600 font-semibold">
+                  Ocurrió un error
+                </p>
+                <p className="text-sm text-red-500 mt-1">{error}</p>
+              </div>
             )}
 
             {!loading && !error && inventoryCountIdState == null && (
-              <p className="text-sm text-gray-500 mb-4">
-                No existe ninguna jornada de inventario registrada para este
-                almacén.
-              </p>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                <p className="text-sm text-gray-700 font-semibold">
+                  No hay jornada registrada
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  No existe ninguna jornada de inventario registrada para este
+                  almacén.
+                </p>
+              </div>
             )}
 
             {!loading && !error && inventoryCountIdState != null && (
               <>
-                {/* Resumen y filtros */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  {/* Resumen */}
-                  <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
+                {/* Resumen + filtros */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex flex-wrap gap-2">
                     <SummaryPill label="Total" value={stats.total} />
                     <SummaryPill
                       label="Pendientes"
@@ -430,155 +437,167 @@ export default function InventoryWarehouseAuditReviewPage() {
                     />
                   </div>
 
-                  {/* Filtros por estado de item */}
-                  <div className="w-full sm:w-auto overflow-x-auto">
-                    <div className="inline-flex rounded-full bg-gray-100 p-1 text-xs sm:text-sm font-medium">
-                      <FilterChip
-                        label="Todos"
-                        active={activeFilter === 'all'}
-                        onClick={() => setActiveFilter('all')}
-                      />
-                      <FilterChip
-                        label="Pendientes"
-                        active={activeFilter === 'pending'}
-                        tone="warning"
-                        onClick={() => setActiveFilter('pending')}
-                      />
-                      <FilterChip
-                        label="Contados"
-                        active={activeFilter === 'counted'}
-                        tone="success"
-                        onClick={() => setActiveFilter('counted')}
-                      />
-                      <FilterChip
-                        label="Recontar"
-                        active={activeFilter === 'recount'}
-                        tone="info"
-                        onClick={() => setActiveFilter('recount')}
-                      />
+                  <div className="w-full sm:w-auto">
+                    <div className="overflow-x-auto">
+                      <div className="inline-flex rounded-full bg-white border border-gray-200 p-1 text-xs sm:text-sm font-medium shadow-sm">
+                        <FilterChip
+                          label="Todos"
+                          active={activeFilter === 'all'}
+                          onClick={() => setActiveFilter('all')}
+                        />
+                        <FilterChip
+                          label="Pendientes"
+                          active={activeFilter === 'pending'}
+                          tone="warning"
+                          onClick={() => setActiveFilter('pending')}
+                        />
+                        <FilterChip
+                          label="Contados"
+                          active={activeFilter === 'counted'}
+                          tone="success"
+                          onClick={() => setActiveFilter('counted')}
+                        />
+                        <FilterChip
+                          label="Recontar"
+                          active={activeFilter === 'recount'}
+                          tone="info"
+                          onClick={() => setActiveFilter('recount')}
+                        />
+                      </div>
                     </div>
+
+                    <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                      Tip: En <span className="font-semibold">Recontar</span>{' '}
+                      puedes ajustar la cantidad.
+                    </p>
                   </div>
                 </div>
 
-                {/* Listado de items */}
-                <div className="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[720px]">
-                      <div className="border-b border-gray-100 px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-500 flex">
-                        <div className="w-24 sm:w-28">SKU</div>
-                        <div className="flex-1">Artículo</div>
-                        <div className="w-20 sm:w-24 text-right">Contado</div>
-                        <div className="w-24 sm:w-28 text-center">Estado</div>
-                        <div className="hidden sm:block w-40 text-center">
-                          Motivo
-                        </div>
-                        <div className="hidden sm:block w-56">Comentario</div>
-                      </div>
-
-                      <div className="divide-y divide-gray-100">
-                        {paginatedItems.length === 0 && (
-                          <div className="px-4 sm:px-6 py-6 text-center text-sm text-gray-500">
-                            No hay artículos para este filtro.
-                          </div>
-                        )}
-
-                        {paginatedItems.map((item) => (
-                          <AuditItemRow
-                            key={item.id}
-                            item={item}
-                            onChangeStatus={handleChangeItemStatus}
-                            onChangeComment={handleChangeItemComment}
-                            onChangeCountedQty={handleChangeItemQty}
-                            onChangeUom={handleChangeItemUom}
-                            readOnly={isReadOnly}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                {/* LISTA RESPONSIVE */}
+                <div className="mt-5">
+                  {/* Mobile/Tablet: cards */}
+                  <div className="grid gap-3 lg:hidden">
+                    {paginatedItems.length === 0 ? (
+                      <EmptyState />
+                    ) : (
+                      paginatedItems.map((item) => (
+                        <AuditItemCard
+                          key={item.id}
+                          item={item}
+                          readOnly={isReadOnly}
+                          onChangeStatus={handleChangeItemStatus}
+                          onChangeComment={handleChangeItemComment}
+                          onChangeCountedQty={handleChangeItemQty}
+                          onChangeUom={handleChangeItemUom}
+                        />
+                      ))
+                    )}
                   </div>
 
-                  {/* Paginador */}
-                  {totalItemsForFilter > PAGE_SIZE && (
-                    <div className="border-t border-gray-100 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-gray-600">
-                      <span>
-                        Mostrando{' '}
-                        <span className="font-semibold">
-                          {currentRange.from}
-                        </span>{' '}
-                        –{' '}
-                        <span className="font-semibold">{currentRange.to}</span>{' '}
-                        de{' '}
-                        <span className="font-semibold">
-                          {totalItemsForFilter}
-                        </span>{' '}
-                        artículos
-                      </span>
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCurrentPage((p) => Math.max(p - 1, 0))
-                          }
-                          disabled={currentPage === 0}
-                          className="px-3 py-1 rounded-full border border-gray-200 bg-white text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  {/* Desktop: tabla limpia */}
+                  <div className="hidden lg:block bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                    <div className="overflow-x-hidden">
+                      <div className="w-full">
+                        <div
+                          className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 backdrop-blur px-6 py-3 text-xs font-semibold text-gray-500
+  grid grid-cols-[100px_minmax(320px,2.2fr)_minmax(170px,1fr)_minmax(130px,0.8fr)_minmax(140px,0.8fr)_minmax(240px,1.4fr)] gap-4
+"
                         >
-                          Anterior
-                        </button>
-                        <span className="text-xs sm:text-sm text-gray-500">
-                          Página{' '}
-                          <span className="font-semibold">
-                            {currentPage + 1}
-                          </span>{' '}
-                          de <span className="font-semibold">{totalPages}</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCurrentPage((p) =>
-                              p + 1 >= totalPages ? p : p + 1
-                            )
-                          }
-                          disabled={currentPage + 1 >= totalPages}
-                          className="px-3 py-1 rounded-full border border-gray-200 bg-white text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                        >
-                          Siguiente
-                        </button>
+                          <div>SKU</div>
+                          <div>Artículo</div>
+                          <div>Usuario</div>
+                          <div className="text-right">Conteo</div>
+                          <div className="text-center">Estado</div>
+                          <div>Comentario</div>
+                        </div>
+
+                        <div className="divide-y divide-gray-100">
+                          {paginatedItems.length === 0 ? (
+                            <EmptyState />
+                          ) : (
+                            paginatedItems.map((item) => (
+                              <AuditItemRowDesktop
+                                key={item.id}
+                                item={item}
+                                readOnly={isReadOnly}
+                                onChangeStatus={handleChangeItemStatus}
+                                onChangeComment={handleChangeItemComment}
+                                onChangeCountedQty={handleChangeItemQty}
+                                onChangeUom={handleChangeItemUom}
+                              />
+                            ))
+                          )}
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Paginador */}
+                    {totalItemsForFilter > PAGE_SIZE && (
+                      <Paginator
+                        currentPage={currentPage}
+                        setCurrentPage={setCurrentPage}
+                        totalPages={totalPages}
+                        from={currentRange.from}
+                        to={currentRange.to}
+                        total={totalItemsForFilter}
+                      />
+                    )}
+                  </div>
+
+                  {/* Paginador (mobile) */}
+                  {totalItemsForFilter > PAGE_SIZE && (
+                    <div className="lg:hidden mt-3">
+                      <Paginator
+                        currentPage={currentPage}
+                        setCurrentPage={setCurrentPage}
+                        totalPages={totalPages}
+                        from={currentRange.from}
+                        to={currentRange.to}
+                        total={totalItemsForFilter}
+                      />
                     </div>
                   )}
                 </div>
 
-                {/* Footer de acciones */}
-                <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    Revisa los artículos y actualiza su estado. Luego marca el
-                    almacén como{' '}
-                    <span className="font-semibold">Completado</span> cuando la
-                    auditoría esté cerrada.
-                  </p>
+                {/* Footer acciones */}
+                <div className="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <p className="font-semibold text-gray-900">
+                        Antes de cerrar
+                      </p>
+                      <p className="mt-0.5">
+                        Revisa <span className="font-semibold">Pendientes</span>{' '}
+                        y <span className="font-semibold">Recontar</span>. Luego
+                        marca la auditoría como{' '}
+                        <span className="font-semibold">Completado</span> y
+                        guarda.
+                      </p>
+                    </div>
 
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => navigate(-1)}
-                      className="px-4 py-2 rounded-full border border-gray-200 text-xs sm:text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveChanges}
-                      disabled={saving || isReadOnly}
-                      className="px-5 py-2 rounded-full bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {isReadOnly
-                        ? 'Conteo cerrado'
-                        : saving
-                        ? 'Guardando...'
-                        : auditStatus === 'completed'
-                        ? 'Guardar y cerrar'
-                        : 'Guardar cambios'}
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveChanges}
+                        disabled={saving || isReadOnly}
+                        className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isReadOnly
+                          ? 'Conteo cerrado'
+                          : saving
+                          ? 'Guardando…'
+                          : auditStatus === 'completed'
+                          ? 'Guardar y cerrar'
+                          : 'Guardar cambios'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </>
@@ -594,6 +613,65 @@ export default function InventoryWarehouseAuditReviewPage() {
 // SUBCOMPONENTES
 // ======================
 
+function EmptyState() {
+  return (
+    <div className="px-4 sm:px-6 py-8 text-center">
+      <p className="text-sm font-semibold text-gray-900">Sin resultados</p>
+      <p className="text-sm text-gray-500 mt-1">
+        No hay artículos para este filtro.
+      </p>
+    </div>
+  );
+}
+
+function Paginator(props: {
+  currentPage: number;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+  totalPages: number;
+  from: number;
+  to: number;
+  total: number;
+}) {
+  const { currentPage, setCurrentPage, totalPages, from, to, total } = props;
+
+  return (
+    <div className="border-t border-gray-100 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-gray-600 bg-white">
+      <span>
+        Mostrando <span className="font-semibold">{from}</span> –{' '}
+        <span className="font-semibold">{to}</span> de{' '}
+        <span className="font-semibold">{total}</span>
+      </span>
+
+      <div className="inline-flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 0))}
+          disabled={currentPage === 0}
+          className="px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          Anterior
+        </button>
+
+        <span className="text-gray-500">
+          Página <span className="font-semibold">{currentPage + 1}</span> de{' '}
+          <span className="font-semibold">{totalPages}</span>
+        </span>
+
+        <button
+          type="button"
+          onClick={() =>
+            setCurrentPage((p) => (p + 1 >= totalPages ? p : p + 1))
+          }
+          disabled={currentPage + 1 >= totalPages}
+          className="px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AuditStatusSelector(props: {
   status: AuditStatus;
   onChange: (status: AuditStatus) => void;
@@ -602,49 +680,56 @@ function AuditStatusSelector(props: {
   const { status, onChange, readOnly } = props;
 
   const buttonBase =
-    'px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold border transition flex items-center gap-1.5';
+    'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition flex items-center justify-center gap-2 flex-1';
 
   return (
-    <div className="inline-flex rounded-full bg-blue-500/20 p-1 backdrop-blur text-xs sm:text-sm">
-      <button
-        type="button"
-        onClick={() => !readOnly && onChange('pending')}
-        className={[
-          buttonBase,
-          status === 'pending'
-            ? 'bg-white text-amber-600 border-amber-400 shadow-sm'
-            : 'border-transparent text-blue-50/80 hover:bg-blue-500/40',
-        ].join(' ')}
-      >
-        <span className="text-lg">⏱</span>
-        <span>Pendiente</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => !readOnly && onChange('in_progress')}
-        className={[
-          buttonBase,
-          status === 'in_progress'
-            ? 'bg-white text-blue-600 border-blue-400 shadow-sm'
-            : 'border-transparent text-blue-50/80 hover:bg-blue-500/40',
-        ].join(' ')}
-      >
-        <span className="text-lg">🔄</span>
-        <span>En progreso</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => !readOnly && onChange('completed')}
-        className={[
-          buttonBase,
-          status === 'completed'
-            ? 'bg-white text-green-600 border-green-400 shadow-sm'
-            : 'border-transparent text-blue-50/80 hover:bg-blue-500/40',
-        ].join(' ')}
-      >
-        <span className="text-lg">✅</span>
-        <span>Completado</span>
-      </button>
+    <div className="w-full sm:w-auto">
+      <div className="grid grid-cols-3 gap-2 bg-white/10 border border-white/15 rounded-2xl p-2 backdrop-blur">
+        <button
+          type="button"
+          onClick={() => !readOnly && onChange('pending')}
+          className={[
+            buttonBase,
+            status === 'pending'
+              ? 'bg-white text-amber-700 border-amber-300 shadow-sm'
+              : 'border-transparent text-blue-50/90 hover:bg-white/10',
+            readOnly ? 'cursor-not-allowed opacity-70' : '',
+          ].join(' ')}
+        >
+          <span className="text-base">⏱</span>
+          <span className="leading-none">Pendiente</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => !readOnly && onChange('in_progress')}
+          className={[
+            buttonBase,
+            status === 'in_progress'
+              ? 'bg-white text-blue-700 border-blue-300 shadow-sm'
+              : 'border-transparent text-blue-50/90 hover:bg-white/10',
+            readOnly ? 'cursor-not-allowed opacity-70' : '',
+          ].join(' ')}
+        >
+          <span className="text-base">🔄</span>
+          <span className="leading-none">En progreso</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => !readOnly && onChange('completed')}
+          className={[
+            buttonBase,
+            status === 'completed'
+              ? 'bg-white text-green-700 border-green-300 shadow-sm'
+              : 'border-transparent text-blue-50/90 hover:bg-white/10',
+            readOnly ? 'cursor-not-allowed opacity-70' : '',
+          ].join(' ')}
+        >
+          <span className="text-base">✅</span>
+          <span className="leading-none">Completado</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -658,12 +743,24 @@ function SummaryPill(props: {
 
   const tones: Record<
     NonNullable<typeof tone>,
-    { bg: string; text: string }
+    { bg: string; text: string; ring: string }
   > = {
-    default: { bg: 'bg-gray-100', text: 'text-gray-700' },
-    success: { bg: 'bg-green-50', text: 'text-green-700' },
-    warning: { bg: 'bg-amber-50', text: 'text-amber-700' },
-    info: { bg: 'bg-blue-50', text: 'text-blue-700' },
+    default: {
+      bg: 'bg-gray-100',
+      text: 'text-gray-800',
+      ring: 'ring-gray-200',
+    },
+    success: {
+      bg: 'bg-green-50',
+      text: 'text-green-800',
+      ring: 'ring-green-200',
+    },
+    warning: {
+      bg: 'bg-amber-50',
+      text: 'text-amber-800',
+      ring: 'ring-amber-200',
+    },
+    info: { bg: 'bg-blue-50', text: 'text-blue-800', ring: 'ring-blue-200' },
   };
 
   const cfg = tones[tone];
@@ -671,16 +768,15 @@ function SummaryPill(props: {
   return (
     <div
       className={[
-        'inline-flex items-center gap-2 px-3 py-1.5 rounded-full',
+        'inline-flex items-center gap-2 px-3 py-2 rounded-xl ring-1',
         cfg.bg,
+        cfg.ring,
       ].join(' ')}
     >
-      <span className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
+      <span className="text-[11px] uppercase tracking-[0.14em] text-gray-500">
         {label}
       </span>
-      <span className={['text-sm font-semibold', cfg.text].join(' ')}>
-        {value}
-      </span>
+      <span className={['text-sm font-bold', cfg.text].join(' ')}>{value}</span>
     </div>
   );
 }
@@ -698,20 +794,20 @@ function FilterChip(props: {
     { active: string; inactive: string }
   > = {
     default: {
-      active: 'bg-white text-gray-900',
-      inactive: 'text-gray-500',
+      active: 'bg-gray-900 text-white',
+      inactive: 'text-gray-600 hover:bg-gray-50',
     },
     success: {
-      active: 'bg-green-500 text-white',
-      inactive: 'text-green-700',
+      active: 'bg-green-600 text-white',
+      inactive: 'text-green-700 hover:bg-green-50',
     },
     warning: {
-      active: 'bg-amber-400 text-white',
-      inactive: 'text-amber-700',
+      active: 'bg-amber-500 text-white',
+      inactive: 'text-amber-700 hover:bg-amber-50',
     },
     info: {
-      active: 'bg-blue-500 text-white',
-      inactive: 'text-blue-700',
+      active: 'bg-blue-600 text-white',
+      inactive: 'text-blue-700 hover:bg-blue-50',
     },
   };
 
@@ -722,7 +818,8 @@ function FilterChip(props: {
       type="button"
       onClick={onClick}
       className={[
-        'px-3 py-1 rounded-full mx-0.5',
+        'px-3 py-1.5 rounded-full mx-0.5 transition whitespace-nowrap',
+        'text-xs sm:text-sm font-semibold',
         active ? cfg.active : cfg.inactive,
       ].join(' ')}
     >
@@ -731,107 +828,227 @@ function FilterChip(props: {
   );
 }
 
-function AuditItemRow(props: {
+function StatusBadge(props: { status: ItemStatus }) {
+  const { status } = props;
+
+  const cfg: Record<ItemStatus, { label: string; cls: string }> = {
+    pending: {
+      label: 'Pendiente',
+      cls: 'bg-amber-50 text-amber-800 ring-amber-200',
+    },
+    counted: {
+      label: 'Contado',
+      cls: 'bg-green-50 text-green-800 ring-green-200',
+    },
+    recount: {
+      label: 'Recontar',
+      cls: 'bg-blue-50 text-blue-800 ring-blue-200',
+    },
+  };
+
+  return (
+    <span
+      className={[
+        'inline-flex items-center justify-center px-2.5 py-1 rounded-full ring-1 text-xs font-bold',
+        cfg[status].cls,
+      ].join(' ')}
+    >
+      {cfg[status].label}
+    </span>
+  );
+}
+
+function MotiveChip(props: { status: ItemStatus; reason?: PendingReasonCode }) {
+  const { status, reason } = props;
+
+  const pendingReasonLabel: Record<PendingReasonCode, string> = {
+    UOM_DIFFERENT: 'UoM diferente',
+    REVIEW: 'Revisión posterior',
+  };
+
+  if (!reason) {
+    return <span className="text-[11px] text-gray-400">Sin motivo</span>;
+  }
+
+  const tone =
+    status === 'pending'
+      ? 'bg-amber-50 text-amber-800 ring-amber-200'
+      : 'bg-gray-50 text-gray-700 ring-gray-200';
+
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 text-[11px] font-semibold',
+        tone,
+      ].join(' ')}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      <span className="truncate">{pendingReasonLabel[reason]}</span>
+    </span>
+  );
+}
+
+function UserPill({ name, email }: { name: string; email?: string }) {
+  const safeName = (name || '—').trim() || '—';
+  const initials = safeName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('');
+
+  return (
+    <div className="w-full min-w-0 overflow-hidden">
+      <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow-sm min-w-0 overflow-hidden">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-900 text-white text-xs font-bold shrink-0">
+          {initials || '—'}
+        </span>
+
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p className="text-sm font-bold text-gray-900 leading-tight truncate">
+            {safeName}
+          </p>
+          <p className="text-xs text-gray-500 leading-tight truncate">
+            {email || '—'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * MOBILE/TABLET CARD (100% responsive, nada “solo desktop”)
+ */
+function AuditItemCard(props: {
   item: AuditItem;
+  readOnly?: boolean;
   onChangeStatus: (id: number, status: ItemStatus) => void;
   onChangeComment: (id: number, comment: string) => void;
   onChangeCountedQty: (id: number, countedQty: number) => void;
   onChangeUom: (id: number, uomId: number, uomCode: string) => void;
-  readOnly?: boolean;
 }) {
   const {
     item,
+    readOnly,
     onChangeStatus,
     onChangeComment,
     onChangeCountedQty,
     onChangeUom,
-    readOnly,
   } = props;
 
-  const statusLabel: Record<ItemStatus, string> = {
-    pending: 'Pendiente',
-    counted: 'Contado',
-    recount: 'Recontar',
-  };
-
   const statusClass: Record<ItemStatus, string> = {
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
-    counted: 'bg-green-50 text-green-700 border-green-200',
-    recount: 'bg-blue-50 text-blue-700 border-blue-200',
+    pending: 'border-amber-200',
+    counted: 'border-green-200',
+    recount: 'border-blue-200',
   };
-
-  const pendingReasonLabel: Record<PendingReasonCode, string> = {
-    UOM_DIFFERENT: 'UoM diferente / revisar',
-    REVIEW: 'Revisión posterior',
-  };
-
-  const motiveInfo = item.pendingReasonCode
-    ? {
-        label: pendingReasonLabel[item.pendingReasonCode],
-        toneClasses:
-          item.status === 'pending'
-            ? 'bg-amber-50 text-amber-700 border-amber-200'
-            : 'bg-gray-50 text-gray-500 border-gray-200',
-      }
-    : null;
 
   return (
-    <div className="px-4 sm:px-6 py-3 text-xs sm:text-sm flex flex-col gap-3 sm:flex-row sm:items-center">
-      {/* Info principal */}
-      <div className="flex-1 flex items-start gap-3 sm:gap-4">
-        <div className="w-24 sm:w-28 font-mono text-gray-700">{item.sku}</div>
-        <div className="flex-1">
-          <p className="font-semibold text-gray-900">{item.name}</p>
-          {readOnly ||
-          !item.availableUoms ||
-          item.availableUoms.length === 0 ? (
-            <p className="text-[11px] sm:text-xs text-gray-500">
-              UoM: {item.uom}
-            </p>
-          ) : (
-            <div className="mt-1 inline-flex items-center gap-2">
-              <span className="text-[11px] text-gray-400">UoM:</span>
-              <select
-                value={item.uomId}
-                onChange={(e) => {
-                  const newUomId = Number(e.target.value);
-                  const selected = item.availableUoms?.find(
-                    (u) => u.id === newUomId
-                  );
-                  if (!selected) return;
-                  onChangeUom(item.id, selected.id, selected.code);
-                }}
-                className="rounded-full border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
-              >
-                {item.availableUoms?.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.code} — {u.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+    <div
+      className={[
+        'bg-white rounded-2xl shadow-sm border p-4',
+        statusClass[item.status],
+      ].join(' ')}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-sm text-gray-700">{item.sku}</p>
+          <p className="mt-1 text-base font-bold text-gray-900 leading-tight break-words">
+            {item.name}
+          </p>
 
-          {/* En móviles mostramos el motivo debajo del nombre */}
-          {motiveInfo && (
-            <div className="mt-1 inline-flex sm:hidden items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] text-gray-600 bg-gray-50">
-              <span className="h-1.5 w-1.5 rounded-full bg-current" />
-              <span>{motiveInfo.label}</span>
-            </div>
-          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <StatusBadge status={item.status} />
+            <MotiveChip status={item.status} reason={item.pendingReasonCode} />
+          </div>
         </div>
-      </div>
 
-      {/* Cantidad, estado, motivo, comentario */}
-      <div className="flex flex-wrap gap-3 sm:gap-4 items-center justify-between sm:justify-end flex-1">
-        {/* Cantidad contada */}
-        <div className="text-right">
+        <div className="shrink-0 text-right">
           <p className="text-[11px] uppercase tracking-[0.14em] text-gray-400">
             Contado
           </p>
+          <p className="text-lg font-extrabold text-gray-900 leading-none mt-1">
+            {Number(item.countedQty ?? 0).toLocaleString('es-DO')}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">UoM: {item.uom || '—'}</p>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Usuario */}
+        <div className="sm:col-span-2">
+          {item.countedBy ? (
+            <UserPill name={item.countedBy.name} email={item.countedBy.email} />
+          ) : (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-600">
+              Usuario: <span className="font-semibold">—</span>
+            </div>
+          )}
+        </div>
+
+        {/* Estado */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Estado del ítem
+          </label>
+          <select
+            value={item.status}
+            onChange={(e) =>
+              onChangeStatus(item.id, e.target.value as ItemStatus)
+            }
+            disabled={readOnly}
+            className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 disabled:opacity-60"
+          >
+            <option value="pending">Pendiente</option>
+            <option value="counted">Contado</option>
+            <option value="recount">Recontar</option>
+          </select>
+        </div>
+
+        {/* UoM */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Unidad de medida
+          </label>
+
+          {readOnly ||
+          !item.availableUoms ||
+          item.availableUoms.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              {item.uom || '—'}
+            </div>
+          ) : (
+            <select
+              value={item.uomId}
+              onChange={(e) => {
+                const newUomId = Number(e.target.value);
+                const selected = item.availableUoms?.find(
+                  (u) => u.id === newUomId
+                );
+                if (!selected) return;
+                onChangeUom(item.id, selected.id, selected.code);
+              }}
+              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+            >
+              {item.availableUoms?.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.code} — {u.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Cantidad (editable solo en recount) */}
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Cantidad (solo editable en “Recontar”)
+          </label>
 
           {item.status === 'recount' && !readOnly ? (
-            <div className="inline-flex items-center justify-end gap-1">
+            <div className="flex items-center gap-2">
               <input
                 type="number"
                 inputMode="decimal"
@@ -848,64 +1065,157 @@ function AuditItemRow(props: {
                   if (Number.isNaN(numeric)) return;
                   onChangeCountedQty(item.id, numeric);
                 }}
-                className="w-24 rounded-lg border border-gray-300 bg-white px-2 py-1 text-right text-xs sm:text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
               />
-              <span className="text-[11px] text-gray-400 ml-1">{item.uom}</span>
+              <span className="text-sm font-semibold text-gray-600">
+                {item.uom}
+              </span>
             </div>
           ) : (
-            <p className="font-semibold text-gray-800">
-              {item.countedQty.toLocaleString('es-DO')}
-            </p>
-          )}
-        </div>
-
-        {/* Selector de estado */}
-        <div className="w-24 sm:w-28">
-          <select
-            value={item.status}
-            onChange={(e) =>
-              onChangeStatus(item.id, e.target.value as ItemStatus)
-            }
-            disabled={readOnly}
-            className={[
-              'w-full rounded-full border px-2 py-1 text-xs sm:text-sm font-medium',
-              statusClass[item.status],
-            ].join(' ')}
-          >
-            <option value="pending">{statusLabel.pending}</option>
-            <option value="counted">{statusLabel.counted}</option>
-            <option value="recount">{statusLabel.recount}</option>
-          </select>
-        </div>
-
-        {/* Motivo pendiente (solo en desktop en su propia columna) */}
-        <div className="hidden sm:block w-40 text-center">
-          {motiveInfo ? (
-            <div
-              className={[
-                'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px]',
-                motiveInfo.toneClasses,
-              ].join(' ')}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-current" />
-              <span className="font-medium">{motiveInfo.label}</span>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+              <span className="font-bold">
+                {Number(item.countedQty ?? 0).toLocaleString('es-DO')}
+              </span>{' '}
+              <span className="text-gray-500">{item.uom}</span>
             </div>
-          ) : (
-            <span className="text-[11px] text-gray-400">—</span>
           )}
         </div>
 
         {/* Comentario */}
-        <div className="w-full sm:w-56">
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Comentario del auditor (opcional)
+          </label>
           <textarea
             value={item.comment ?? ''}
             onChange={(e) => onChangeComment(item.id, e.target.value)}
             disabled={readOnly}
-            rows={2}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 resize-none"
-            placeholder="Comentario del auditor (opcional)…"
+            rows={3}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 resize-none disabled:opacity-60"
+            placeholder="Explica el motivo, hallazgos o acciones requeridas…"
           />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * DESKTOP ROW (tabla clara + consistente)
+ */
+function AuditItemRowDesktop(props: {
+  item: AuditItem;
+  readOnly?: boolean;
+  onChangeStatus: (id: number, status: ItemStatus) => void;
+  onChangeComment: (id: number, comment: string) => void;
+  onChangeCountedQty: (id: number, countedQty: number) => void;
+  onChangeUom: (id: number, uomId: number, uomCode: string) => void;
+}) {
+  const {
+    item,
+    onChangeStatus,
+    onChangeComment,
+    onChangeCountedQty,
+    onChangeUom,
+    readOnly,
+  } = props;
+
+  return (
+    <div
+      className="px-6 py-3 grid grid-cols-[100px_minmax(320px,2.2fr)_minmax(170px,1fr)_minmax(130px,0.8fr)_minmax(140px,0.8fr)_minmax(240px,1.4fr)] gap-4
+ items-center"
+    >
+      {/* SKU */}
+      <div className="font-mono text-sm text-gray-700">{item.sku}</div>
+
+      {/* Artículo */}
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+          {item.name}
+        </p>
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
+          <span>UoM:</span>
+          {readOnly || !item.availableUoms?.length ? (
+            <span className="font-medium">{item.uom}</span>
+          ) : (
+            <select
+              value={item.uomId}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                const u = item.availableUoms?.find((x) => x.id === id);
+                if (u) onChangeUom(item.id, u.id, u.code);
+              }}
+              className="rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {item.availableUoms.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.code}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* Usuario (compacto, SIN card) */}
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="h-7 w-7 rounded-full bg-gray-900 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
+          {item.countedBy?.name?.[0] ?? '—'}
+        </div>
+        <p className="text-sm font-medium text-gray-900 truncate">
+          {item.countedBy?.name ?? '—'}
+        </p>
+      </div>
+
+      {/* Conteo */}
+      <div className="text-right">
+        {item.status === 'recount' && !readOnly ? (
+          <div className="inline-flex items-center gap-2">
+            <input
+              type="number"
+              step="0.0001"
+              value={Number(item.countedQty)}
+              onChange={(e) =>
+                onChangeCountedQty(item.id, Number(e.target.value))
+              }
+              className="w-20 rounded-md border border-gray-300 px-2 py-1 text-right text-sm font-semibold"
+            />
+            <span className="text-xs text-gray-500">{item.uom}</span>
+          </div>
+        ) : (
+          <span className="text-sm font-semibold text-gray-900">
+            {Number(item.countedQty).toLocaleString('es-DO')}{' '}
+            <span className="text-xs text-gray-500">{item.uom}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Estado (compact badge) */}
+      <div className="flex justify-center">
+        <select
+          value={item.status}
+          onChange={(e) =>
+            onChangeStatus(item.id, e.target.value as ItemStatus)
+          }
+          disabled={readOnly}
+          className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="pending">Pendiente</option>
+          <option value="counted">Contado</option>
+          <option value="recount">Recontar</option>
+        </select>
+      </div>
+
+      {/* Comentario (1 línea) */}
+      <div className="min-w-0">
+        <input
+          type="text"
+          value={item.comment ?? ''}
+          onChange={(e) => onChangeComment(item.id, e.target.value)}
+          disabled={readOnly}
+          placeholder="Comentario…"
+          className="w-full min-w-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
       </div>
     </div>
   );
