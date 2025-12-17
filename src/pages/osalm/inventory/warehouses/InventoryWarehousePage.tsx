@@ -413,15 +413,13 @@ function ProductCard({
       onClick={onOpen}
       className="w-full text-left bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer"
     >
-      {/* IZQUIERDA: nombre, código, uom */}
+      {/* IZQUIERDA: nombre, código */}
       <div className="flex flex-col gap-1">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
           {product.name}
         </h2>
         <p className="text-xs sm:text-sm text-gray-500 tracking-wide">
           <span className="font-medium">{product.code}</span>
-          <span className="mx-2">•</span>
-          <span className="uppercase">{product.uom}</span>
         </p>
       </div>
 
