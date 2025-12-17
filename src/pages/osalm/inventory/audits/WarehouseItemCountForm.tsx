@@ -175,10 +175,10 @@ export function NewWarehouseAuditForm({
       return next;
     });
 
-  const auditorDisplay =
-    profile?.name ??
-    (profile && 'name' in profile ? profile.name : undefined) ??
-    auditorEmail;
+  // const auditorDisplay =
+  //   profile?.name ??
+  //   (profile && 'name' in profile ? profile.name : undefined) ??
+  //   auditorEmail;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,7 +217,7 @@ export function NewWarehouseAuditForm({
       className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-28"
     >
       {/* Almacén */}
-      <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
+      {/* <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Almacén</h2>
         <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900">
           {warehouse.name}
@@ -235,7 +235,7 @@ export function NewWarehouseAuditForm({
           El almacén{area ? ' y el área ' : ' '}se toman desde la pantalla
           anterior y no se pueden cambiar.
         </p>
-      </div>
+      </div> */}
 
       {/* Producto */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-3">
@@ -554,7 +554,7 @@ export function NewWarehouseAuditForm({
       </div>
 
       {/* Auditor */}
-      <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
+      {/* <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Auditor</h2>
         <div className="w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm sm:text-base bg-gray-50 text-gray-900">
           {auditorDisplay || 'Cargando usuario...'}
@@ -562,7 +562,7 @@ export function NewWarehouseAuditForm({
         <p className="mt-2 text-[11px] text-gray-400">
           El auditor se toma automáticamente del usuario conectado.
         </p>
-      </div>
+      </div> */}
 
       {/* Botones inferiores */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 lg:px-10 py-3 flex gap-3">
