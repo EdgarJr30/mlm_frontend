@@ -240,7 +240,7 @@ export default function InventoryWarehousePage() {
     });
   }, [products, search]);
 
-  // 👉 clic en cada producto: ir al conteo de ese artículo
+  // clic en cada producto: ir al conteo de ese artículo
   const handleOpenProduct = (product: WarehouseProduct) => {
     if (!warehouse) return;
 
@@ -261,11 +261,6 @@ export default function InventoryWarehousePage() {
     );
   };
 
-  // const handleNewManualCount = () => {
-  //   if (!warehouse) return;
-  //   navigate(`/osalm/conteos_inventario/${warehouse.code}/audits/new`);
-  // };
-
   const totalProducts = products.length;
   const loading = loadingWarehouse || loadingProducts || loadingArea;
 
@@ -278,7 +273,21 @@ export default function InventoryWarehousePage() {
         {/* HEADER AZUL */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
           <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Texto: título + subtítulo */}
+            {/* Botón Volver - SOLO móvil, pegado a la izquierda */}
+            <div className="sm:hidden flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs font-semibold shadow-sm hover:bg-white transition shrink-0"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
+                  ←
+                </span>
+                <span className="whitespace-nowrap">Volver</span>
+              </button>
+            </div>
+
+            {/* Texto: título + subtítulos */}
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
                 {loadingWarehouse
@@ -303,12 +312,12 @@ export default function InventoryWarehousePage() {
               )}
             </div>
 
-            {/* Botón Volver */}
-            <div className="flex justify-start sm:justify-end">
+            {/* Botón Volver - SOLO desktop, a la derecha */}
+            <div className="hidden sm:flex justify-end">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                   ←
