@@ -30,7 +30,7 @@ type ViewMode = 'warehouses' | 'areas';
 export default function InventoryHomePage() {
   const navigate = useNavigate();
 
-  // ✅ Solo usuarios con alguno de estos permisos verán el botón
+  // Solo usuarios con alguno de estos permisos verán el botón
   const canSeeAuditAdmin = useCan([
     'inventory_adjustments:full_access',
     'inventory_adjustments:read',
