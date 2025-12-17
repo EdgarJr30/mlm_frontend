@@ -44,17 +44,115 @@ type NewWarehouseAuditFormProps = {
   baskets?: Basket[];
 };
 
-function getBasketColorClass(color: string | null | undefined): string {
-  const c = (color ?? '').toLowerCase();
+type BasketTheme = {
+  card: string; // fondo + borde + texto (cuando NO está seleccionado)
+  iconWrap: string; // fondo del cuadrito del ícono
+  icon: string; // color del SVG (clase text-*)
+};
 
-  if (c.includes('rojo') || c.includes('red')) return 'text-red-600';
-  if (c.includes('verde') || c.includes('green')) return 'text-green-600';
-  if (c.includes('azul') || c.includes('blue')) return 'text-blue-600';
-  if (c.includes('amarillo') || c.includes('yellow')) return 'text-yellow-500';
-  if (c.includes('naranja') || c.includes('orange')) return 'text-orange-500';
-  if (c.includes('morado') || c.includes('purple')) return 'text-purple-500';
+function getBasketTheme(colorOrName: string | null | undefined): BasketTheme {
+  const c = (colorOrName ?? '').toLowerCase().trim();
 
-  return 'text-gray-500';
+  // Helpers (por si te llegan nombres como "Blanco Carniceria Grande", etc.)
+  const has = (...keys: string[]) => keys.some((k) => c.includes(k));
+
+  // ✅ BLANCO (hueso real) + caso especial de icono
+  if (has('blanco', 'white')) {
+    return {
+      card: 'bg-stone-50 border-stone-200 text-stone-900',
+      iconWrap: 'bg-black',
+      icon: 'text-white',
+    };
+  }
+
+  // ✅ GRIS (gris real, distinto del negro)
+  if (has('gris', 'gray', 'grey')) {
+    return {
+      card: 'bg-slate-200 border-slate-400 text-slate-900',
+      iconWrap: 'bg-white',
+      icon: 'text-slate-700',
+    };
+  }
+
+  // ✅ MARRÓN / CAFE (marrón marrón, no amarillo)
+  if (has('marron', 'marrón', 'cafe', 'café', 'brown')) {
+    return {
+      // orange = marrón tierra/caramelo (se ve marrón, no amarillo)
+      card: 'bg-orange-200 border-orange-500 text-orange-950',
+      iconWrap: 'bg-white',
+      icon: 'text-orange-800',
+    };
+  }
+
+  // ✅ NEGRO (carbón oscuro, bien separado del gris)
+  if (has('negro', 'black')) {
+    return {
+      card: 'bg-zinc-800 border-zinc-900 text-white',
+      iconWrap: 'bg-white',
+      icon: 'text-zinc-950',
+    };
+  }
+
+  // ✅ ROJO
+  if (has('rojo', 'red')) {
+    return {
+      card: 'bg-red-50 border-red-200 text-red-900',
+      iconWrap: 'bg-white',
+      icon: 'text-red-600',
+    };
+  }
+
+  // ✅ VERDE
+  if (has('verde', 'green')) {
+    return {
+      card: 'bg-green-50 border-green-200 text-green-900',
+      iconWrap: 'bg-white',
+      icon: 'text-green-600',
+    };
+  }
+
+  // ✅ AZUL
+  if (has('azul', 'blue')) {
+    return {
+      card: 'bg-blue-50 border-blue-200 text-blue-900',
+      iconWrap: 'bg-white',
+      icon: 'text-blue-600',
+    };
+  }
+
+  // ✅ AMARILLO
+  if (has('amarillo', 'yellow')) {
+    return {
+      card: 'bg-yellow-50 border-yellow-200 text-yellow-900',
+      iconWrap: 'bg-white',
+      icon: 'text-yellow-600',
+    };
+  }
+
+  // ✅ NARANJA
+  if (has('naranja', 'orange')) {
+    return {
+      card: 'bg-orange-50 border-orange-200 text-orange-900',
+      iconWrap: 'bg-white',
+      icon: 'text-orange-600',
+    };
+  }
+
+  // ✅ MORADO
+  if (has('morado', 'purple', 'violeta', 'violet')) {
+    return {
+      card: 'bg-purple-50 border-purple-200 text-purple-900',
+      iconWrap: 'bg-white',
+      icon: 'text-purple-600',
+    };
+  }
+
+  // Fallback
+  return {
+    card: 'bg-gray-50 border-gray-200 text-gray-900',
+    iconWrap: 'bg-white',
+    icon: 'text-gray-500',
+  };
 }
 
 export function NewWarehouseAuditForm({
@@ -349,57 +447,57 @@ export function NewWarehouseAuditForm({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {baskets.map((basket) => {
                   const isSelected = selectedBasketId === String(basket.id);
+                  const theme = getBasketTheme(
+                    `${basket.color ?? ''} ${basket.name ?? ''}`
+                  );
                   return (
                     <button
                       key={basket.id}
                       type="button"
                       onClick={() => setSelectedBasketId(String(basket.id))}
                       className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
-                        ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-50 text-blue-800'
-                            : 'border-gray-200 bg-gray-50 text-gray-700'
-                        }`}
+        ${theme.card}
+        ${
+          isSelected
+            ? 'ring-2 ring-blue-500 border-blue-400'
+            : 'hover:brightness-[0.98]'
+        }
+      `}
                     >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white text-lg shadow-sm">
+                      <span
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md shadow-sm ${theme.iconWrap}`}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
                           fill="none"
                           strokeWidth={1.6}
-                          className={`w-6 h-6 ${getBasketColorClass(
-                            basket.color
-                          )}`}
+                          className={`w-6 h-6 ${theme.icon}`}
                         >
                           <g
                             stroke="currentColor"
                             strokeLinecap="round"
                             strokeLinejoin="round"
                           >
-                            {/* Cuerpo del huacal, bajito */}
                             <path d="M4 9.5c0-.9.7-1.5 1.6-1.5h12.8c.9 0 1.6.6 1.6 1.5v4.7c0 1.3-1 2.3-2.3 2.3H6.3C5 16.5 4 15.5 4 14.2Z" />
-
-                            {/* Borde superior */}
                             <path d="M5.2 8.25h13.6" />
-
-                            {/* Asas laterales */}
                             <path d="M6.2 10.1h1.9M15.9 10.1h1.9" />
-
-                            {/* Listones horizontales (solo 2 para no ensuciar) */}
                             <path d="M6 11.9h12M6 13.5h12" />
-
-                            {/* Listones verticales internos (3 nada más) */}
                             <path d="M8.3 10.2v4.1M12 10.2v4.1M15.7 10.2v4.1" />
-
-                            {/* Base suavemente marcada */}
                             <path d="M7.2 16.1h3.1M13.7 16.1h3.1" />
                           </g>
                         </svg>
                       </span>
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{basket.name}</p>
-                        <p className="text-[11px] text-gray-500">
+                        <p
+                          className={`font-semibold truncate ${
+                            isSelected ? 'text-blue-900' : ''
+                          }`}
+                        >
+                          {basket.name}
+                        </p>
+                        <p className="text-[11px] opacity-80">
                           Peso canasto:{' '}
                           <span className="font-semibold">
                             {Number(basket.weight ?? 0).toFixed(2)}
