@@ -371,32 +371,35 @@ export default function WarehouseItemCountPage() {
           <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Texto del header */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight break-words">
-                Conteo de Inventario
-              </h1>
-
-              <p className="text-sm sm:text-base mt-1 opacity-90">
+              <p className="text-md sm:text-2xl md:text-3xl leading-tight break-words">
                 {loadingWarehouse ? (
                   'Cargando almacén…'
-                ) : warehouse ? (
+                ) : !warehouse ? (
+                  'Almacén no encontrado'
+                ) : area ? (
                   <>
-                    Almacén:{' '}
-                    <span className="font-semibold">{warehouse.name}</span>
+                    Conteo en el área{' '}
+                    <span className="font-semibold">{area.name}</span> del
+                    almacén{' '}
+                    <span className="font-semibold">{warehouse.name}</span>.
                   </>
                 ) : (
-                  'Almacén no encontrado'
+                  <>
+                    Conteo en el almacén{' '}
+                    <span className="font-semibold">{warehouse.name}</span>.
+                  </>
                 )}
               </p>
 
-              {initialProduct && (
-                <p className="text-xs sm:text-sm mt-1 text-blue-100/90 break-words">
+              {/* {initialProduct && (
+                <p className="text-xl sm:text-2xl md:text-3xl leading-tight break-words">
                   Producto seleccionado:{' '}
                   <span className="font-semibold">
                     {initialProduct.code} · {initialProduct.name} (
                     {initialProduct.uomCode})
                   </span>
                 </p>
-              )}
+              )} */}
 
               {saving && (
                 <p className="mt-1 text-xs text-blue-100/90">
