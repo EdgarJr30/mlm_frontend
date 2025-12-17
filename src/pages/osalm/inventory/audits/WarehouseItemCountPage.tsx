@@ -247,6 +247,15 @@ export default function WarehouseItemCountPage() {
     const netQty =
       isWeighted && basket ? Math.max(0, grossQty - basketWeight) : grossQty;
 
+    // Evitar guardar conteos vacíos
+    const effectiveQty = isWeighted ? netQty : grossQty;
+    if (effectiveQty <= 0) {
+      showToastError(
+        'No puedes guardar un conteo vacío. Digita una cantidad mayor a 0.'
+      );
+      return;
+    }
+
     const articuloEtiqueta = `${initialProduct.code} · ${initialProduct.name} (${initialProduct.uomCode})`;
 
     try {
@@ -258,7 +267,7 @@ export default function WarehouseItemCountPage() {
         itemId: itemNumericId,
         uomId: uomNumericId,
         warehouseItemId: warehouseItemNumericId,
-        quantity: grossQty, //enviamos la cantidad digitada (peso bruto)
+        quantity: grossQty, // seguimos enviando el peso bruto
         isWeighted,
         basketId: basketIdNumeric,
         status: payload.status,
