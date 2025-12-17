@@ -93,7 +93,7 @@ export default function InventoryAuditWarehousePage() {
       <Sidebar />
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
-        {/* TOP BAR */}
+        {/* HEADER AZUL */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
           <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Títulos */}
@@ -110,7 +110,7 @@ export default function InventoryAuditWarehousePage() {
             </div>
 
             {/* Botón Volver */}
-            <div className="flex justify-start sm:justify-end">
+            <div className="flex justify-end sm:justify-end">
               <button
                 type="button"
                 onClick={() => navigate('/osalm/conteos_inventario')}
