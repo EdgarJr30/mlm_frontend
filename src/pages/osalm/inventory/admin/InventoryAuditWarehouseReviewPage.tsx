@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
@@ -40,6 +40,34 @@ function extractErrorMessage(err: unknown): string {
   return 'Ocurrió un error';
 }
 
+/**
+ * Debounce simple (sin librerías) para evitar re-render “por tecla”.
+ */
+function useDebouncedValue<T>(value: T, delayMs = 250): T {
+  const [debounced, setDebounced] = useState<T>(value);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => window.clearTimeout(id);
+  }, [value, delayMs]);
+
+  return debounced;
+}
+
+/**
+ * Normaliza para búsqueda:
+ * - minúsculas
+ * - elimina acentos
+ * - trim
+ */
+function normalizeForSearch(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
 export default function InventoryWarehouseAuditReviewPage() {
   const navigate = useNavigate();
   const { inventoryCountId } = useParams<{ inventoryCountId: string }>();
@@ -60,6 +88,10 @@ export default function InventoryWarehouseAuditReviewPage() {
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentPage, setCurrentPage] = useState(0);
+
+  // ✅ Buscador
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearchText = useDebouncedValue(searchText, 250);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -127,16 +159,47 @@ export default function InventoryWarehouseAuditReviewPage() {
     };
   }, [canManageAudit, inventoryCountId]);
 
-  // Reset página cuando cambia el filtro
+  // Reset página cuando cambia el filtro o cambia la búsqueda (debounced)
   useEffect(() => {
     setCurrentPage(0);
-  }, [activeFilter]);
+  }, [activeFilter, debouncedSearchText]);
 
-  // Filtrado de items
+  // Stats (universo completo)
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      pending: items.filter((i) => i.status === 'pending').length,
+      counted: items.filter((i) => i.status === 'counted').length,
+      recount: items.filter((i) => i.status === 'recount').length,
+    }),
+    [items]
+  );
+
+  // ✅ filtro + búsqueda (case-insensitive, sin acentos)
   const filteredItems = useMemo(() => {
-    if (activeFilter === 'all') return items;
-    return items.filter((item) => item.status === activeFilter);
-  }, [items, activeFilter]);
+    const byTab =
+      activeFilter === 'all'
+        ? items
+        : items.filter((item) => item.status === activeFilter);
+
+    const q = normalizeForSearch(debouncedSearchText);
+    if (q.length < 2) return byTab;
+
+    return byTab.filter((item) => {
+      const haystack = normalizeForSearch(
+        [
+          item.sku,
+          item.name,
+          item.uom,
+          item.countedBy?.name ?? '',
+          item.countedBy?.email ?? '',
+          item.comment ?? '',
+        ].join(' ')
+      );
+
+      return haystack.includes(q);
+    });
+  }, [items, activeFilter, debouncedSearchText]);
 
   // Paginación
   const totalItemsForFilter = filteredItems.length;
@@ -158,42 +221,37 @@ export default function InventoryWarehouseAuditReviewPage() {
     return { from, to };
   }, [currentPage, totalItemsForFilter]);
 
-  // Estadísticas de items (sobre todo el universo)
-  const stats = useMemo(
-    () => ({
-      total: items.length,
-      pending: items.filter((i) => i.status === 'pending').length,
-      counted: items.filter((i) => i.status === 'counted').length,
-      recount: items.filter((i) => i.status === 'recount').length,
-    }),
-    [items]
+  // Cambiar estado de la auditoría
+  const handleChangeAuditStatus = useCallback(
+    (nextStatus: AuditStatus) => {
+      if (isReadOnly) return;
+      setAuditStatus(nextStatus);
+
+      if (nextStatus === 'completed') {
+        showToastSuccess(
+          'La auditoría se ha marcado como Completada. Guarda para cerrar el conteo.'
+        );
+      }
+    },
+    [isReadOnly]
   );
 
-  // Cambiar estado de la auditoría
-  const handleChangeAuditStatus = (nextStatus: AuditStatus) => {
-    if (isReadOnly) return;
-    setAuditStatus(nextStatus);
-
-    if (nextStatus === 'completed') {
-      showToastSuccess(
-        'La auditoría se ha marcado como Completada. Guarda para cerrar el conteo.'
+  const handleChangeItemStatus = useCallback(
+    (id: number, status: ItemStatus) => {
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status } : item))
       );
-    }
-  };
+    },
+    []
+  );
 
-  const handleChangeItemStatus = (id: number, status: ItemStatus) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status } : item))
-    );
-  };
-
-  const handleChangeItemComment = (id: number, comment: string) => {
+  const handleChangeItemComment = useCallback((id: number, comment: string) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, comment } : item))
     );
-  };
+  }, []);
 
-  const handleChangeItemQty = (id: number, countedQty: number) => {
+  const handleChangeItemQty = useCallback((id: number, countedQty: number) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
@@ -206,7 +264,43 @@ export default function InventoryWarehouseAuditReviewPage() {
         return { ...item, countedQty, baseCountedQty };
       })
     );
-  };
+  }, []);
+
+  const handleChangeItemUom = useCallback(
+    (id: number, uomId: number, uomCode: string) => {
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id !== id) return item;
+
+          const available = item.availableUoms ?? [];
+
+          const target = available.find((u) => u.id === uomId);
+          const targetFactor = target?.factor ?? 1;
+
+          const previous = available.find((u) => u.id === item.uomId);
+          const previousFactor = previous?.factor ?? 1;
+
+          let effectiveBase = item.baseCountedQty ?? 0;
+          if (!Number.isFinite(effectiveBase) || effectiveBase <= 0) {
+            const qty = Number(item.countedQty ?? 0);
+            effectiveBase = previousFactor > 0 ? qty * previousFactor : qty;
+          }
+
+          const newCountedQty =
+            targetFactor > 0 ? effectiveBase / targetFactor : item.countedQty;
+
+          return {
+            ...item,
+            uomId,
+            uom: uomCode,
+            countedQty: newCountedQty,
+            baseCountedQty: effectiveBase,
+          };
+        })
+      );
+    },
+    []
+  );
 
   const handleSaveChanges = async () => {
     if (isReadOnly) {
@@ -247,39 +341,6 @@ export default function InventoryWarehouseAuditReviewPage() {
     }
   };
 
-  const handleChangeItemUom = (id: number, uomId: number, uomCode: string) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-
-        const available = item.availableUoms ?? [];
-
-        const target = available.find((u) => u.id === uomId);
-        const targetFactor = target?.factor ?? 1;
-
-        const previous = available.find((u) => u.id === item.uomId);
-        const previousFactor = previous?.factor ?? 1;
-
-        let effectiveBase = item.baseCountedQty ?? 0;
-        if (!Number.isFinite(effectiveBase) || effectiveBase <= 0) {
-          const qty = Number(item.countedQty ?? 0);
-          effectiveBase = previousFactor > 0 ? qty * previousFactor : qty;
-        }
-
-        const newCountedQty =
-          targetFactor > 0 ? effectiveBase / targetFactor : item.countedQty;
-
-        return {
-          ...item,
-          uomId,
-          uom: uomCode,
-          countedQty: newCountedQty,
-          baseCountedQty: effectiveBase,
-        };
-      })
-    );
-  };
-
   // Renderizado principal (sin permiso)
   if (!canManageAudit) {
     return (
@@ -315,6 +376,9 @@ export default function InventoryWarehouseAuditReviewPage() {
       </div>
     );
   }
+
+  const showingCount = totalItemsForFilter;
+  const hasActiveSearch = normalizeForSearch(searchText).length >= 2;
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -416,60 +480,111 @@ export default function InventoryWarehouseAuditReviewPage() {
 
             {!loading && !error && inventoryCountIdState != null && (
               <>
-                {/* Resumen + filtros */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="flex flex-wrap gap-2">
-                    <SummaryPill label="Total" value={stats.total} />
-                    <SummaryPill
-                      label="Pendientes"
-                      value={stats.pending}
-                      tone="warning"
-                    />
-                    <SummaryPill
-                      label="Contados"
-                      value={stats.counted}
-                      tone="success"
-                    />
-                    <SummaryPill
-                      label="Recontar"
-                      value={stats.recount}
-                      tone="info"
-                    />
-                  </div>
-
-                  <div className="w-full sm:w-auto">
-                    <div className="overflow-x-auto">
-                      <div className="inline-flex rounded-full bg-white border border-gray-200 p-1 text-xs sm:text-sm font-medium shadow-sm">
-                        <FilterChip
-                          label="Todos"
-                          active={activeFilter === 'all'}
-                          onClick={() => setActiveFilter('all')}
-                        />
-                        <FilterChip
-                          label="Pendientes"
-                          active={activeFilter === 'pending'}
-                          tone="warning"
-                          onClick={() => setActiveFilter('pending')}
-                        />
-                        <FilterChip
-                          label="Contados"
-                          active={activeFilter === 'counted'}
-                          tone="success"
-                          onClick={() => setActiveFilter('counted')}
-                        />
-                        <FilterChip
-                          label="Recontar"
-                          active={activeFilter === 'recount'}
-                          tone="info"
-                          onClick={() => setActiveFilter('recount')}
-                        />
-                      </div>
+                {/* Resumen + filtros + buscador */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex flex-wrap gap-2">
+                      <SummaryPill label="Total" value={stats.total} />
+                      <SummaryPill
+                        label="Pendientes"
+                        value={stats.pending}
+                        tone="warning"
+                      />
+                      <SummaryPill
+                        label="Contados"
+                        value={stats.counted}
+                        tone="success"
+                      />
+                      <SummaryPill
+                        label="Recontar"
+                        value={stats.recount}
+                        tone="info"
+                      />
                     </div>
 
-                    <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
-                      Tip: En <span className="font-semibold">Recontar</span>{' '}
-                      puedes ajustar la cantidad.
-                    </p>
+                    <div className="w-full sm:w-[420px]">
+                      <SearchBox
+                        value={searchText}
+                        onChange={setSearchText}
+                        placeholder="Buscar por SKU, nombre, usuario, comentario…"
+                      />
+                      <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                        Escribe al menos{' '}
+                        <span className="font-semibold">2</span> caracteres.
+                        Búsqueda no distingue mayúsculas/acentos.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="w-full sm:w-auto">
+                      <div className="overflow-x-auto">
+                        <div className="inline-flex rounded-full bg-white border border-gray-200 p-1 text-xs sm:text-sm font-medium shadow-sm">
+                          <FilterChip
+                            label="Todos"
+                            active={activeFilter === 'all'}
+                            onClick={() => setActiveFilter('all')}
+                          />
+                          <FilterChip
+                            label="Pendientes"
+                            active={activeFilter === 'pending'}
+                            tone="warning"
+                            onClick={() => setActiveFilter('pending')}
+                          />
+                          <FilterChip
+                            label="Contados"
+                            active={activeFilter === 'counted'}
+                            tone="success"
+                            onClick={() => setActiveFilter('counted')}
+                          />
+                          <FilterChip
+                            label="Recontar"
+                            active={activeFilter === 'recount'}
+                            tone="info"
+                            onClick={() => setActiveFilter('recount')}
+                          />
+                        </div>
+                      </div>
+
+                      <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
+                        Tip: En <span className="font-semibold">Recontar</span>{' '}
+                        puedes ajustar la cantidad.
+                      </p>
+                    </div>
+
+                    {/* ✅ Contador filtro+búsqueda */}
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <span className="font-semibold text-gray-900">
+                        Mostrando {showingCount}
+                      </span>{' '}
+                      resultado{showingCount === 1 ? '' : 's'}
+                      {activeFilter !== 'all' && (
+                        <>
+                          {' '}
+                          en{' '}
+                          <span className="font-semibold">
+                            {labelForTab(activeFilter)}
+                          </span>
+                        </>
+                      )}
+                      {hasActiveSearch && (
+                        <>
+                          {' '}
+                          para{' '}
+                          <span className="font-semibold">
+                            “{debouncedSearchText.trim()}”
+                          </span>
+                        </>
+                      )}
+                      {items.length > 0 && (
+                        <>
+                          {' '}
+                          <span className="text-gray-400">
+                            (de {items.length})
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -500,8 +615,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                       <div className="w-full">
                         <div
                           className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 backdrop-blur px-6 py-3 text-xs font-semibold text-gray-500
-  grid grid-cols-[100px_minmax(320px,2.2fr)_minmax(170px,1fr)_minmax(130px,0.8fr)_minmax(140px,0.8fr)_minmax(240px,1.4fr)] gap-4
-"
+                          grid grid-cols-[100px_minmax(320px,2.2fr)_minmax(170px,1fr)_minmax(130px,0.8fr)_minmax(140px,0.8fr)_minmax(240px,1.4fr)] gap-4"
                         >
                           <div>SKU</div>
                           <div>Artículo</div>
@@ -613,12 +727,54 @@ export default function InventoryWarehouseAuditReviewPage() {
 // SUBCOMPONENTES
 // ======================
 
+function labelForTab(tab: FilterTab): string {
+  if (tab === 'all') return 'Todos';
+  if (tab === 'pending') return 'Pendientes';
+  if (tab === 'counted') return 'Contados';
+  return 'Recontar';
+}
+
+function SearchBox(props: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const { value, onChange, placeholder } = props;
+
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+        🔎
+      </span>
+
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl border border-gray-200 bg-white pl-9 pr-10 py-2.5 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+      />
+
+      {value.trim().length > 0 && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100"
+          aria-label="Limpiar búsqueda"
+          title="Limpiar"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <div className="px-4 sm:px-6 py-8 text-center">
       <p className="text-sm font-semibold text-gray-900">Sin resultados</p>
       <p className="text-sm text-gray-500 mt-1">
-        No hay artículos para este filtro.
+        No hay artículos para este filtro/búsqueda.
       </p>
     </div>
   );
@@ -918,7 +1074,7 @@ function UserPill({ name, email }: { name: string; email?: string }) {
 }
 
 /**
- * MOBILE/TABLET CARD (100% responsive, nada “solo desktop”)
+ * MOBILE/TABLET CARD
  */
 function AuditItemCard(props: {
   item: AuditItem;
@@ -1101,7 +1257,7 @@ function AuditItemCard(props: {
 }
 
 /**
- * DESKTOP ROW (tabla clara + consistente)
+ * DESKTOP ROW
  */
 function AuditItemRowDesktop(props: {
   item: AuditItem;
@@ -1121,14 +1277,9 @@ function AuditItemRowDesktop(props: {
   } = props;
 
   return (
-    <div
-      className="px-6 py-3 grid grid-cols-[100px_minmax(320px,2.2fr)_minmax(170px,1fr)_minmax(130px,0.8fr)_minmax(140px,0.8fr)_minmax(240px,1.4fr)] gap-4
- items-center"
-    >
-      {/* SKU */}
+    <div className="px-6 py-3 grid grid-cols-[100px_minmax(320px,2.2fr)_minmax(170px,1fr)_minmax(130px,0.8fr)_minmax(140px,0.8fr)_minmax(240px,1.4fr)] gap-4 items-center">
       <div className="font-mono text-sm text-gray-700">{item.sku}</div>
 
-      {/* Artículo */}
       <div className="min-w-0">
         <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
           {item.name}
@@ -1157,7 +1308,6 @@ function AuditItemRowDesktop(props: {
         </div>
       </div>
 
-      {/* Usuario (compacto, SIN card) */}
       <div className="flex items-center gap-2 min-w-0">
         <div className="h-7 w-7 rounded-full bg-gray-900 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
           {item.countedBy?.name?.[0] ?? '—'}
@@ -1167,7 +1317,6 @@ function AuditItemRowDesktop(props: {
         </p>
       </div>
 
-      {/* Conteo */}
       <div className="text-right">
         {item.status === 'recount' && !readOnly ? (
           <div className="inline-flex items-center gap-2">
@@ -1190,7 +1339,6 @@ function AuditItemRowDesktop(props: {
         )}
       </div>
 
-      {/* Estado (compact badge) */}
       <div className="flex justify-center">
         <select
           value={item.status}
@@ -1206,7 +1354,6 @@ function AuditItemRowDesktop(props: {
         </select>
       </div>
 
-      {/* Comentario (1 línea) */}
       <div className="min-w-0">
         <input
           type="text"
