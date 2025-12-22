@@ -16,13 +16,20 @@ import type { Basket } from '../../../../types/inventory';
 import { registerInventoryOperation } from '../../../../services/inventoryCountsService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
 
+class SubmitValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SubmitValidationError';
+  }
+}
+
 type RouteParams = {
   warehouseId: string; // aquí usas el code desde BD: "OC-QUIM", etc.
   warehouseItemId: string; // SKU: "A000001"
 };
 
 type WarehouseHeader = {
-  id: string; // lo guardamos como string para el form
+  id: string;
   code: string;
   name: string;
 };
@@ -202,16 +209,18 @@ export default function WarehouseItemCountPage() {
     };
   }, []);
 
-  const handleSubmit = async (payload: WarehouseItemCountPayload) => {
+  const handleSubmit = async (
+    payload: WarehouseItemCountPayload
+  ): Promise<void> => {
     // Candado inmediato anti doble submit
     if (savingRef.current) return;
 
     // Validación de datos requeridos
     if (!warehouse || !initialProduct) {
-      showToastError(
-        'No se pudo registrar el conteo. Faltan los datos del almacén o del artículo seleccionado.'
-      );
-      return;
+      const msg =
+        'No se pudo registrar el conteo. Faltan los datos del almacén o del artículo seleccionado.';
+      showToastError(msg);
+      throw new SubmitValidationError(msg);
     }
 
     const warehouseNumericId = Number(warehouse.id);
@@ -230,15 +239,16 @@ export default function WarehouseItemCountPage() {
       Number.isNaN(uomNumericId) ||
       Number.isNaN(warehouseItemNumericId)
     ) {
-      showToastError(
-        'Ocurrió un problema con los identificadores de almacén o artículo. Vuelve atrás y selecciona el artículo nuevamente.'
-      );
-      return;
+      const msg =
+        'Ocurrió un problema con los identificadores de almacén o artículo. Vuelve atrás y selecciona el artículo nuevamente.';
+      showToastError(msg);
+      throw new SubmitValidationError(msg);
     }
 
     if (isWeighted && (!basketIdNumeric || Number.isNaN(basketIdNumeric))) {
-      showToastError('Selecciona un canasto para registrar artículos pesados.');
-      return;
+      const msg = 'Selecciona un canasto para registrar artículos pesados.';
+      showToastError(msg);
+      throw new SubmitValidationError(msg);
     }
 
     const basket = isWeighted
@@ -253,10 +263,10 @@ export default function WarehouseItemCountPage() {
     // Evitar guardar conteos vacíos
     const effectiveQty = isWeighted ? netQty : grossQty;
     if (effectiveQty <= 0) {
-      showToastError(
-        'No puedes guardar un conteo vacío. Digita una cantidad mayor a 0.'
-      );
-      return;
+      const msg =
+        'No puedes guardar un conteo vacío. Digita una cantidad mayor a 0.';
+      showToastError(msg);
+      throw new SubmitValidationError(msg);
     }
 
     const articuloEtiqueta = `${initialProduct.code} · ${initialProduct.name} (${initialProduct.uomCode})`;
@@ -288,22 +298,19 @@ export default function WarehouseItemCountPage() {
           )} − canasto ${basketWeight.toFixed(2)})`
         : `${grossQty.toFixed(2)}`;
 
-      if (esPendiente) {
-        showToastSuccess(
-          `Artículo marcado como pendiente: ${articuloEtiqueta} — Cantidad: ${cantidadTexto}`
-        );
-      } else {
-        showToastSuccess(
-          `Artículo contado: ${articuloEtiqueta} — Cantidad: ${cantidadTexto}`
-        );
-      }
+      showToastSuccess(
+        esPendiente
+          ? `Artículo marcado como pendiente: ${articuloEtiqueta} — Cantidad: ${cantidadTexto}`
+          : `Artículo contado: ${articuloEtiqueta} — Cantidad: ${cantidadTexto}`
+      );
 
       navigate(-1);
     } catch (error: unknown) {
       console.error('❌ Error registrando conteo:', error);
-      showToastError(
-        `No se pudo guardar el conteo: ${extractErrorMessage(error)}`
-      );
+      if (error instanceof SubmitValidationError) throw error;
+      const msg = `No se pudo guardar el conteo: ${extractErrorMessage(error)}`;
+      showToastError(msg);
+      throw error;
     } finally {
       savingRef.current = false;
       setSaving(false);

@@ -38,7 +38,7 @@ type NewWarehouseAuditFormProps = {
   area?: { id: string; name: string } | null;
   initialProduct?: SelectedProductForAudit;
   onCancel: () => void;
-  onSubmit?: (payload: WarehouseItemCountPayload) => void;
+  onSubmit?: (payload: WarehouseItemCountPayload) => Promise<void>;
   baskets?: Basket[];
   isSubmitting?: boolean;
 };
@@ -205,12 +205,6 @@ export function NewWarehouseAuditForm({
     }
   }, [pendingReasonCode, statusComment]);
 
-  // Lock de envío para evitar doble submit
-  useEffect(() => {
-    // cuando el parent deja de guardar, liberamos el lock del form
-    if (!isSubmitting) submitLockRef.current = false;
-  }, [isSubmitting]);
-
   const clampQuantity = (value: number): number => {
     if (Number.isNaN(value)) return 0;
     if (value < 0) return 0;
@@ -280,11 +274,13 @@ export function NewWarehouseAuditForm({
       return next;
     });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // No permitir doble submit
     if (isSubmitting || submitLockRef.current) return;
+    // Si no hay onSubmit, no bloqueamos
+    if (!onSubmit) return;
     submitLockRef.current = true;
 
     const isPending = pendingReasonCode !== '';
@@ -312,7 +308,11 @@ export function NewWarehouseAuditForm({
         isPending && trimmedComment !== '' ? trimmedComment : undefined,
     };
 
-    onSubmit?.(payload);
+    try {
+      await onSubmit(payload);
+    } finally {
+      submitLockRef.current = false;
+    }
   };
 
   return (
