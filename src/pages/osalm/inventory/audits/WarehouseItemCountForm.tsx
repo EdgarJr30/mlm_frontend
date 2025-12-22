@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useUser } from '../../../../context/UserContext';
 import type { Basket } from '../../../../types/inventory';
 
 export type InventoryStatus = 'counted' | 'pending' | 'recount';
 export type PendingReasonCode = 'UOM_DIFFERENT' | 'REVIEW';
-
 export type SelectedProductForAudit = {
   id: string;
   warehouseItemId: string;
@@ -14,7 +13,6 @@ export type SelectedProductForAudit = {
   uomId: string;
   isWeighted: 'N' | 'Y';
 };
-
 export type WarehouseItemCountPayload = {
   warehouseId: string;
   areaId?: string;
@@ -42,6 +40,7 @@ type NewWarehouseAuditFormProps = {
   onCancel: () => void;
   onSubmit?: (payload: WarehouseItemCountPayload) => void;
   baskets?: Basket[];
+  isSubmitting?: boolean;
 };
 
 type BasketTheme = {
@@ -162,6 +161,7 @@ export function NewWarehouseAuditForm({
   onCancel,
   onSubmit,
   baskets = [],
+  isSubmitting = false,
 }: NewWarehouseAuditFormProps) {
   const { profile } = useUser();
   const [date] = useState(() => new Date().toISOString().slice(0, 10));
@@ -191,6 +191,7 @@ export function NewWarehouseAuditForm({
   >('');
   const [statusComment, setStatusComment] = useState<string>('');
   const [auditorEmail, setAuditorEmail] = useState('');
+  const submitLockRef = useRef(false);
   useEffect(() => {
     if (profile?.email && auditorEmail === '') {
       setAuditorEmail(profile.email);
@@ -203,6 +204,12 @@ export function NewWarehouseAuditForm({
       setStatusComment('');
     }
   }, [pendingReasonCode, statusComment]);
+
+  // Lock de envío para evitar doble submit
+  useEffect(() => {
+    // cuando el parent deja de guardar, liberamos el lock del form
+    if (!isSubmitting) submitLockRef.current = false;
+  }, [isSubmitting]);
 
   const clampQuantity = (value: number): number => {
     if (Number.isNaN(value)) return 0;
@@ -273,13 +280,12 @@ export function NewWarehouseAuditForm({
       return next;
     });
 
-  // const auditorDisplay =
-  //   profile?.name ??
-  //   (profile && 'name' in profile ? profile.name : undefined) ??
-  //   auditorEmail;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // No permitir doble submit
+    if (isSubmitting || submitLockRef.current) return;
+    submitLockRef.current = true;
 
     const isPending = pendingReasonCode !== '';
     const derivedStatus: InventoryStatus = isPending ? 'pending' : 'counted';
@@ -297,7 +303,7 @@ export function NewWarehouseAuditForm({
       productName: initialProduct?.name,
       uomCode: initialProduct?.uomCode,
       isWeighted,
-      quantity, // aquí sigue yendo lo que el usuario digitó
+      quantity,
       basketId: selectedBasketId ?? undefined,
       status: derivedStatus,
       auditorEmail,
@@ -314,27 +320,6 @@ export function NewWarehouseAuditForm({
       onSubmit={handleSubmit}
       className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto space-y-4 sm:space-y-6 pb-28"
     >
-      {/* Almacén */}
-      {/* <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Almacén</h2>
-        <div className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm sm:text-base text-gray-900">
-          {warehouse.name}
-        </div>
-
-        {area && (
-          <div className="mt-3">
-            <h3 className="text-xs font-semibold text-gray-600 mb-1">Área</h3>
-            <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs sm:text-sm text-blue-900">
-              {area.name}
-            </div>
-          </div>
-        )}
-        <p className="mt-2 text-xs text-gray-400">
-          El almacén{area ? ' y el área ' : ' '}se toman desde la pantalla
-          anterior y no se pueden cambiar.
-        </p>
-      </div> */}
-
       {/* Producto */}
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -651,31 +636,43 @@ export function NewWarehouseAuditForm({
         </div>
       </div>
 
-      {/* Auditor */}
-      {/* <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Auditor</h2>
-        <div className="w-full rounded-2xl border border-gray-200 px-3 py-3 text-sm sm:text-base bg-gray-50 text-gray-900">
-          {auditorDisplay || 'Cargando usuario...'}
-        </div>
-        <p className="mt-2 text-[11px] text-gray-400">
-          El auditor se toma automáticamente del usuario conectado.
-        </p>
-      </div> */}
-
       {/* Botones inferiores */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 lg:px-10 py-3 flex gap-3">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 h-11 rounded-2xl bg-gray-100 text-gray-800 text-sm sm:text-base font-semibold"
+          disabled={isSubmitting}
+          className={`flex-1 h-11 rounded-2xl text-sm sm:text-base font-semibold
+            ${
+              isSubmitting
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-800'
+            }
+          `}
         >
           Cancelar
         </button>
         <button
           type="submit"
-          className="flex-1 h-11 rounded-2xl bg-blue-600 text-white text-sm sm:text-base font-semibold"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+          className={`flex-1 h-11 rounded-2xl text-sm sm:text-base font-semibold inline-flex items-center justify-center gap-2
+            ${
+              isSubmitting
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }
+            text-white
+          `}
         >
-          Guardar
+          {isSubmitting ? (
+            <>
+              <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
+              Guardando…
+            </>
+          ) : (
+            'Guardar'
+          )}
         </button>
       </div>
     </form>

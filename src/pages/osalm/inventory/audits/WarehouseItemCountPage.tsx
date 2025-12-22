@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import {
@@ -57,12 +57,11 @@ function extractErrorMessage(err: unknown): string {
 
 export default function WarehouseItemCountPage() {
   const navigate = useNavigate();
-  const { warehouseId, warehouseItemId } = useParams<RouteParams>();
-
-  const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
   const location = useLocation();
   const state = location.state as LocationState;
   const area = state?.area ?? null;
+  const { warehouseId, warehouseItemId } = useParams<RouteParams>();
+  const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);
   const [initialProduct, setInitialProduct] =
     useState<SelectedProductForAudit | null>(null);
   const [baskets, setBaskets] = useState<Basket[]>([]);
@@ -70,6 +69,7 @@ export default function WarehouseItemCountPage() {
   const [loadingItem, setLoadingItem] = useState(true);
   const [, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   // 1) Cargar almacén desde DB (getActiveWarehouses)
   useEffect(() => {
@@ -203,6 +203,10 @@ export default function WarehouseItemCountPage() {
   }, []);
 
   const handleSubmit = async (payload: WarehouseItemCountPayload) => {
+    // Candado inmediato anti doble submit
+    if (savingRef.current) return;
+
+    // Validación de datos requeridos
     if (!warehouse || !initialProduct) {
       showToastError(
         'No se pudo registrar el conteo. Faltan los datos del almacén o del artículo seleccionado.'
@@ -215,7 +219,6 @@ export default function WarehouseItemCountPage() {
     const uomNumericId = Number(initialProduct.uomId);
     const warehouseItemNumericId = Number(initialProduct.warehouseItemId);
     const areaNumericId = payload.areaId ? Number(payload.areaId) : undefined;
-
     const isWeighted = payload.isWeighted === 'Y';
     const basketIdNumeric = payload.basketId
       ? Number(payload.basketId)
@@ -259,6 +262,7 @@ export default function WarehouseItemCountPage() {
     const articuloEtiqueta = `${initialProduct.code} · ${initialProduct.name} (${initialProduct.uomCode})`;
 
     try {
+      savingRef.current = true;
       setSaving(true);
 
       await registerInventoryOperation({
@@ -267,7 +271,7 @@ export default function WarehouseItemCountPage() {
         itemId: itemNumericId,
         uomId: uomNumericId,
         warehouseItemId: warehouseItemNumericId,
-        quantity: grossQty, // seguimos enviando el peso bruto
+        quantity: grossQty,
         isWeighted,
         basketId: basketIdNumeric,
         status: payload.status,
@@ -301,6 +305,7 @@ export default function WarehouseItemCountPage() {
         `No se pudo guardar el conteo: ${extractErrorMessage(error)}`
       );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -444,6 +449,7 @@ export default function WarehouseItemCountPage() {
                 baskets={baskets}
                 onCancel={() => navigate(-1)}
                 onSubmit={handleSubmit}
+                isSubmitting={saving}
               />
             )}
           </div>
