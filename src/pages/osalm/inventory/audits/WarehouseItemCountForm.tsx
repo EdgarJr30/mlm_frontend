@@ -310,6 +310,8 @@ export function NewWarehouseAuditForm({
 
     try {
       await onSubmit(payload);
+    } catch (err: unknown) {
+      console.error('❌ Error en submit del formulario:', err);
     } finally {
       submitLockRef.current = false;
     }

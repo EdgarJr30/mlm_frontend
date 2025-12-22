@@ -220,7 +220,7 @@ export default function WarehouseItemCountPage() {
       const msg =
         'No se pudo registrar el conteo. Faltan los datos del almacén o del artículo seleccionado.';
       showToastError(msg);
-      throw new SubmitValidationError(msg);
+      return;
     }
 
     const warehouseNumericId = Number(warehouse.id);
@@ -242,13 +242,13 @@ export default function WarehouseItemCountPage() {
       const msg =
         'Ocurrió un problema con los identificadores de almacén o artículo. Vuelve atrás y selecciona el artículo nuevamente.';
       showToastError(msg);
-      throw new SubmitValidationError(msg);
+      return;
     }
 
     if (isWeighted && (!basketIdNumeric || Number.isNaN(basketIdNumeric))) {
       const msg = 'Selecciona un canasto para registrar artículos pesados.';
       showToastError(msg);
-      throw new SubmitValidationError(msg);
+      return;
     }
 
     const basket = isWeighted
@@ -266,7 +266,7 @@ export default function WarehouseItemCountPage() {
       const msg =
         'No puedes guardar un conteo vacío. Digita una cantidad mayor a 0.';
       showToastError(msg);
-      throw new SubmitValidationError(msg);
+      return;
     }
 
     const articuloEtiqueta = `${initialProduct.code} · ${initialProduct.name} (${initialProduct.uomCode})`;
@@ -310,7 +310,7 @@ export default function WarehouseItemCountPage() {
       if (error instanceof SubmitValidationError) throw error;
       const msg = `No se pudo guardar el conteo: ${extractErrorMessage(error)}`;
       showToastError(msg);
-      throw error;
+      return;
     } finally {
       savingRef.current = false;
       setSaving(false);
