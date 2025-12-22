@@ -475,23 +475,9 @@ export default function InventoryWarehouseAuditReviewPage() {
               <>
                 {/* Resumen + filtros + buscador */}
                 <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    {/* Search box */}
-                    <div className="w-full sm:w-[420px]">
-                      <SearchBox
-                        value={searchText}
-                        onChange={setSearchText}
-                        placeholder="Buscar por SKU, nombre, usuario, comentario…"
-                      />
-                      <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
-                        Escribe al menos{' '}
-                        <span className="font-semibold">2</span> caracteres.
-                        Búsqueda no distingue mayúsculas/acentos.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Row principal */}
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    {/* Tabs */}
                     <div className="w-full sm:w-auto">
                       <AuditItemsStatusTabs
                         stats={stats}
@@ -505,38 +491,53 @@ export default function InventoryWarehouseAuditReviewPage() {
                       </p>
                     </div>
 
-                    {/* Contador filtro+búsqueda */}
-                    <div className="text-xs sm:text-sm text-gray-600">
-                      <span className="font-semibold text-gray-900">
-                        Mostrando {showingCount}
-                      </span>{' '}
-                      resultado{showingCount === 1 ? '' : 's'}
-                      {activeFilter !== 'all' && (
-                        <>
-                          {' '}
-                          en{' '}
-                          <span className="font-semibold">
-                            {labelForTab(activeFilter)}
-                          </span>
-                        </>
-                      )}
-                      {hasActiveSearch && (
-                        <>
-                          {' '}
-                          para{' '}
-                          <span className="font-semibold">
-                            “{debouncedSearchText.trim()}”
-                          </span>
-                        </>
-                      )}
-                      {items.length > 0 && (
-                        <>
-                          {' '}
-                          <span className="text-gray-400">
-                            (de {items.length})
-                          </span>
-                        </>
-                      )}
+                    {/* Search + contador */}
+                    <div className="w-full sm:w-[420px] flex flex-col items-end gap-1">
+                      <SearchBox
+                        value={searchText}
+                        onChange={setSearchText}
+                        placeholder="Buscar por SKU, nombre, usuario, comentario…"
+                      />
+
+                      <p className="text-[11px] sm:text-xs text-gray-500 text-right">
+                        Escribe al menos{' '}
+                        <span className="font-semibold">2</span> caracteres.
+                        Búsqueda no distingue mayúsculas/acentos.
+                      </p>
+
+                      {/* Contador */}
+                      <div className="mt-1 text-xs sm:text-sm text-gray-600 text-right">
+                        <span className="font-semibold text-gray-900">
+                          Mostrando {showingCount}
+                        </span>{' '}
+                        resultado{showingCount === 1 ? '' : 's'}
+                        {activeFilter !== 'all' && (
+                          <>
+                            {' '}
+                            en{' '}
+                            <span className="font-semibold">
+                              {labelForTab(activeFilter)}
+                            </span>
+                          </>
+                        )}
+                        {hasActiveSearch && (
+                          <>
+                            {' '}
+                            para{' '}
+                            <span className="font-semibold">
+                              “{debouncedSearchText.trim()}”
+                            </span>
+                          </>
+                        )}
+                        {items.length > 0 && (
+                          <>
+                            {' '}
+                            <span className="text-gray-400">
+                              (de {items.length})
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
