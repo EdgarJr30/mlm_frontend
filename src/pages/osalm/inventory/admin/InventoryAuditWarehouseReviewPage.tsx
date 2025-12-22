@@ -496,7 +496,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                       <SearchBox
                         value={searchText}
                         onChange={setSearchText}
-                        placeholder="Buscar por SKU, nombre, usuario, comentario…"
+                        placeholder="Buscar por código, nombre, usuario, comentario…"
                       />
 
                       <p className="text-[11px] sm:text-xs text-gray-500 text-right">
