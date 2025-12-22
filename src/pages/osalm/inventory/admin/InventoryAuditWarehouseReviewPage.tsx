@@ -40,9 +40,7 @@ function extractErrorMessage(err: unknown): string {
   return 'Ocurrió un error';
 }
 
-/**
- * Debounce simple (sin librerías) para evitar re-render “por tecla”.
- */
+// Debounce simple (sin librerías) para evitar re-render “por tecla”.
 function useDebouncedValue<T>(value: T, delayMs = 250): T {
   const [debounced, setDebounced] = useState<T>(value);
 
@@ -54,12 +52,7 @@ function useDebouncedValue<T>(value: T, delayMs = 250): T {
   return debounced;
 }
 
-/**
- * Normaliza para búsqueda:
- * - minúsculas
- * - elimina acentos
- * - trim
- */
+// Normaliza para búsqueda: minúsculas, elimina acentos, trim
 function normalizeForSearch(input: string): string {
   return input
     .toLowerCase()
@@ -72,7 +65,7 @@ export default function InventoryWarehouseAuditReviewPage() {
   const navigate = useNavigate();
   const { inventoryCountId } = useParams<{ inventoryCountId: string }>();
 
-  // ✅ Solo auditores ven esta pantalla
+  // Solo auditores ven esta pantalla
   const canManageAudit = useCan([
     'inventory_adjustments:full_access',
     'inventory_adjustments:read',
@@ -89,7 +82,7 @@ export default function InventoryWarehouseAuditReviewPage() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [currentPage, setCurrentPage] = useState(0);
 
-  // ✅ Buscador
+  // Buscador
   const [searchText, setSearchText] = useState('');
   const debouncedSearchText = useDebouncedValue(searchText, 250);
 
@@ -175,7 +168,7 @@ export default function InventoryWarehouseAuditReviewPage() {
     [items]
   );
 
-  // ✅ filtro + búsqueda (case-insensitive, sin acentos)
+  // filtro + búsqueda (case-insensitive, sin acentos)
   const filteredItems = useMemo(() => {
     const byTab =
       activeFilter === 'all'
@@ -483,25 +476,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                 {/* Resumen + filtros + buscador */}
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex flex-wrap gap-2">
-                      <SummaryPill label="Total" value={stats.total} />
-                      <SummaryPill
-                        label="Pendientes"
-                        value={stats.pending}
-                        tone="warning"
-                      />
-                      <SummaryPill
-                        label="Contados"
-                        value={stats.counted}
-                        tone="success"
-                      />
-                      <SummaryPill
-                        label="Recontar"
-                        value={stats.recount}
-                        tone="info"
-                      />
-                    </div>
-
+                    {/* Search box */}
                     <div className="w-full sm:w-[420px]">
                       <SearchBox
                         value={searchText}
@@ -518,33 +493,11 @@ export default function InventoryWarehouseAuditReviewPage() {
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="w-full sm:w-auto">
-                      <div className="overflow-x-auto">
-                        <div className="inline-flex rounded-full bg-white border border-gray-200 p-1 text-xs sm:text-sm font-medium shadow-sm">
-                          <FilterChip
-                            label="Todos"
-                            active={activeFilter === 'all'}
-                            onClick={() => setActiveFilter('all')}
-                          />
-                          <FilterChip
-                            label="Pendientes"
-                            active={activeFilter === 'pending'}
-                            tone="warning"
-                            onClick={() => setActiveFilter('pending')}
-                          />
-                          <FilterChip
-                            label="Contados"
-                            active={activeFilter === 'counted'}
-                            tone="success"
-                            onClick={() => setActiveFilter('counted')}
-                          />
-                          <FilterChip
-                            label="Recontar"
-                            active={activeFilter === 'recount'}
-                            tone="info"
-                            onClick={() => setActiveFilter('recount')}
-                          />
-                        </div>
-                      </div>
+                      <AuditItemsStatusTabs
+                        stats={stats}
+                        active={activeFilter}
+                        onChange={setActiveFilter}
+                      />
 
                       <p className="mt-2 text-[11px] sm:text-xs text-gray-500">
                         Tip: En <span className="font-semibold">Recontar</span>{' '}
@@ -552,7 +505,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                       </p>
                     </div>
 
-                    {/* ✅ Contador filtro+búsqueda */}
+                    {/* Contador filtro+búsqueda */}
                     <div className="text-xs sm:text-sm text-gray-600">
                       <span className="font-semibold text-gray-900">
                         Mostrando {showingCount}
@@ -835,152 +788,349 @@ function AuditStatusSelector(props: {
 }) {
   const { status, onChange, readOnly } = props;
 
+  const [openMobile, setOpenMobile] = useState(false);
+
+  // Si cambia a desktop, cerramos el accordion (por seguridad UX)
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 640px)'); // tailwind sm
+    const handler = () => {
+      if (mql.matches) setOpenMobile(false);
+    };
+    handler();
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  const statusMeta = useMemo(() => {
+    const map: Record<
+      AuditStatus,
+      { label: string; icon: string; activeCls: string }
+    > = {
+      pending: {
+        label: 'Pendiente',
+        icon: '⏱',
+        activeCls: 'bg-white text-amber-700 border-amber-300 shadow-sm',
+      },
+      in_progress: {
+        label: 'En progreso',
+        icon: '🔄',
+        activeCls: 'bg-white text-blue-700 border-blue-300 shadow-sm',
+      },
+      completed: {
+        label: 'Completado',
+        icon: '✅',
+        activeCls: 'bg-white text-green-700 border-green-300 shadow-sm',
+      },
+    };
+    return map[status];
+  }, [status]);
+
   const buttonBase =
-    'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition flex items-center justify-center gap-2 flex-1';
+    'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition flex items-center justify-center gap-2';
+
+  const inactiveBase = 'border-transparent text-blue-50/90 hover:bg-white/10';
+
+  const handlePick = (next: AuditStatus) => {
+    if (readOnly) return;
+    onChange(next);
+    setOpenMobile(false);
+  };
 
   return (
     <div className="w-full sm:w-auto">
-      <div className="grid grid-cols-3 gap-2 bg-white/10 border border-white/15 rounded-2xl p-2 backdrop-blur">
-        <button
-          type="button"
-          onClick={() => !readOnly && onChange('pending')}
-          className={[
-            buttonBase,
-            status === 'pending'
-              ? 'bg-white text-amber-700 border-amber-300 shadow-sm'
-              : 'border-transparent text-blue-50/90 hover:bg-white/10',
-            readOnly ? 'cursor-not-allowed opacity-70' : '',
-          ].join(' ')}
-        >
-          <span className="text-base">⏱</span>
-          <span className="leading-none">Pendiente</span>
-        </button>
+      {/* =========================
+          MOBILE: COLLAPSABLE
+          ========================= */}
+      <div className="sm:hidden">
+        <div className="rounded-2xl bg-white/10 border border-white/15 backdrop-blur p-2">
+          {/* Botón header */}
+          <button
+            type="button"
+            onClick={() => !readOnly && setOpenMobile((v) => !v)}
+            disabled={readOnly}
+            className={[
+              'w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2',
+              'border border-white/15 text-blue-50/90',
+              'transition',
+              readOnly ? 'opacity-70 cursor-not-allowed' : 'hover:bg-white/10',
+            ].join(' ')}
+            aria-expanded={openMobile}
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-base">{statusMeta.icon}</span>
+              <span className="text-xs font-semibold">Estado:</span>
+              <span className="text-sm font-extrabold">{statusMeta.label}</span>
+            </span>
 
-        <button
-          type="button"
-          onClick={() => !readOnly && onChange('in_progress')}
-          className={[
-            buttonBase,
-            status === 'in_progress'
-              ? 'bg-white text-blue-700 border-blue-300 shadow-sm'
-              : 'border-transparent text-blue-50/90 hover:bg-white/10',
-            readOnly ? 'cursor-not-allowed opacity-70' : '',
-          ].join(' ')}
-        >
-          <span className="text-base">🔄</span>
-          <span className="leading-none">En progreso</span>
-        </button>
+            <span
+              className={[
+                'text-lg leading-none transition-transform',
+                openMobile ? 'rotate-180' : 'rotate-0',
+              ].join(' ')}
+            >
+              ▾
+            </span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => !readOnly && onChange('completed')}
-          className={[
-            buttonBase,
-            status === 'completed'
-              ? 'bg-white text-green-700 border-green-300 shadow-sm'
-              : 'border-transparent text-blue-50/90 hover:bg-white/10',
-            readOnly ? 'cursor-not-allowed opacity-70' : '',
-          ].join(' ')}
-        >
-          <span className="text-base">✅</span>
-          <span className="leading-none">Completado</span>
-        </button>
+          {/* Panel colapsable */}
+          <div
+            className={[
+              'grid transition-[grid-template-rows,opacity] duration-200 ease-out',
+              openMobile
+                ? 'grid-rows-[1fr] opacity-100 mt-2'
+                : 'grid-rows-[0fr] opacity-0',
+            ].join(' ')}
+          >
+            <div className="overflow-hidden">
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePick('pending')}
+                  className={[
+                    buttonBase,
+                    'w-full',
+                    status === 'pending' ? statusMeta.activeCls : inactiveBase,
+                    readOnly ? 'cursor-not-allowed opacity-70' : '',
+                  ].join(' ')}
+                >
+                  <span className="text-base">⏱</span>
+                  <span className="leading-none">Pendiente</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePick('in_progress')}
+                  className={[
+                    buttonBase,
+                    'w-full',
+                    status === 'in_progress'
+                      ? 'bg-white text-blue-700 border-blue-300 shadow-sm'
+                      : inactiveBase,
+                    readOnly ? 'cursor-not-allowed opacity-70' : '',
+                  ].join(' ')}
+                >
+                  <span className="text-base">🔄</span>
+                  <span className="leading-none">En progreso</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePick('completed')}
+                  className={[
+                    buttonBase,
+                    'w-full',
+                    status === 'completed'
+                      ? 'bg-white text-green-700 border-green-300 shadow-sm'
+                      : inactiveBase,
+                    readOnly ? 'cursor-not-allowed opacity-70' : '',
+                  ].join(' ')}
+                >
+                  <span className="text-base">✅</span>
+                  <span className="leading-none">Completado</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================
+          DESKTOP: ORIGINAL (3 en fila)
+          ========================= */}
+      <div className="hidden sm:block">
+        <div className="grid grid-cols-3 gap-2 bg-white/10 border border-white/15 rounded-2xl p-2 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => !readOnly && onChange('pending')}
+            className={[
+              buttonBase,
+              'flex-1',
+              status === 'pending'
+                ? 'bg-white text-amber-700 border-amber-300 shadow-sm'
+                : inactiveBase,
+              readOnly ? 'cursor-not-allowed opacity-70' : '',
+            ].join(' ')}
+          >
+            <span className="text-base">⏱</span>
+            <span className="leading-none">Pendiente</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => !readOnly && onChange('in_progress')}
+            className={[
+              buttonBase,
+              'flex-1',
+              status === 'in_progress'
+                ? 'bg-white text-blue-700 border-blue-300 shadow-sm'
+                : inactiveBase,
+              readOnly ? 'cursor-not-allowed opacity-70' : '',
+            ].join(' ')}
+          >
+            <span className="text-base">🔄</span>
+            <span className="leading-none">En progreso</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => !readOnly && onChange('completed')}
+            className={[
+              buttonBase,
+              'flex-1',
+              status === 'completed'
+                ? 'bg-white text-green-700 border-green-300 shadow-sm'
+                : inactiveBase,
+              readOnly ? 'cursor-not-allowed opacity-70' : '',
+            ].join(' ')}
+          >
+            <span className="text-base">✅</span>
+            <span className="leading-none">Completado</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function SummaryPill(props: {
-  label: string;
-  value: number;
-  tone?: 'default' | 'success' | 'warning' | 'info';
+function AuditItemsStatusTabs(props: {
+  stats: { total: number; pending: number; counted: number; recount: number };
+  active: FilterTab;
+  onChange: (tab: FilterTab) => void;
 }) {
-  const { label, value, tone = 'default' } = props;
+  const { stats, active, onChange } = props;
+
+  const tabs: Array<{
+    key: FilterTab;
+    label: string;
+    value: number;
+    tone: 'default' | 'warning' | 'success' | 'info';
+  }> = [
+    { key: 'all', label: 'Total', value: stats.total, tone: 'default' },
+    {
+      key: 'pending',
+      label: 'Pendientes',
+      value: stats.pending,
+      tone: 'warning',
+    },
+    {
+      key: 'counted',
+      label: 'Contados',
+      value: stats.counted,
+      tone: 'success',
+    },
+    { key: 'recount', label: 'Recontar', value: stats.recount, tone: 'info' },
+  ];
 
   const tones: Record<
-    NonNullable<typeof tone>,
-    { bg: string; text: string; ring: string }
+    'default' | 'warning' | 'success' | 'info',
+    {
+      base: string;
+      active: string;
+      countBase: string;
+      countActive: string;
+    }
   > = {
     default: {
-      bg: 'bg-gray-100',
-      text: 'text-gray-800',
-      ring: 'ring-gray-200',
-    },
-    success: {
-      bg: 'bg-green-50',
-      text: 'text-green-800',
-      ring: 'ring-green-200',
+      base: 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50',
+      active: 'bg-gray-900 border-gray-900 text-white shadow-sm',
+      countBase: 'bg-gray-100 text-gray-800',
+      countActive: 'bg-white/15 text-white',
     },
     warning: {
-      bg: 'bg-amber-50',
-      text: 'text-amber-800',
-      ring: 'ring-amber-200',
-    },
-    info: { bg: 'bg-blue-50', text: 'text-blue-800', ring: 'ring-blue-200' },
-  };
-
-  const cfg = tones[tone];
-
-  return (
-    <div
-      className={[
-        'inline-flex items-center gap-2 px-3 py-2 rounded-xl ring-1',
-        cfg.bg,
-        cfg.ring,
-      ].join(' ')}
-    >
-      <span className="text-[11px] uppercase tracking-[0.14em] text-gray-500">
-        {label}
-      </span>
-      <span className={['text-sm font-bold', cfg.text].join(' ')}>{value}</span>
-    </div>
-  );
-}
-
-function FilterChip(props: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  tone?: 'default' | 'success' | 'warning' | 'info';
-}) {
-  const { label, active, onClick, tone = 'default' } = props;
-
-  const tones: Record<
-    NonNullable<typeof tone>,
-    { active: string; inactive: string }
-  > = {
-    default: {
-      active: 'bg-gray-900 text-white',
-      inactive: 'text-gray-600 hover:bg-gray-50',
+      base: 'bg-white border-amber-200 text-amber-800 hover:bg-amber-50',
+      active: 'bg-amber-500 border-amber-500 text-white shadow-sm',
+      countBase: 'bg-amber-50 text-amber-800',
+      countActive: 'bg-white/15 text-white',
     },
     success: {
-      active: 'bg-green-600 text-white',
-      inactive: 'text-green-700 hover:bg-green-50',
-    },
-    warning: {
-      active: 'bg-amber-500 text-white',
-      inactive: 'text-amber-700 hover:bg-amber-50',
+      base: 'bg-white border-green-200 text-green-800 hover:bg-green-50',
+      active: 'bg-green-600 border-green-600 text-white shadow-sm',
+      countBase: 'bg-green-50 text-green-800',
+      countActive: 'bg-white/15 text-white',
     },
     info: {
-      active: 'bg-blue-600 text-white',
-      inactive: 'text-blue-700 hover:bg-blue-50',
+      base: 'bg-white border-blue-200 text-blue-800 hover:bg-blue-50',
+      active: 'bg-blue-600 border-blue-600 text-white shadow-sm',
+      countBase: 'bg-blue-50 text-blue-800',
+      countActive: 'bg-white/15 text-white',
     },
   };
 
-  const cfg = tones[tone];
-
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'px-3 py-1.5 rounded-full mx-0.5 transition whitespace-nowrap',
-        'text-xs sm:text-sm font-semibold',
-        active ? cfg.active : cfg.inactive,
-      ].join(' ')}
-    >
-      {label}
-    </button>
+    <div className="w-full">
+      {/* ✅ Mobile: grid (NO scroll) */}
+      <div className="grid grid-cols-2 gap-2 sm:hidden">
+        {tabs.map((t) => {
+          const isActive = active === t.key;
+          const cfg = tones[t.tone];
+
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => onChange(t.key)}
+              className={[
+                'w-full inline-flex items-center justify-between gap-2',
+                'rounded-2xl border px-3 py-2',
+                'text-xs font-semibold transition',
+                isActive ? cfg.active : cfg.base,
+              ].join(' ')}
+              aria-pressed={isActive}
+            >
+              <span className="text-[11px] uppercase tracking-[0.14em] opacity-90">
+                {t.label}
+              </span>
+
+              <span
+                className={[
+                  'inline-flex items-center justify-center',
+                  'h-7 px-2 rounded-xl text-sm font-extrabold',
+                  isActive ? cfg.countActive : cfg.countBase,
+                ].join(' ')}
+              >
+                {t.value}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ✅ Desktop/Tablet: pills en fila, sin overflow */}
+      <div className="hidden sm:flex sm:flex-wrap gap-2 rounded-2xl bg-white/60 border border-gray-200 p-2 shadow-sm">
+        {tabs.map((t) => {
+          const isActive = active === t.key;
+          const cfg = tones[t.tone];
+
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => onChange(t.key)}
+              className={[
+                'inline-flex items-center gap-2 rounded-2xl border px-3 py-2',
+                'text-sm font-semibold transition',
+                isActive ? cfg.active : cfg.base,
+              ].join(' ')}
+              aria-pressed={isActive}
+            >
+              <span className="text-xs uppercase tracking-[0.14em] opacity-90">
+                {t.label}
+              </span>
+
+              <span
+                className={[
+                  'inline-flex items-center justify-center min-w-[2.25rem]',
+                  'h-7 px-2 rounded-xl text-sm font-extrabold',
+                  isActive ? cfg.countActive : cfg.countBase,
+                ].join(' ')}
+              >
+                {t.value}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -1073,9 +1223,6 @@ function UserPill({ name, email }: { name: string; email?: string }) {
   );
 }
 
-/**
- * MOBILE/TABLET CARD
- */
 function AuditItemCard(props: {
   item: AuditItem;
   readOnly?: boolean;
@@ -1256,9 +1403,6 @@ function AuditItemCard(props: {
   );
 }
 
-/**
- * DESKTOP ROW
- */
 function AuditItemRowDesktop(props: {
   item: AuditItem;
   readOnly?: boolean;
