@@ -102,7 +102,7 @@ export function InventoryAuditExportButton({
       type="button"
       onClick={handleExportAudit}
       disabled={disabled}
-      className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-blue-500/25 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-blue-500/40 hover:border-white/50 disabled:opacity-60 disabled:cursor-not-allowed transition"
+      className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-blue-500/25 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-blue-500/40 hover:border-white/50 disabled:opacity-60 disabled:cursor-not-allowed transition cursor-pointer"
     >
       <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
         ⬇️

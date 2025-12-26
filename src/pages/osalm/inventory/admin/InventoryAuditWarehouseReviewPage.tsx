@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
 import {
@@ -89,6 +89,8 @@ export default function InventoryWarehouseAuditReviewPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const location = useLocation();
 
   const isReadOnly = isClosedFromDb;
 
@@ -358,8 +360,14 @@ export default function InventoryWarehouseAuditReviewPage() {
               </p>
               <button
                 type="button"
-                onClick={() => navigate(-1)}
-                className="mt-4 w-full rounded-xl bg-gray-900 text-white py-2 text-sm font-semibold hover:bg-black"
+                onClick={() =>
+                  navigate(
+                    `/osalm/conteos_inventario/auditoria/almacenes${
+                      location.search || '?tab=warehouses'
+                    }`
+                  )
+                }
+                className="mt-4 w-full rounded-xl bg-gray-900 text-white py-2 text-sm font-semibold hover:bg-black cursor-pointer"
               >
                 Volver
               </button>
@@ -426,9 +434,13 @@ export default function InventoryWarehouseAuditReviewPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    navigate('/osalm/conteos_inventario/auditoria/almacenes')
+                    navigate(
+                      `/osalm/conteos_inventario/auditoria/almacenes${
+                        location.search || '?tab=warehouses'
+                      }`
+                    )
                   }
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition cursor-pointer"
                 >
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                     ←
@@ -647,7 +659,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                       <button
                         type="button"
                         onClick={() => navigate(-1)}
-                        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                        className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -655,7 +667,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                         type="button"
                         onClick={handleSaveChanges}
                         disabled={saving || isReadOnly}
-                        className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {isReadOnly
                           ? 'Conteo cerrado'
@@ -827,7 +839,7 @@ function AuditStatusSelector(props: {
   }, [status]);
 
   const buttonBase =
-    'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition flex items-center justify-center gap-2';
+    'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition flex items-center justify-center gap-2 cursor-pointer';
 
   const inactiveBase = 'border-transparent text-blue-50/90 hover:bg-white/10';
 
@@ -1032,26 +1044,28 @@ function AuditItemsStatusTabs(props: {
     }
   > = {
     default: {
-      base: 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50',
-      active: 'bg-gray-900 border-gray-900 text-white shadow-sm',
+      base: 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 cursor-pointer',
+      active: 'bg-gray-900 border-gray-900 text-white shadow-sm cursor-pointer',
       countBase: 'bg-gray-100 text-gray-800',
       countActive: 'bg-white/15 text-white',
     },
     warning: {
-      base: 'bg-white border-amber-200 text-amber-800 hover:bg-amber-50',
-      active: 'bg-amber-500 border-amber-500 text-white shadow-sm',
+      base: 'bg-white border-amber-200 text-amber-800 hover:bg-amber-50 cursor-pointer',
+      active:
+        'bg-amber-500 border-amber-500 text-white shadow-sm cursor-pointer',
       countBase: 'bg-amber-50 text-amber-800',
       countActive: 'bg-white/15 text-white',
     },
     success: {
-      base: 'bg-white border-green-200 text-green-800 hover:bg-green-50',
-      active: 'bg-green-600 border-green-600 text-white shadow-sm',
+      base: 'bg-white border-green-200 text-green-800 hover:bg-green-50 cursor-pointer',
+      active:
+        'bg-green-600 border-green-600 text-white shadow-sm cursor-pointer',
       countBase: 'bg-green-50 text-green-800',
       countActive: 'bg-white/15 text-white',
     },
     info: {
-      base: 'bg-white border-blue-200 text-blue-800 hover:bg-blue-50',
-      active: 'bg-blue-600 border-blue-600 text-white shadow-sm',
+      base: 'bg-white border-blue-200 text-blue-800 hover:bg-blue-50 cursor-pointer',
+      active: 'bg-blue-600 border-blue-600 text-white shadow-sm cursor-pointer',
       countBase: 'bg-blue-50 text-blue-800',
       countActive: 'bg-white/15 text-white',
     },

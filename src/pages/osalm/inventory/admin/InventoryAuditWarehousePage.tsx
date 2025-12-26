@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEventHandler } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
 import {
@@ -13,16 +13,27 @@ type AuditHistoryTab = 'warehouses' | 'areas';
 export default function InventoryAuditWarehousePage() {
   const navigate = useNavigate();
 
-  // ✅ Solo auditores ven esta pantalla
+  // Solo auditores ven esta pantalla
   const canManageAudit = useCan([
     'inventory_adjustments:full_access',
     'inventory_adjustments:read',
   ]);
 
   const [sessions, setSessions] = useState<AuditSession[]>([]);
-  const [activeTab, setActiveTab] = useState<AuditHistoryTab>('warehouses');
+  // const [activeTab, setActiveTab] = useState<AuditHistoryTab>('warehouses');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const urlTab = searchParams.get('tab');
+  const initialTab: AuditHistoryTab =
+    urlTab === 'areas' || urlTab === 'warehouses' ? urlTab : 'warehouses';
+
+  const [activeTab, setActiveTab] = useState<AuditHistoryTab>(initialTab);
+
+  useEffect(() => {
+    setSearchParams({ tab: activeTab }, { replace: true });
+  }, [activeTab, setSearchParams]);
 
   const filteredSessions = sessions.filter((s) =>
     activeTab === 'warehouses' ? !s.isArea : s.isArea
@@ -93,10 +104,8 @@ export default function InventoryAuditWarehousePage() {
       <Sidebar />
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
-        {/* HEADER AZUL */}
         <header className="bg-blue-600 text-white shadow-sm pt-16 sm:pt-6">
           <div className="px-4 sm:px-6 lg:px-10 pb-4 sm:pb-5 max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Títulos */}
             <div className="flex-1 min-w-0">
               <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/80">
                 Auditoría de inventario
@@ -109,12 +118,11 @@ export default function InventoryAuditWarehousePage() {
               </p>
             </div>
 
-            {/* Botón Volver */}
             <div className="flex justify-end sm:justify-end">
               <button
                 type="button"
                 onClick={() => navigate('/osalm/conteos_inventario')}
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0"
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition shrink-0 cursor-pointer"
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                   ←
@@ -125,7 +133,6 @@ export default function InventoryAuditWarehousePage() {
           </div>
         </header>
 
-        {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto w-full">
             {/* Tabs: Almacenes / Áreas */}
@@ -136,7 +143,7 @@ export default function InventoryAuditWarehousePage() {
                     type="button"
                     onClick={() => setActiveTab('warehouses')}
                     className={[
-                      'px-4 py-1.5 rounded-full whitespace-nowrap',
+                      'px-4 py-1.5 rounded-full whitespace-nowrap cursor-pointer',
                       activeTab === 'warehouses'
                         ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700',
@@ -149,7 +156,7 @@ export default function InventoryAuditWarehousePage() {
                     type="button"
                     onClick={() => setActiveTab('areas')}
                     className={[
-                      'px-4 py-1.5 rounded-full whitespace-nowrap',
+                      'px-4 py-1.5 rounded-full whitespace-nowrap cursor-pointer',
                       activeTab === 'areas'
                         ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700',
@@ -206,6 +213,7 @@ export default function InventoryAuditWarehousePage() {
 
 function AuditSessionCard({ session }: { session: AuditSession }) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const statusConfig: Record<
     AuditStatus,
@@ -242,7 +250,9 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
     : undefined;
 
   const handleClick = () => {
-    navigate(`/osalm/conteos_inventario/auditoria/almacenes/${session.id}`);
+    navigate(
+      `/osalm/conteos_inventario/auditoria/almacenes/${session.id}${location.search}`
+    );
   };
 
   const handleKeyDown: KeyboardEventHandler<HTMLElement> = (event) => {
