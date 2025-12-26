@@ -22,6 +22,7 @@ import InventoryAuditWarehousePage from '../../pages/osalm/inventory/admin/Inven
 import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
 import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
 import InventoryMasterItemsPage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemsPage';
+import InventoryMasterItemCountSelectWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemCountSelectWarehousePage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -386,6 +387,20 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/osalm/conteos_inventario/maestra',
     element: <InventoryMasterItemsPage />,
+    allowPerms: [
+      'inventory_adjustments:read',
+      'inventory_adjustments:create',
+      'inventory_adjustments:export',
+      'inventory_adjustments:approve',
+      'inventory_adjustments:full_access',
+    ],
+    name: 'Data Maestra',
+    showInSidebar: false,
+  },
+
+  {
+    path: '/osalm/conteos_inventario/maestra/articulos/:itemId/conteo',
+    element: <InventoryMasterItemCountSelectWarehousePage />,
     allowPerms: [
       'inventory_adjustments:read',
       'inventory_adjustments:create',

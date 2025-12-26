@@ -741,3 +741,98 @@ export async function getWarehouseItemByWarehouseItemId(
 
   return (data as WarehouseStockItem) ?? null;
 }
+
+export async function getWarehouseItemIdForItemInWarehouse(
+  warehouseId: number,
+  itemId: number
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('warehouse_items')
+    .select('id')
+    .eq('warehouse_id', warehouseId)
+    .eq('item_id', itemId)
+    .order('id', { ascending: false }) // toma el más nuevo
+    .limit(1);
+
+  if (error) {
+    console.error('[getWarehouseItemIdForItemInWarehouse] error:', error);
+    throw new Error(error.message);
+  }
+
+  const first = data?.[0];
+  return first?.id ? Number(first.id) : null;
+}
+
+export async function getBaseUomCodeByItemIds(
+  itemIds: number[]
+): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  if (itemIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from('items')
+    .select(
+      `
+      id,
+      uoms:base_uom_id ( code )
+    `
+    )
+    .in('id', itemIds);
+
+  if (error) {
+    console.error('❌ Error al obtener UoM base por items:', error.message);
+    return map;
+  }
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: number;
+    uoms: { code: string } | null;
+  }>;
+
+  for (const r of rows) {
+    map.set(r.id, r.uoms?.code ?? '—');
+  }
+
+  return map;
+}
+
+export async function getTotalCountedBaseQtyByItemIds(
+  itemIds: number[]
+): Promise<Map<number, number>> {
+  const map = new Map<number, number>();
+  if (itemIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from('inventory_count_lines')
+    .select('item_id, base_counted_qty, counted_qty, status')
+    .in('item_id', itemIds);
+
+  if (error) {
+    console.error(
+      '❌ Error al obtener total contado por items:',
+      error.message
+    );
+    return map;
+  }
+
+  const rows = (data ?? []) as Array<{
+    item_id: number;
+    base_counted_qty: string | number | null;
+    counted_qty: string | number | null;
+    status: 'counted' | 'pending' | 'ignored' | null;
+  }>;
+
+  for (const r of rows) {
+    // Solo sumar lo contado
+    if (r.status && r.status !== 'counted') continue;
+
+    const base = Number(r.base_counted_qty);
+    const fallback = Number(r.counted_qty ?? 0);
+    const qty = Number.isFinite(base) ? base : fallback;
+
+    const prev = map.get(r.item_id) ?? 0;
+    map.set(r.item_id, prev + (Number.isFinite(qty) ? qty : 0));
+  }
+
+  return map;
+}

@@ -2,11 +2,29 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { useCan } from '../../../../rbac/PermissionsContext';
-import { getItemsPaginated } from '../../../../services/inventoryService';
+import {
+  getItemsPaginated,
+  getBaseUomCodeByItemIds,
+  getTotalCountedBaseQtyByItemIds,
+} from '../../../../services/inventoryService';
 import type { Item } from '../../../../types/inventory';
+
+type MasterItemCard = {
+  id: number;
+  sku: string;
+  name: string;
+  uom: string; // UoM base
+  counted: number; // total contado (base)
+};
 
 const PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 350;
+
+function formatQty(n: number): string {
+  if (!Number.isFinite(n)) return '0';
+  // Si quieres sin decimales, cambia maximumFractionDigits: 0
+  return n.toLocaleString('es-DO', { maximumFractionDigits: 2 });
+}
 
 export default function InventoryMasterItemsPage() {
   const navigate = useNavigate();
@@ -27,6 +45,13 @@ export default function InventoryMasterItemsPage() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [uomByItemId, setUomByItemId] = useState<Map<number, string>>(
+    new Map()
+  );
+  const [countedByItemId, setCountedByItemId] = useState<Map<number, number>>(
+    new Map()
+  );
 
   const requestSeqRef = useRef(0);
 
@@ -63,11 +88,20 @@ export default function InventoryMasterItemsPage() {
 
         const res = await getItemsPaginated(page, PAGE_SIZE, searchTerm);
 
+        const ids = res.data.map((x) => x.id);
+
+        const [uomsMap, countedMap] = await Promise.all([
+          getBaseUomCodeByItemIds(ids),
+          getTotalCountedBaseQtyByItemIds(ids),
+        ]);
+
         const isStale = !isMounted || seq !== requestSeqRef.current;
         if (isStale) return;
 
         setItems(res.data);
         setCount(res.count);
+        setUomByItemId(uomsMap);
+        setCountedByItemId(countedMap);
       } catch (err: unknown) {
         const isStale = !isMounted || seq !== requestSeqRef.current;
         if (isStale) return;
@@ -76,8 +110,6 @@ export default function InventoryMasterItemsPage() {
         else setError('Ocurrió un error al cargar los artículos.');
       } finally {
         const isStale = !isMounted || seq !== requestSeqRef.current;
-
-        // ✅ NO return dentro de finally (evita no-unsafe-finally)
         if (!isStale) {
           setIsInitialLoading(false);
           setIsFetching(false);
@@ -107,6 +139,18 @@ export default function InventoryMasterItemsPage() {
     if (isInitialLoading) return 'Cargando…';
     return `${count} artículos`;
   }, [count, isInitialLoading]);
+
+  const cards: MasterItemCard[] = useMemo(
+    () =>
+      items.map((it) => ({
+        id: it.id,
+        sku: it.sku,
+        name: it.name,
+        uom: uomByItemId.get(it.id) ?? '—',
+        counted: countedByItemId.get(it.id) ?? 0,
+      })),
+    [items, uomByItemId, countedByItemId]
+  );
 
   return (
     <div className="h-screen flex bg-gray-100">
@@ -207,39 +251,34 @@ export default function InventoryMasterItemsPage() {
                       <div className="h-4 w-3/4 rounded bg-gray-200" />
                       <div className="h-3 w-1/2 rounded bg-gray-200" />
                     </div>
-                    <div className="h-8 w-20 rounded bg-gray-200" />
+                    <div className="flex flex-col items-end gap-2 w-1/4">
+                      <div className="h-6 w-12 rounded bg-gray-200" />
+                      <div className="h-3 w-10 rounded bg-gray-200" />
+                    </div>
                   </div>
                 ))}
 
               {!isInitialLoading &&
                 !error &&
-                items.map((it) => (
-                  <button
+                cards.map((it) => (
+                  <MasterItemCardRow
                     key={it.id}
-                    type="button"
-                    onClick={() => {
-                      // luego definimos el flujo
+                    item={it}
+                    onOpen={() => {
+                      navigate(
+                        `/osalm/conteos_inventario/maestra/articulos/${it.id}/conteo`,
+                        {
+                          state: {
+                            item: {
+                              id: String(it.id),
+                              sku: it.sku,
+                              name: it.name,
+                            },
+                          },
+                        }
+                      );
                     }}
-                    className="w-full text-left bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                        {it.name}
-                      </h2>
-                      <p className="text-xs sm:text-sm text-gray-500 tracking-wide">
-                        <span className="font-medium">{it.sku}</span>
-                        <span className="text-gray-300 mx-2">•</span>
-                        ID: {it.id}
-                      </p>
-                    </div>
-
-                    <span
-                      className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 text-lg"
-                      aria-hidden="true"
-                    >
-                      ›
-                    </span>
-                  </button>
+                  />
                 ))}
             </div>
 
@@ -274,5 +313,55 @@ export default function InventoryMasterItemsPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function MasterItemCardRow({
+  item,
+  onOpen,
+}: {
+  item: MasterItemCard;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer"
+    >
+      {/* IZQUIERDA */}
+      <div className="flex flex-col gap-1">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+          {item.name}
+        </h2>
+        <p className="text-xs sm:text-sm text-gray-500 tracking-wide">
+          <span className="font-medium">{item.sku}</span>
+          <span className="text-gray-300 mx-2">•</span>
+          ID: {item.id}
+        </p>
+      </div>
+
+      {/* DERECHA: total contado + UoM */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-col items-end leading-tight">
+          <span className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {formatQty(item.counted)}
+          </span>
+          <span className="text-[11px] sm:text-xs text-gray-400 uppercase">
+            {item.uom}
+          </span>
+          <span className="text-[10px] sm:text-[11px] text-gray-400">
+            Total contado
+          </span>
+        </div>
+
+        <span
+          className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-400 text-lg"
+          aria-hidden="true"
+        >
+          ›
+        </span>
+      </div>
+    </button>
   );
 }
