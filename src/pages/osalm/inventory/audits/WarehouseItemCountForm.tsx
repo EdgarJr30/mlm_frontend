@@ -397,7 +397,7 @@ export function NewWarehouseAuditForm({
               setIsWeighted('N');
               setSelectedBasketId(null);
             }}
-            className={`h-11 rounded-2xl text-sm font-semibold transition
+            className={`h-11 rounded-2xl text-sm font-semibold transition cursor-pointer
               ${
                 isWeighted === 'N'
                   ? 'bg-blue-600 text-white'
@@ -409,7 +409,7 @@ export function NewWarehouseAuditForm({
           <button
             type="button"
             onClick={() => setIsWeighted('Y')}
-            className={`h-11 rounded-2xl text-sm font-semibold transition
+            className={`h-11 rounded-2xl text-sm font-semibold transition cursor-pointer
               ${
                 isWeighted === 'Y'
                   ? 'bg-blue-600 text-white'
@@ -442,7 +442,7 @@ export function NewWarehouseAuditForm({
                       key={basket.id}
                       type="button"
                       onClick={() => setSelectedBasketId(String(basket.id))}
-                      className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
+                      className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition cursor-pointer
         ${theme.card}
         ${
           isSelected
@@ -512,7 +512,7 @@ export function NewWarehouseAuditForm({
           <button
             type="button"
             onClick={decrement}
-            className="h-11 w-11 rounded-2xl bg-gray-100 text-xl font-semibold flex items-center justify-center"
+            className="h-11 w-11 rounded-2xl bg-gray-100 text-xl font-semibold flex items-center justify-center cursor-pointer"
           >
             –
           </button>
@@ -530,7 +530,7 @@ export function NewWarehouseAuditForm({
           <button
             type="button"
             onClick={increment}
-            className="h-11 w-11 rounded-2xl bg-blue-600 text-white text-xl font-semibold flex items-center justify-center"
+            className="h-11 w-11 rounded-2xl bg-blue-600 text-white text-xl font-semibold flex items-center justify-center cursor-pointer"
           >
             +
           </button>
@@ -571,7 +571,7 @@ export function NewWarehouseAuditForm({
                 current === 'UOM_DIFFERENT' ? '' : 'UOM_DIFFERENT'
               )
             }
-            className={`flex-1 inline-flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
+            className={`flex-1 inline-flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition cursor-pointer
               ${
                 pendingReasonCode === 'UOM_DIFFERENT'
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -599,7 +599,7 @@ export function NewWarehouseAuditForm({
                 current === 'REVIEW' ? '' : 'REVIEW'
               )
             }
-            className={`flex-1 inline-flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition
+            className={`flex-1 inline-flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-xs sm:text-sm text-left transition cursor-pointer 
               ${
                 pendingReasonCode === 'REVIEW'
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -644,7 +644,7 @@ export function NewWarehouseAuditForm({
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className={`flex-1 h-11 rounded-2xl text-sm sm:text-base font-semibold
+          className={`flex-1 h-11 rounded-2xl text-sm sm:text-base font-semibold cursor-pointer
             ${
               isSubmitting
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -658,7 +658,7 @@ export function NewWarehouseAuditForm({
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
-          className={`flex-1 h-11 rounded-2xl text-sm sm:text-base font-semibold inline-flex items-center justify-center gap-2
+          className={`flex-1 h-11 rounded-2xl text-sm sm:text-base font-semibold inline-flex items-center justify-center gap-2 cursor-pointer
             ${
               isSubmitting
                 ? 'bg-blue-400 cursor-not-allowed'
