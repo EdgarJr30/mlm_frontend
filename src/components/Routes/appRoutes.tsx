@@ -21,6 +21,7 @@ import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/Inven
 import InventoryAuditWarehousePage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
 import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
 import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
+import InventoryMasterItemsPage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemsPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -379,6 +380,20 @@ export const APP_ROUTES: AppRoute[] = [
       'inventory_warehouses:full_access',
     ],
     name: 'Almacenes',
+    showInSidebar: false,
+  },
+
+  {
+    path: '/osalm/conteos_inventario/maestra',
+    element: <InventoryMasterItemsPage />,
+    allowPerms: [
+      'inventory_adjustments:read',
+      'inventory_adjustments:create',
+      'inventory_adjustments:export',
+      'inventory_adjustments:approve',
+      'inventory_adjustments:full_access',
+    ],
+    name: 'Data Maestra',
     showInSidebar: false,
   },
 
