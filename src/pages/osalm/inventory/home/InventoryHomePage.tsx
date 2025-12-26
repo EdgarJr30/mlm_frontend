@@ -52,6 +52,10 @@ export default function InventoryHomePage() {
     );
   };
 
+  const handleOpenMaster = () => {
+    navigate('/osalm/conteos_inventario/maestra');
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -252,6 +256,7 @@ export default function InventoryHomePage() {
                 </p>
 
                 <div className="mt-3 inline-flex rounded-full bg-gray-100 p-0.5 border border-gray-200">
+                  {/* Almacenes */}
                   <button
                     type="button"
                     onClick={() => setViewMode('warehouses')}
@@ -263,6 +268,8 @@ export default function InventoryHomePage() {
                   >
                     Almacenes
                   </button>
+
+                  {/* Áreas */}
                   <button
                     type="button"
                     onClick={() => setViewMode('areas')}
@@ -274,6 +281,18 @@ export default function InventoryHomePage() {
                   >
                     Áreas
                   </button>
+
+                  {/* Maestra (solo con permisos) */}
+                  {canSeeAuditAdmin && (
+                    <button
+                      type="button"
+                      onClick={handleOpenMaster}
+                      className="px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-full font-medium transition cursor-pointer
+                 text-gray-500 hover:text-gray-700 hover:bg-white"
+                    >
+                      Maestra
+                    </button>
+                  )}
                 </div>
               </div>
 
