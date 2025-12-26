@@ -1,5 +1,3 @@
-// src/pages/osalm/conteos_inventario/InventoryCountsPage.tsx
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../../../components/layout/Sidebar';
@@ -13,16 +11,16 @@ import {
 
 type WarehouseCard = {
   id: number;
-  code: string; // va en la URL, ej: 'OC'
-  name: string; // se muestra, ej: 'Almacén Central OC'
+  code: string;
+  name: string;
 };
 
 type WarehouseAreaCard = {
   id: number;
-  code: string; // código del área: ABARROTES, CF-01, etc.
-  name: string; // nombre del área
-  warehouseCode: string; // código del almacén: OC, PAP-GRAL
-  warehouseName: string; // nombre del almacén
+  code: string;
+  name: string;
+  warehouseCode: string;
+  warehouseName: string;
 };
 
 type ViewMode = 'warehouses' | 'areas';
@@ -47,8 +45,6 @@ export default function InventoryHomePage() {
   };
 
   const handleOpenArea = (warehouseCode: string, areaCode: string) => {
-    // Puedes leer este query param en la pantalla de conteos
-    // para saber en qué área estás contando.
     navigate(
       `/osalm/conteos_inventario/almacen/${warehouseCode}?area=${encodeURIComponent(
         areaCode
@@ -219,7 +215,6 @@ export default function InventoryHomePage() {
       <Sidebar />
 
       <main className="flex flex-col flex-1 h-[100dvh] bg-gray-100 overflow-hidden">
-        {/* TOP BAR */}
         <header className="bg-blue-600 text-white shadow-sm">
           <div className="pl-16 pr-4 sm:px-6 lg:px-10 py-4 sm:py-5 flex items-center justify-between gap-4">
             <div>
@@ -234,7 +229,7 @@ export default function InventoryHomePage() {
                 onClick={() =>
                   navigate('/osalm/conteos_inventario/auditoria/almacenes')
                 }
-                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition"
+                className="inline-flex items-center gap-2 rounded-full bg-white/95 text-blue-700 px-4 py-2 text-xs sm:text-sm font-semibold shadow-sm hover:bg-white transition cursor-pointer"
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-600 text-base">
                   ⚙️
@@ -245,10 +240,8 @@ export default function InventoryHomePage() {
           </div>
         </header>
 
-        {/* CONTENT */}
         <section className="flex-1 overflow-y-auto">
           <div className="px-4 sm:px-6 lg:px-10 py-4 sm:py-6 max-w-6xl mx-auto">
-            {/* Header de la sección */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
               <div>
                 <h2 className="text-sm sm:text-lg font-semibold text-gray-800">
@@ -258,12 +251,11 @@ export default function InventoryHomePage() {
                   {subtitleLabel}
                 </p>
 
-                {/* Toggle Almacenes / Áreas */}
                 <div className="mt-3 inline-flex rounded-full bg-gray-100 p-0.5 border border-gray-200">
                   <button
                     type="button"
                     onClick={() => setViewMode('warehouses')}
-                    className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-full font-medium transition ${
+                    className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-full font-medium transition cursor-pointer ${
                       viewMode === 'warehouses'
                         ? 'bg-white text-blue-700 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
@@ -274,7 +266,7 @@ export default function InventoryHomePage() {
                   <button
                     type="button"
                     onClick={() => setViewMode('areas')}
-                    className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-full font-medium transition ${
+                    className={`px-3 sm:px-4 py-1.5 text-xs sm:text-sm rounded-full font-medium transition cursor-pointer ${
                       viewMode === 'areas'
                         ? 'bg-white text-blue-700 shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
@@ -285,7 +277,6 @@ export default function InventoryHomePage() {
                 </div>
               </div>
 
-              {/* Tarjeta de resumen */}
               <div className="inline-flex items-center rounded-2xl bg-white border border-gray-200 shadow-sm px-3 py-2 sm:px-4 sm:py-2.5">
                 <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50">
                   <span className="text-sm">
@@ -310,14 +301,12 @@ export default function InventoryHomePage() {
               </div>
             </div>
 
-            {/* Mensaje de error */}
             {error && (
               <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs sm:text-sm text-red-700">
                 Ocurrió un problema al cargar los datos: {error}
               </div>
             )}
 
-            {/* Empty state */}
             {!loading &&
               !error &&
               ((viewMode === 'warehouses' && warehouses.length === 0) ||
@@ -329,7 +318,6 @@ export default function InventoryHomePage() {
                 </div>
               )}
 
-            {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 pb-8">
               {/* Skeletons */}
               {loading &&
@@ -358,7 +346,7 @@ export default function InventoryHomePage() {
                     type="button"
                     onClick={() => handleOpenWarehouse(w.code)}
                     className="group relative flex flex-col items-start gap-2 rounded-2xl bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm border border-gray-100
-                               hover:shadow-md hover:border-blue-200 hover:-translate-y-0.5 transition-all text-left"
+                               hover:shadow-md hover:border-blue-200 hover:-translate-y-0.5 transition-all text-left cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-600 text-[11px] sm:text-xs px-2 py-0.5">
@@ -397,7 +385,7 @@ export default function InventoryHomePage() {
                     type="button"
                     onClick={() => handleOpenArea(a.warehouseCode, a.code)}
                     className="group relative flex flex-col items-start gap-2 rounded-2xl bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm border border-gray-100
-                               hover:shadow-md hover:border-emerald-200 hover:-translate-y-0.5 transition-all text-left"
+                               hover:shadow-md hover:border-emerald-200 hover:-translate-y-0.5 transition-all text-left cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] sm:text-xs px-2 py-0.5">
