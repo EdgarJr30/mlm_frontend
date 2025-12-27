@@ -13,8 +13,8 @@ type MasterItemCard = {
   id: number;
   sku: string;
   name: string;
-  uom: string; // UoM base
-  counted: number; // total contado (base)
+  uom: string;
+  counted: number;
 };
 
 const PAGE_SIZE = 50;
@@ -22,7 +22,6 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 function formatQty(n: number): string {
   if (!Number.isFinite(n)) return '0';
-  // Si quieres sin decimales, cambia maximumFractionDigits: 0
   return n.toLocaleString('es-DO', { maximumFractionDigits: 2 });
 }
 
@@ -329,7 +328,6 @@ function MasterItemCardRow({
       onClick={onOpen}
       className="w-full text-left bg-white rounded-2xl shadow-sm px-4 py-4 sm:px-6 sm:py-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer"
     >
-      {/* IZQUIERDA */}
       <div className="flex flex-col gap-1">
         <h2 className="text-base sm:text-lg font-semibold text-gray-900">
           {item.name}
@@ -341,7 +339,6 @@ function MasterItemCardRow({
         </p>
       </div>
 
-      {/* DERECHA: total contado + UoM */}
       <div className="flex items-center gap-2 sm:gap-3">
         <div className="flex flex-col items-end leading-tight">
           <span className="text-2xl sm:text-3xl font-bold text-gray-900">
