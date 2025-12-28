@@ -909,21 +909,21 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     .from('inventory_count_lines')
     .select(
       `
-         id,
-    item_id,
-    uom_id,
-    counted_qty,
-    base_counted_qty,
-    status,
-    status_comment,
-    pending_reason_code,
-     created_by,
-      users:created_by (
         id,
-        name,
-        last_name,
-        email
-      )
+        item_id,
+        uom_id,
+        counted_qty,
+        base_counted_qty,
+        status,
+        status_comment,
+        pending_reason_code,
+        created_by,
+        users:created_by (
+          id,
+          name,
+          last_name,
+          email
+        )
       `
     )
     .eq('inventory_count_id', count.id)
@@ -975,24 +975,26 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
     lines?.map((l) => {
       const key = `${l.item_id}-${l.uom_id}`;
       const desc = descByKey.get(key);
+
       const availableUoms = uomsByItem.get(l.item_id as number) ?? [];
 
-      // UoM actual de la línea
+      // UoM actual de la línea (para tener factor disponible si luego cambian UoM en UI)
       const currentUom = availableUoms.find((u) => u.id === l.uom_id);
       const factorCurrent = currentUom?.factor ?? 1;
 
-      const countedFromDb = Number(l.counted_qty ?? 0);
+      // ✅ Regla: en Auditoría mostramos EXACTAMENTE lo que se guardó en counted_qty
+      const countedQty = Number(l.counted_qty ?? 0);
 
+      // baseCountedQty se usa como cache interno (para conversiones cuando el usuario cambie UoM)
+      // - Si viene de BD y es válido, lo respetamos.
+      // - Si no viene o está inválido, lo calculamos como fallback SIN alterar countedQty.
       let baseCountedQty = Number(l.base_counted_qty);
       if (!Number.isFinite(baseCountedQty) || baseCountedQty <= 0) {
         baseCountedQty =
-          factorCurrent > 0 ? countedFromDb * factorCurrent : countedFromDb;
+          factorCurrent > 0 ? countedQty * factorCurrent : countedQty;
       }
 
-      const countedQty =
-        factorCurrent > 0 ? baseCountedQty / factorCurrent : countedFromDb;
-
-      // ✅ AQUÍ (antes del return)
+      // ✅ Usuario que contó (antes del return)
       const u = (l as any).users as {
         id: string;
         name?: string | null;
@@ -1012,8 +1014,8 @@ export async function getInventoryAuditById(inventoryCountId: number): Promise<{
         sku: desc?.sku ?? '',
         name: desc?.name ?? '',
         uom: desc?.uomCode ?? '',
-        countedQty,
-        baseCountedQty,
+        countedQty, // ✅ sin conversión al cargar
+        baseCountedQty, // ✅ cache para conversiones posteriores
         status: mapDbItemStatusToUi(
           (l.status ?? 'counted') as 'pending' | 'counted' | 'ignored'
         ),
