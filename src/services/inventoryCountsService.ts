@@ -1074,6 +1074,10 @@ async function getUomsForItems(
     .eq('is_active', true)
     .in('item_id', itemIds);
 
+  console.log('[getUomsForItems] itemIds:', itemIds);
+  console.log('[getUomsForItems] rows:', data?.length, 'error:', error);
+  console.log('[getUomsForItems] sample:', data?.slice(0, 5));
+
   if (error) {
     console.error('Error fetching item_uoms for audit', error);
     return new Map();
