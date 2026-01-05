@@ -163,6 +163,7 @@ create table if not exists public.tickets (
   updated_at timestamptz,
   status text default 'Pendiente',
   created_by uuid,
+  updated_by uuid,
   assignee_id bigint
 );
 
@@ -178,6 +179,23 @@ begin
       foreign key (created_by) references public.users(id);
   end if;
 end$$;
+
+-- 2) Crear FK (si no existe) hacia public.users(id)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE table_schema='public'
+      AND table_name='tickets'
+      AND constraint_name='tickets_updated_by_fkey'
+  ) THEN
+    ALTER TABLE public.tickets
+      ADD CONSTRAINT tickets_updated_by_fkey
+      FOREIGN KEY (updated_by) REFERENCES public.users(id)
+      ON DELETE SET NULL;
+  END IF;
+END$$;
 
 -- FK assignee_id (NOT VALID + validate)
 do $$
@@ -829,7 +847,7 @@ grant execute on all functions in schema public to anon, authenticated;
 
 
 
-//TODO: Actualizar semilla
+-- TODO: Actualizar semilla
 -- 1.1) Nueva columna para archivo y fecha de finalización
 alter table public.tickets
   add column if not exists is_archived boolean not null default false,
@@ -1514,7 +1532,6 @@ CREATE OR REPLACE VIEW public.v_tickets_compat (
   special_incident_code
 ) AS
 SELECT
-  -- === columnas existentes (mismo orden) ===
   t.id,
   t.title,
   t.description,
@@ -1538,26 +1555,26 @@ SELECT
   t.is_archived,
   t.finalized_at,
   a.primary_assignee_id,
-  a.secondary_assignee_ids,
+  COALESCE(a.secondary_assignee_ids, ARRAY[]::bigint[]) AS secondary_assignee_ids,
   COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id,
 
-  -- === nuevas columnas añadidas al final ===
   t.updated_by,
-  CONCAT(u_created.name, ' ', COALESCE(u_created.last_name, '')) AS created_by_name,
-  CONCAT(u_updated.name, ' ', COALESCE(u_updated.last_name, '')) AS updated_by_name,
-  CONCAT(ap.name, ' ', COALESCE(ap.last_name, ''))               AS primary_assignee_name,
+  concat_ws(' ', u_created.name, u_created.last_name) AS created_by_name,
+  concat_ws(' ', u_updated.name, u_updated.last_name) AS updated_by_name,
+  concat_ws(' ', ap.name, ap.last_name)               AS primary_assignee_name,
+
   (
-    SELECT STRING_AGG(CONCAT(asg.name, ' ', COALESCE(asg.last_name, '')), ', ')
+    SELECT STRING_AGG(concat_ws(' ', asg.name, asg.last_name), ', ')
     FROM public.work_order_assignees wa
     JOIN public.assignees asg ON asg.id = wa.assignee_id
     WHERE wa.work_order_id = t.id
       AND wa.is_active = TRUE
-      AND wa.role = 'SECONDARY'
+      AND wa.role = 'SECONDARY'::assignee_role_enum
   ) AS secondary_assignees_names,
+
   t.special_incident_id,
   si.name AS special_incident_name,
   si.code AS special_incident_code
-
 FROM public.tickets t
 LEFT JOIN public.v_work_order_assignees_agg a
   ON a.work_order_id = t.id
@@ -1569,8 +1586,6 @@ LEFT JOIN public.assignees ap
   ON ap.id = a.primary_assignee_id
 LEFT JOIN public.special_incidents si
   ON si.id = t.special_incident_id;
-
-
 
   BEGIN;
 
@@ -1584,6 +1599,7 @@ DROP TABLE IF EXISTS public.inventory_count_lines CASCADE;
 DROP TABLE IF EXISTS public.inventory_counts CASCADE;
 DROP TABLE IF EXISTS public.baskets CASCADE;
 DROP TABLE IF EXISTS public.item_uoms CASCADE;
+DROP TABLE IF EXISTS public.uom_conversion_templates CASCADE;
 DROP TABLE IF EXISTS public.warehouse_items CASCADE;
 DROP TABLE IF EXISTS public.warehouse_areas CASCADE;
 DROP TABLE IF EXISTS public.warehouse_area_items CASCADE;
@@ -1619,12 +1635,16 @@ CREATE TABLE public.uoms (
   updated_by   UUID REFERENCES public.users(id)
 );
 
--- ITEMS (SIN UNIDAD DE MEDIDA BASE)
+-- ITEMS (CON UNIDAD DE MEDIDA BASE)
 CREATE TABLE public.items (
   id            bigint generated always as identity primary key,
   sku           text not null unique,        -- código de artículo
   name          text not null,
   is_weightable boolean not null default false,      -- suele pesarse
+
+  -- UoM base del ítem (ej: ML, GRAMO, UND, etc.)
+  -- Todas las conversiones en item_uoms se expresan respecto a esta UoM base.
+  base_uom_id   bigint not null references public.uoms(id),
 
   -- otros campos: categoría, marca, etc.
   is_active     boolean not null default true,
@@ -1642,7 +1662,13 @@ CREATE TABLE public.warehouse_items (
   warehouse_id  bigint not null references public.warehouses(id),
   item_id       bigint not null references public.items(id),
   uom_id        bigint not null references public.uoms(id),
+
+  -- Cantidad en la UoM de este registro (uom_id)
   quantity      numeric(18,4) not null default 0,
+
+  -- Cantidad en UoM base del ítem (items.base_uom_id)
+  base_quantity numeric(18,4),
+
   is_active     boolean not null default true,
 
   -- Evita duplicados del mismo item en la misma UoM y almacén
@@ -1688,24 +1714,37 @@ CREATE TABLE public.warehouse_area_items (
   updated_by   uuid REFERENCES public.users(id)
 );
 
--- RELACIÓN ITEM ↔ UOMS (PARA FUTURO: CONVERSIONES ENTRE UOMS)
+-- RELACIÓN ITEM ↔ UOMS (CONVERSIONES ENTRE UOMS)
 CREATE TABLE public.item_uoms (
   id                bigint generated always as identity primary key,
   item_id           bigint not null references public.items(id) on delete cascade,
   uom_id            bigint not null references public.uoms(id),
 
-  -- pensado para futuro: conversión entre unidades del mismo ítem
-  conversion_factor numeric(18,6),  -- puede ser NULL en el MVP
+  -- Regla: conversion_factor = cuántas unidades de la UoM base del ítem
+  -- (items.base_uom_id) hay en 1 unidad de esta UoM.
+  -- Ej: base = ML; UoM = "ENV. 50 LT." → conversion_factor = 50000.
+  conversion_factor numeric(18,6) not null,
 
   is_active         boolean not null default true,
 
   unique (item_id, uom_id),
+
+  CONSTRAINT item_uoms_factor_chk
+    CHECK (conversion_factor > 0),
 
   -- Auditoría
   created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
   created_by   UUID REFERENCES public.users(id),
   updated_by   UUID REFERENCES public.users(id)
+);
+
+-- Tabla de factor de conversion
+CREATE TABLE public.uom_conversion_templates (
+  base_uom_code   text NOT NULL,
+  uom_code        text NOT NULL,
+  factor          numeric(18,6) NOT NULL,
+  PRIMARY KEY (base_uom_code, uom_code)
 );
 
 -- CANASTOS
@@ -1754,7 +1793,12 @@ CREATE TABLE public.inventory_count_lines (
   item_id            bigint not null references public.items(id),
   uom_id             bigint not null references public.uoms(id),  -- UoM final del conteo
 
-  counted_qty        numeric(18,4),   -- cantidad física contada (en uom_id)
+  -- cantidad física contada (en uom_id)
+  counted_qty        numeric(18,4),
+
+  -- cantidad contada en UoM base del ítem (items.base_uom_id)
+  base_counted_qty   numeric(18,4),
+
   last_counted_at    timestamptz,
 
   -- Nuevo: estado final de este artículo en este conteo
@@ -1797,7 +1841,11 @@ CREATE TABLE public.inventory_count_operations (
   is_weighted        boolean not null default false,       -- usuario marcó "es pesado"
   basket_id          bigint references public.baskets(id),        -- canasto usado (si aplica)
   gross_qty          numeric(18,4),  -- lectura bruta de la balanza (producto + canasto)
+  base_gross_qty          numeric(18,4),
   net_qty            numeric(18,4),  -- cantidad neta después de restar el canasto (si aplica)
+
+  -- Cantidad neta expresada en UoM base del ítem
+  base_net_qty       numeric(18,4),
 
   -- Estado de la operación
   is_pending         boolean not null default false,       -- caso raro (uom inexistente, etc.)
@@ -1827,7 +1875,12 @@ CREATE TABLE public.inventory_adjustments (
   item_id             bigint not null references public.items(id),
   uom_id              bigint not null references public.uoms(id),
 
-  difference_qty      numeric(18,4) not null,  -- cuánto se va a ajustar (en uom_id)
+  -- cuánto se va a ajustar (en uom_id)
+  difference_qty      numeric(18,4) not null,
+
+  -- cuánto se va a ajustar en UoM base del ítem
+  base_difference_qty numeric(18,4),
+
   adjustment_reason   text,                    -- "Toma física Nov 2025"
 
   posted_to_erp       boolean not null default false,
@@ -2447,6 +2500,7 @@ CREATE OR REPLACE VIEW public.vw_warehouse_stock AS
 SELECT
   wi.id              AS warehouse_item_id,
   wi.quantity        AS quantity,
+  wi.base_quantity   AS base_quantity,
   wi.is_active       AS is_active,
 
   -- Almacén
@@ -2459,6 +2513,9 @@ SELECT
   i.sku              AS item_sku,
   i.name             AS item_name,
   i.is_weightable    AS item_is_weightable,
+  i.base_uom_id      AS item_base_uom_id,
+  bu.code            AS base_uom_code,
+  bu.name            AS base_uom_name,
 
   -- UoM del ítem en este almacén (stock)
   u.id               AS uom_id,
@@ -2473,7 +2530,8 @@ SELECT
 FROM public.warehouse_items wi
 JOIN public.warehouses w ON w.id = wi.warehouse_id
 JOIN public.items      i ON i.id = wi.item_id
-JOIN public.uoms       u ON u.id = wi.uom_id;
+JOIN public.uoms       u ON u.id = wi.uom_id
+LEFT JOIN public.uoms  bu ON bu.id = i.base_uom_id;
 
 GRANT SELECT ON public.vw_warehouse_stock TO anon, authenticated;
 
